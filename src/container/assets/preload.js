@@ -64,7 +64,7 @@ window.addEventListener('DOMContentLoaded', () => {
 			// Dynamically insert the DLL script in development env in the
 			// renderer process
 			// Dynamically insert the bundled app script in the renderer process
-			const port = process.env.PORT || 5000;
+			const port = process.env.PORT || 3001;
 			sources.push(`http://localhost:${port}/dist/container.js`);
 		} else {
 			sources.push("../../container/dist/index.js");

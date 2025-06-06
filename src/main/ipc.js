@@ -43,9 +43,9 @@ module.exports = function generateIpc(store, initCallback) {
 			if (store.finish) {
 				store.windows.container.current.webContents.send("ready", true)
 			}
-
 		} else if (who === 'loader' && store.windows.loader.current && count === 0) {
-
+			log.info(`[WINDOW] > Loader ready event received, starting initialization...`)
+			
 			if (store.windows.container.current) {
 				store.windows.container.current.webContents.send("user_path", store.infos.user_path)
 			}
@@ -62,10 +62,10 @@ module.exports = function generateIpc(store, initCallback) {
 
 					if (store.debug) {
 						openLoaderDevTools(store)
-					}
-				}
+					}				}
+				log.info(`[WINDOW] > Starting initialize process...`)
 				await initialize({ conf: store.conf || store.path.conf, version: store.infos.version }, initCallback)
-
+				log.info(`[WINDOW] > Initialize process completed`)
 
 				if (store.conf && store.conf.extensions) {
 					for (const name in store.conf.extensions) {

@@ -147,8 +147,7 @@ module.exports = function nodeIpcConnect(store, callback, logger) {
 					}
 				}
 			})
-
 		socket.connect()
-		return resolve()
+		resolve()
 	})
 }

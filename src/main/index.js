@@ -170,13 +170,19 @@ const createWindows = () => {
 	log.debug(`[APP] > packaged: ${app.isPackaged, process.resourcesPath}`)
 
 	store.choosen_screen = chooseScreen(argv.screen, store.screens)
+	log.debug(`[APP] > Chosen screen: ${store.choosen_screen ? store.choosen_screen.id : 'null'}`)
 
 	try {
+		log.debug("[APP] > Creating container window...")
 		store.windows.container.current = generateContainerWindow(store)
+		log.debug("[APP] > Creating loader window...")
 		store.windows.loader.current = generateLoaderWindow(store)
+		log.debug("[APP] > Generating IPC...")
 		generateIpc(store, initCallback)
+		log.debug("[APP] > Windows created successfully")
 
 	} catch (err) {
+		log.error(`[APP] > Error creating windows: ${err.message}`)
 		throw new CustomError(500, err.api_code || err.code || CustomError.CODE.GENERATE_WINDOWS, err.message)
 	}
 }
@@ -231,13 +237,13 @@ getConfig(store.path.conf).then(conf => {
 	.catch((err) => {
 		store.pre_error_init = err
 	})
-	.finally(() => {
-		app.whenReady()
+	.finally(() => {		app.whenReady()
 			.then(() => {
+				log.info("[INIT] > App is ready, starting initialization...")
 
 				if (store.pre_error_init) {
 					showDialogError(store, store.pre_error_init)
-					throw err
+					throw store.pre_error_init
 				}
 				process.on("SIGINT", () => {
 					log.info("[PROCESS] > SIGINT")
@@ -249,44 +255,57 @@ getConfig(store.path.conf).then(conf => {
 					app.quit()
 				});
 
-			})
-			.then(() => {
-				return new Promise((resolve, reject) => {
-					if (pm2 && process.env.NODE_ENV === "development") {
-						pm2.connect(true, (err) => {
-							if (err) {
-								return reject(err)
-							}
-							store.pm2.connected = true
-							resolve()
-						})
-					}
-					else {
+			})		.then(() => {
+			log.info("[INIT] > Connecting to PM2...")
+			return new Promise((resolve, reject) => {
+				if (pm2 && process.env.NODE_ENV === "development") {
+					pm2.connect(true, (err) => {
+						if (err) {
+							return reject(err)
+						}
+						store.pm2.connected = true
+						log.info("[INIT] > PM2 connected")
 						resolve()
-					}
-				})
+					})
+				}
+				else {
+					log.info("[INIT] > PM2 skipped (not in development)")
+					resolve()
+				}
+			})
 
-			})
-			.then(() => {
-				configureProtocol(store)
-			})
-			.then(() => {
-				innerGlobalShortcut(store, log)
-			})
-			.then(() => {
-				store.screens = getScreens()
-			})
-			.then(createWindows)
-			.then(() => {
-				return nodeIpcConnect(store, initCallback, log)
-			})
-			.then(() => {
-				generateTray(store)
-				return null
-			})
-			.catch((err) => {
-				log.error(err.code ? `[${err.code}] ${err.message}` : err.message)
-			})
+		})
+		.then(() => {
+			log.info("[INIT] > Configuring protocol...")
+			configureProtocol(store)
+		})
+		.then(() => {
+			log.info("[INIT] > Setting up global shortcuts...")
+			innerGlobalShortcut(store, log)
+		})
+		.then(() => {
+			log.info("[INIT] > Getting screens...")
+			store.screens = getScreens()
+			log.info(`[INIT] > Found ${store.screens.length} screens`)
+		})
+		.then(() => {
+			log.info("[INIT] > Creating windows...")
+			return createWindows()
+		})
+		.then(() => {
+			log.info("[INIT] > Connecting to Node IPC...")
+			return nodeIpcConnect(store, initCallback, log)
+		})
+		.then(() => {
+			log.info("[INIT] > Generating tray...")
+			generateTray(store)
+			log.info("[INIT] > Initialization complete!")
+			return null
+		})
+		.catch((err) => {
+			log.error(`[INIT] > Error during initialization: ${err.code ? `[${err.code}] ${err.message}` : err.message}`)
+			log.error(err.stack)
+		})
 
 		app.on('activate', () => {
 			if (store.windows.container.current === null) createWindows()

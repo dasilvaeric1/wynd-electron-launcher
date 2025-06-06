@@ -243,10 +243,10 @@ module.exports = function generataInitCallback(store) {
 						protocol: 'http',
 						slashes: true
 					})
-					loadURL(containerFile)
-				}
+					loadURL(containerFile)				}
 				break
 			case 'finish':
+				log.info("[INIT] > Finish action called - showing container window")
 				if (process.env.DEV && process.env.DEV === "LOADER") {
 					break
 				}

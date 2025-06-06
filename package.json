@@ -2,11 +2,11 @@
   "name": "wynd-electron-launcher",
   "productName": "electron-launcher",
   "version": "1.22.0",
-  "main": "src/main/index.js",
-  "scripts": {
+  "main": "src/main/index.js",  "scripts": {
     "prepare": "cross-env NODE_OPTIONS=--openssl-legacy-provider NODE_ENV=development webpack --config ./configs/webpack.config.renderer.dll.js --progress",
     "postversion": "git push origin --follow-tags",
-    "start": "npx cross-env NODE_ENV=development START_MAIN=true node scripts/renderer.js",
+    "start": "node scripts/start-dev.js",
+    "start:pm2": "npx cross-env NODE_ENV=development START_MAIN=true node scripts/renderer.js",
     "start:logs": "npx cross-env NODE_ENV=development START_MAIN=true node scripts/renderer.js && npm run logs",
     "start:main": "npx cross-env NODE_ENV=development node scripts/main.js",
     "start:main:logs": "npx cross-env NODE_ENV=development node scripts/main.js && npm run logs",

@@ -10,7 +10,7 @@ const startMain = require('../scripts/main')
 
 const baseConfig = require('./webpack.config.base')
 
-const port = process.env.PORT || 5000
+const port = process.env.PORT || 3001
 const publicPath = `http://localhost:${port}/dist`;
 
 const dllDir = path.join(__dirname, '../dll');
@@ -69,34 +69,34 @@ const devConfig = merge(baseConfig, {
       include: /\.tsx?$/i
     }),
   ],
-  node: {},
-  devServer: {
+  node: {},  devServer: {
     port,
-    publicPath,
     compress: true,
-    noInfo: false,
-    stats: 'normal',
-    inline: true,
-    lazy: false,
     hot: true,
     headers: { 'Access-Control-Allow-Origin': '*' },
-    contentBase: path.join(__dirname, 'dist'),
-    watchOptions: {
-      aggregateTimeout: 300,
-      ignored: /node_modules/,
-      poll: 100,
+    static: {
+      directory: path.join(__dirname, '../dist'),
+      publicPath: '/static/',
+    },
+    watchFiles: {
+      paths: ['src/**/*'],
+      options: {
+        aggregateTimeout: 300,
+        ignored: /node_modules/,
+        poll: 100,
+      },
     },
     historyApiFallback: {
       verbose: true,
       disableDotRule: false,
     },
-		before (app, server) {
-
-			if (process.env.START_MAIN) {
-				// eslint-disable-next-line no-console
-				startMain().catch(console.error)
-			}
-		}
+    setupMiddlewares: (middlewares, devServer) => {
+      if (process.env.START_MAIN) {
+        // eslint-disable-next-line no-console
+        startMain().catch(console.error)
+      }
+      return middlewares;
+    }
   },
 });
 

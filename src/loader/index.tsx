@@ -15,6 +15,8 @@ declare let window: ICustomWindow
 
 window.theme = new Theme(undefined, computeTheme())
 
+// eslint-disable-next-line no-console
+console.log('[LOADER] Loading and sending ready event...')
 ipcRenderer.send('ready', 'loader')
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)

@@ -28,13 +28,24 @@ module.exports = function generateLoaderWindow(store) {
 		preload: path.join(__dirname, '..', 'loader', 'assets', 'preload.js'),
 		},
 	})
-
 	loaderWindow.on('closed', () => {
+		log.info('[WINDOW] > Loader : closed')
 		store.windows.loader.current = null
 	})
 
+	loaderWindow.on('show', () => {
+		log.info('[WINDOW] > Loader : show')
+	})
 	loaderWindow.webContents.on('ready-to-show', () => {
-		log.debug('[WINDOW] > Loader : ready-to-show')
+		log.info('[WINDOW] > Loader : ready-to-show')
+	})
+
+	loaderWindow.webContents.on('did-finish-load', () => {
+		log.info('[WINDOW] > Loader : did-finish-load')
+	})
+
+	loaderWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+		log.error(`[WINDOW] > Loader : did-fail-load - ${errorCode} ${errorDescription} ${validatedURL}`)
 	})
 
 	const loaderFile = url.format({
@@ -42,12 +53,17 @@ module.exports = function generateLoaderWindow(store) {
 		protocol: 'file',
 		slashes: true
 	})
-
+	log.info(`[WINDOW] > Loading loader from: ${loaderFile}`)
 	loaderWindow.loadURL(loaderFile)
 
 	if (process.env.DEV && process.env.DEV.toLowerCase().indexOf("loader") >= 0) {
 		loaderWindow.webContents.openDevTools({mode: 'detach'})
 		loaderWindow.center()
+	}
+
+	// Force open DevTools for debugging
+	if (process.env.NODE_ENV === 'development') {
+		loaderWindow.webContents.openDevTools({mode: 'detach'})
 	}
 
 	return loaderWindow

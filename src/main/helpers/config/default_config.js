@@ -73,9 +73,8 @@ module.exports =  function defaultConfig(config, log) {
 			password: null,
 			connection_timeout: 10,
 			creation_timeout: 30
-		}
-	} else {
-		if (!config.wpt.enable) {
+		}	} else {
+		if (config.wpt.enable === undefined || config.wpt.enable === null) {
 			config.wpt.enable = config.wpt.url ? true : false
 		}
 		if (!config.wpt.url) {
