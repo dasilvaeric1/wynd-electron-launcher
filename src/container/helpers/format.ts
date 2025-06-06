@@ -1,7 +1,6 @@
 import numeral from 'numeral'
 import { DateTime } from 'luxon'
 import { IReport, IReportCA, IReportCARaw, IReportProduct, IReportProductByDivision, IReportRate, IReportStat, IReportZ, TReportType } from '../interface'
-import { DATE_HUGE } from 'luxon/src/impl/formats'
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const formatNumber = (value: number | null) => {
@@ -23,7 +22,7 @@ export const formatDate = (value : string | null) : string => {
 }
 
 export const formatDate2 = (value: string | null) : string => {
-	return value ? DateTime.fromISO(value).setLocale('fr').toLocaleString(DATE_HUGE) : 'unknown'
+	return value ? DateTime.fromISO(value).setLocale('fr').toLocaleString(DateTime.DATE_HUGE) : 'unknown'
 }
 
 export const formatDate3 = (value : string | null) : string => {

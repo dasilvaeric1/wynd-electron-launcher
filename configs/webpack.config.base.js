@@ -1,5 +1,7 @@
 const path = require('path');
+const webpack = require('webpack');
 const { dependencies } = require('../package.json')
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 const baseConfig = {
 	module: {
 		rules: [
@@ -92,13 +94,28 @@ const baseConfig = {
 	},
 	/**
 	 * Determine the array of extensions that should be used to resolve modules.
-	 */
-	resolve: {
+	 */	resolve: {
 		extensions: ['.js', '.ts', '.tsx', '.css', '.less'],
-		modules: [path.join(__dirname, '../src'), 'node_modules'],
+		modules: [path.join(__dirname, '../src'), 'node_modules'],		fallback: {
+			"path": require.resolve("path-browserify"),
+			"fs": false,
+			"crypto": require.resolve("crypto-browserify"),
+			"stream": require.resolve("stream-browserify"),
+			"url": require.resolve("url/"),
+			"events": require.resolve("events/"),
+			"string_decoder": require.resolve("string_decoder/"),
+			"buffer": require.resolve("buffer/"),
+			"util": require.resolve("util/"),
+			"process": require.resolve("process/browser.js")
+		}
 	},
-
-	plugins: [],
+	plugins: [
+		new NodePolyfillPlugin(),
+		new webpack.ProvidePlugin({
+			Buffer: ['buffer', 'Buffer'],
+			process: 'process/browser'
+		})
+	],
 };
 
 
