@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';" />
+  <title>Demande de support distant</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    body {
+      background: #f8fafc;
+      color: #0f172a;
+      padding: 18px 22px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    h1 {
+      font-size: 17px;
+      margin: 0 0 6px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .icon { font-size: 22px; }
+    p { font-size: 13px; line-height: 1.45; margin: 6px 0; color: #334155; }
+    .session { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; color: #64748b; }
+    .warn {
+      background: #fef3c7;
+      border-left: 3px solid #f59e0b;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #78350f;
+      margin: 10px 0;
+      border-radius: 2px;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 12px;
+    }
+    button {
+      flex: 1;
+      padding: 9px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background 100ms;
+    }
+    button.accept {
+      background: #2563eb;
+      color: white;
+    }
+    button.accept:hover { background: #1d4ed8; }
+    button.decline {
+      background: white;
+      color: #334155;
+      border-color: #cbd5e1;
+    }
+    button.decline:hover { background: #f1f5f9; }
+    .countdown { font-size: 11px; color: #64748b; text-align: center; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <h1><span class="icon">🖥️</span>Demande de support distant</h1>
+  <p>
+    Le support central souhaite <strong>visualiser l'écran</strong> de cette caisse.
+  </p>
+  <p class="session" id="meta"></p>
+  <div class="warn">
+    Pendant la session, ton écran est diffusé en direct. Un badge rouge restera affiché.
+    Tu peux fermer la session à tout moment depuis le central.
+  </div>
+  <div class="actions">
+    <button class="decline" id="decline-btn">Refuser</button>
+    <button class="accept" id="accept-btn">Autoriser</button>
+  </div>
+  <div class="countdown" id="countdown"></div>
+
+  <script>
+    const params = new URLSearchParams(location.search)
+    const sessionId = params.get('sessionId') || '?'
+    const ttl = parseInt(params.get('ttlSeconds') || '900', 10)
+    const requestedBy = params.get('requestedBy') || ''
+    document.getElementById('meta').textContent =
+      `Session ${sessionId.substring(0, 12)}… · durée max ${Math.round(ttl / 60)} min` +
+      (requestedBy ? ` · demandé par ${requestedBy.substring(0, 24)}` : '')
+
+    document.getElementById('accept-btn').addEventListener('click', () => {
+      window.screenConsent.accept()
+    })
+    document.getElementById('decline-btn').addEventListener('click', () => {
+      window.screenConsent.decline()
+    })
+
+    // Décompte 30s — auto-decline côté main aussi (filet)
+    let remaining = 30
+    const cdEl = document.getElementById('countdown')
+    const tick = () => {
+      cdEl.textContent = `Refus automatique dans ${remaining}s si pas de réponse`
+      remaining--
+      if (remaining < 0) return
+      setTimeout(tick, 1000)
+    }
+    tick()
+  </script>
+</body>
+</html>
