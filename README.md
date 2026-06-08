@@ -627,3 +627,50 @@ if (parent) {
  parent.postMessage(message, '*')
 }
 ```
+
+## Screen-session (vue & contrôle distant de l'écran caisse)
+
+Module `src/main/screen_session.js` (+ `src/main/webrtc/`). Permet au BO
+central de voir et piloter l'écran d'une caisse à distance, avec consentement
+du caissier. **Voir [CLAUDE.md](./CLAUDE.md) pour l'architecture détaillée.**
+
+### Activation côté caisse
+
+Le module lit l'api-key + base URL + serial depuis l'`appsettings.json` du
+service C# RetailScheduler. En dev local (sans ce fichier), surcharger via
+env vars :
+
+```bash
+env -u ELECTRON_RUN_AS_NODE \
+  EL_SCREEN_API_KEY=fk_xxx \
+  EL_SCREEN_BASE_URL=https://dashboard-api.example.com \
+  EL_SCREEN_SERIAL=53R1124914 \
+  EL_SCREEN_AUTO_ACCEPT=1 \
+  ./node_modules/.bin/electron .
+```
+
+`EL_SCREEN_AUTO_ACCEPT=1` bypass le consentement caissier — **dev uniquement**.
+
+### Modes de capture
+
+* **window** (défaut) : capture la fenêtre POS (`webContents.capturePage`).
+  Aucune permission OS. Contrôle via `sendInputEvent` + hit-testing
+  panneau Wynd / webview.
+* **screen** : capture l'écran entier (`desktopCapturer`, écran
+  `screenIndex`). Contrôle via nut.js (système-wide, requiert
+  `@nut-tree-fork/nut-js` installé + permission Accessibilité macOS).
+
+### Transport
+
+* **JPEG / WebSocket** (défaut) — 10 fps, ~80-250 KB/s par session.
+* **WebRTC** (opt-in, toggle BO ou `EL_USE_WEBRTC=1`) — H.264/VP8, ÷10
+  bande passante, ÷4 latence. ICE servers Cloudflare TURN poussés par le
+  central. Fallback JPEG transparent si le handshake échoue.
+
+### Debug
+
+```bash
+EL_DEBUG=webrtc <launcher>   # affiche la capture window WebRTC + DevTools
+```
+
+Logs : `%APPDATA%/electron-launcher/logs/` (lignes `[SCREEN]` / `[WEBRTC]`).
