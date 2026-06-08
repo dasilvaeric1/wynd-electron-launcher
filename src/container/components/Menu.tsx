@@ -174,7 +174,10 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
       <Menu id="e-launcher-menu" items={generateItems()} />
       <div className="e-launcher-menu-footer">
         <span className="e-launcher-menu-version">
-          {appInfo?.version ? `v${appInfo.version}` : ""}
+          {(() => {
+            const v = window.electronAPI?.version || appInfo?.version;
+            return v ? `v${v}` : "";
+          })()}
         </span>
       </div>
     </React.Fragment>

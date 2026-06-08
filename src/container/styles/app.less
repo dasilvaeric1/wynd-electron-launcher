@@ -43,6 +43,21 @@
 			justify-content: center;
 			align-items: center;
 			margin: 0px;
+			position: relative;
+			// Transitions douces au survol → ressenti moderne.
+			transition: background-color 0.2s ease, color 0.2s ease, transform 0.12s ease;
+
+			// Barre d'accent qui se révèle à gauche au survol/sélection.
+			&::before {
+				content: "";
+				position: absolute;
+				left: 0;
+				top: 0;
+				bottom: 0;
+				width: 0;
+				background: @antd-menu-background;
+				transition: width 0.2s ease;
+			}
 
 			.ant-menu-title-content {
 				span.anticon {
@@ -56,21 +71,24 @@
     }
 
     .ant-menu-item:not(:last-child) {
-        border-bottom: 2px solid @antd-submenu-background;
+        border-bottom: 1px solid color-mix(in srgb, @antd-submenu-background 60%, transparent);
         flex-grow: 1;
 
     }
-
-    // https://codepen.io/jonnyb1250/pen/WGPaOm
 
     & .ant-menu-item:hover,
     & .ant-menu-item:active,
     & .ant-menu-submenu-title:active,
     &.ant-menu:not(.ant-menu-horizontal) .ant-menu-item-selected {
-        background-color: @antd-menu-background;
-        color: @antd-text-color-inv;
+        background-color: color-mix(in srgb, @antd-menu-background 12%, transparent);
+        color: @antd-text-color;
 			}
-				
+
+    & .ant-menu-item:hover::before,
+    &.ant-menu:not(.ant-menu-horizontal) .ant-menu-item-selected::before {
+        width: 4px;
+    }
+
 }
 		
 .rc-virtual-list-holder-inner .@{select-prefix}-item {
@@ -102,17 +120,24 @@
 		text-align: center;
 	}
 
-	// Footer version (build stamp) — discret, en bas du panneau.
+	// Footer version (build stamp) — pill discrète en bas du panneau.
 	.e-launcher-menu-footer {
 		margin-top: auto;
-		padding: 8px 12px;
-		text-align: center;
-		border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+		padding: 10px 12px;
+		display: flex;
+		justify-content: center;
+		border-top: 1px solid color-mix(in srgb, currentColor 8%, transparent);
 	}
 	.e-launcher-menu-version {
 		font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 		font-size: 10px;
-		opacity: 0.5;
+		line-height: 1;
+		padding: 4px 9px;
+		border-radius: 999px;
+		opacity: 0.65;
+		color: var(--menu-background);
+		background: color-mix(in srgb, var(--menu-background) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--menu-background) 18%, transparent);
 		user-select: text;
 	}
 }

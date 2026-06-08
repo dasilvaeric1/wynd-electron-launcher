@@ -1,13 +1,24 @@
 @import "~react-antd-cssvars/dist/styles/variables.less";
 
 #e-launcher-loader {
-	background: transparent;
 	height: 100%;
-	background-color: var(--text-color);
 	color: var(--text-color-inv);
-	padding: 14px 16px 10px;
+	padding: 16px 18px 12px;
 	user-select: none;
 	font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	overflow: hidden;
+	// Fond dégradé sombre + halo d'accent diffus en haut → look moderne.
+	background:
+		radial-gradient(
+			120% 80% at 100% 0%,
+			color-mix(in srgb, var(--menu-background) 35%, transparent) 0%,
+			transparent 60%
+		),
+		linear-gradient(
+			160deg,
+			color-mix(in srgb, var(--text-color) 92%, white) 0%,
+			var(--text-color) 100%
+		);
 
 	.loader-container {
 		display: flex;
@@ -25,76 +36,130 @@
 	}
 
 	.loader-action {
-		font-size: 17px;
-		font-weight: 600;
+		font-size: 18px;
+		font-weight: 700;
 		letter-spacing: 0.2px;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		// Léger dégradé sur le texte du titre.
+		background: linear-gradient(
+			90deg,
+			var(--text-color-inv) 0%,
+			color-mix(in srgb, var(--text-color-inv) 70%, var(--menu-background)) 100%
+		);
+		-webkit-background-clip: text;
+		background-clip: text;
+		-webkit-text-fill-color: transparent;
 	}
 
-	// Corps : statut courant (peut être long → ellipsis sur 2 lignes).
+	// Corps : dot pulsant d'accent + statut (2 lignes max).
 	.loader-content {
 		flex: 1;
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
-		gap: 8px;
+		gap: 10px;
 		min-height: 0;
 	}
 
 	.loader-status {
+		position: relative;
+		padding-left: 16px;
 		color: var(--menu-text-color);
 		font-size: 13px;
 		line-height: 1.35;
-		opacity: 0.85;
+		opacity: 0.9;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
+
+		&::before {
+			content: "";
+			position: absolute;
+			left: 0;
+			top: 6px;
+			width: 8px;
+			height: 8px;
+			border-radius: 999px;
+			background: var(--menu-background);
+			box-shadow: 0 0 0 0 color-mix(in srgb, var(--menu-background) 70%, transparent);
+			animation: el-pulse 1.4s ease-out infinite;
+		}
 	}
 
-	// Pied : nom de l'app à gauche, version (build stamp) à droite.
+	// Pied : nom (gauche) + version en pill (droite).
 	.loader-footer {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 		gap: 8px;
-		padding-top: 8px;
-		border-top: 1px solid color-mix(in srgb, var(--text-color-inv) 12%, transparent);
-		color: var(--menu-text-color);
+		padding-top: 10px;
+		border-top: 1px solid color-mix(in srgb, var(--text-color-inv) 10%, transparent);
 	}
 
 	.loader-app-name {
 		font-size: 11px;
-		font-weight: 600;
-		opacity: 0.7;
+		font-weight: 700;
+		opacity: 0.6;
 		text-transform: uppercase;
-		letter-spacing: 0.5px;
+		letter-spacing: 0.6px;
+		color: var(--text-color-inv);
 	}
 
 	.loader-version {
 		font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 		font-size: 10px;
-		opacity: 0.55;
+		line-height: 1;
+		padding: 3px 7px;
+		border-radius: 999px;
+		color: color-mix(in srgb, var(--text-color-inv) 75%, transparent);
+		background: color-mix(in srgb, var(--text-color-inv) 8%, transparent);
+		border: 1px solid color-mix(in srgb, var(--text-color-inv) 10%, transparent);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		max-width: 60%;
+		max-width: 62%;
+		user-select: text;
 	}
 
-	// Progression par étapes (header) + barre de download (content).
+	// Progression par étapes (header) avec glow d'accent sur les actives.
 	.loader-action-progress {
 		.ant-progress-steps-item {
 			width: 4px !important;
-			height: 16px !important;
+			height: 18px !important;
 			margin-right: 3px;
-			border-radius: 1px;
+			border-radius: 2px;
+			background: color-mix(in srgb, var(--text-color-inv) 14%, transparent);
+			transition: background 0.25s ease, box-shadow 0.25s ease;
 		}
 
 		.ant-progress-steps-item-active {
 			background: var(--menu-background);
+			box-shadow: 0 0 6px color-mix(in srgb, var(--menu-background) 60%, transparent);
 		}
+	}
+
+	// Barre de download (téléchargement d'update).
+	.loader-content .ant-progress-bg {
+		background: linear-gradient(
+			90deg,
+			var(--menu-background) 0%,
+			color-mix(in srgb, var(--menu-background) 55%, white) 100%
+		) !important;
+	}
+}
+
+@keyframes el-pulse {
+	0% {
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--menu-background) 60%, transparent);
+	}
+	70% {
+		box-shadow: 0 0 0 7px transparent;
+	}
+	100% {
+		box-shadow: 0 0 0 0 transparent;
 	}
 }
 

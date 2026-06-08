@@ -1,19 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from "react";
 
-import { Layout, Tooltip, Progress } from 'antd'
+import { Layout, Tooltip, Progress } from "antd";
 
-import './App.less'
+import "./App.less";
 import {
   EAction,
   EActionKeys,
   EStatus,
   EStatusKeys,
   IStore,
-} from './interface'
-import { getTotal } from './helpers/get_total'
-import { ICustomWindow } from '../helpers/interface'
+} from "./interface";
+import { getTotal } from "./helpers/get_total";
+import { ICustomWindow } from "../helpers/interface";
 
-declare let window: ICustomWindow
+declare let window: ICustomWindow;
 
 export interface IAppProps {}
 export interface IAppState {}
@@ -21,122 +21,130 @@ const App: React.FunctionComponent<IAppProps> = () => {
   const [appState, setAppState] = useState<IStore>({
     action: EAction.initialize,
     current: 0,
-    total: getTotal('initialize'),
+    total: getTotal("initialize"),
     status: EStatus.start_app,
-    name: '',
-    version: '',
+    name: "",
+    // Version injectée synchroniquement par le preload (pas de race IPC).
+    version: window.electronAPI?.version || "",
     download: false,
     progress: 0,
-  })
+  });
 
-  const appRef = useRef<IStore>(appState)
+  const appRef = useRef<IStore>(appState);
 
   useEffect(() => {
     window.electronAPI.on(
-      'current_status',
+      "current_status",
       (status: EStatusKeys, data: any) => {
         const newState: IStore = {
           ...appRef.current,
+        };
+
+        if (status === "get_wpt_pid" && data) {
+          newState.status = newState.status + " " + data;
         }
 
-				if (status === 'get_wpt_pid' && data) {
-          newState.status = newState.status + ' ' + data
+        if (status === "check_update_skip" && data) {
+          newState.status = data.message;
         }
 
-        if (status === 'check_update_skip' && data) {
-          newState.status = data.message
+        let current = newState.current;
+
+        if (status === "wpt_connect_done") {
+          if (data === true) {
+            current = newState.current + 1;
+            newState.status = EStatus[status];
+          }
+        } else if (
+          status.indexOf("_skip") > 0 ||
+          status.indexOf("_done") > 0 ||
+          status === "finish"
+        ) {
+          current = newState.current + 1;
+          newState.status = EStatus[status];
+        } else {
+          newState.status = EStatus[status];
         }
-
-				let current = newState.current
-
-				if (status === 'wpt_connect_done') {
-					if (data === true) {
-						current = newState.current + 1
-						newState.status = EStatus[status]
-					}
-				} else if (status.indexOf('_skip') > 0 || status.indexOf('_done') > 0 || status === 'finish') {
-					current = newState.current + 1
-					newState.status = EStatus[status]
-				} else {
-					newState.status = EStatus[status]
-				}
-        newState.current = current
-        if (status === 'download_update') {
-          newState.download = true
-          newState.progress = 0
+        newState.current = current;
+        if (status === "download_update") {
+          newState.download = true;
+          newState.progress = 0;
         }
 
         if (
-          (process.env.NODE_ENV === 'development' ) ||
-          window.electronAPI.env?.DEV === 'LOADER'
+          process.env.NODE_ENV === "development" ||
+          window.electronAPI.env?.DEV === "LOADER"
         ) {
-
-					if (!EStatus[status]) {
-						// eslint-disable-next-line no-console
-						console.warn(
-							status,
-							newState.status,
-							EStatus[status],
-							newState.current,
-							newState.total
-						)
-					} else {
-						// eslint-disable-next-line no-console
-						console.info(
-							status,
-							newState.status,
-							EStatus[status],
-							newState.current,
-							newState.total
-						)
-					}
+          if (!EStatus[status]) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              status,
+              newState.status,
+              EStatus[status],
+              newState.current,
+              newState.total
+            );
+          } else {
+            // eslint-disable-next-line no-console
+            console.info(
+              status,
+              newState.status,
+              EStatus[status],
+              newState.current,
+              newState.total
+            );
+          }
         }
 
-				appRef.current = newState
-				if (newState.status) {
-					setAppState(newState)
-				}
+        appRef.current = newState;
+        if (newState.status) {
+          setAppState(newState);
+        }
       }
-    )
+    );
 
-    window.electronAPI.on('download_progress', (action: any) => {
+    window.electronAPI.on("download_progress", (action: any) => {
       appRef.current = {
         ...appRef.current,
         progress: action,
-      }
-    })
+      };
+    });
 
-    window.electronAPI.on('app_infos', (action: any) => {
-			appRef.current = {
+    window.electronAPI.on("app_infos", (action: any) => {
+      appRef.current = {
         ...appRef.current,
         ...action,
-      }
-    })
+      };
+    });
 
-    window.electronAPI.on('loader.action', (action: EActionKeys) => {
+    window.electronAPI.on("loader.action", (action: EActionKeys) => {
       appRef.current = {
         ...appRef.current,
         current: 0,
         total: getTotal(action),
         action: EAction[action],
-      }
-    })
+      };
+    });
 
-    window.electronAPI.on('error', (data: any) => {
-			appRef.current = {
+    window.electronAPI.on("error", (data: any) => {
+      appRef.current = {
         ...appRef.current,
         status: data.message,
-      }
-    })
-  }, [])
+      };
+    });
+  }, []);
 
-  const value = Math.round(Number(( appRef.current.current * 100) /  appRef.current.total))
+  const value = Math.round(
+    Number((appRef.current.current * 100) / appRef.current.total)
+  );
   return (
     <Layout id="e-launcher-loader">
       <div className="loader-container">
         <div className="loader-header">
-          <span className="loader-action">{ appRef.current.action}</span>
-          <Tooltip title={`${ appRef.current.current} / ${ appRef.current.total}`}>
+          <span className="loader-action">{appRef.current.action}</span>
+          <Tooltip
+            title={`${appRef.current.current} / ${appRef.current.total}`}
+          >
             <Progress
               className="loader-action-progress"
               size="small"
@@ -147,22 +155,22 @@ const App: React.FunctionComponent<IAppProps> = () => {
           </Tooltip>
         </div>
         <div className="loader-content">
-          <div className="loader-status">{ appRef.current.status}</div>
-          { appRef.current.download && (
+          <div className="loader-status">{appRef.current.status}</div>
+          {appRef.current.download && (
             <Progress
-              percent={ appRef.current.progress}
+              percent={appRef.current.progress}
               status="active"
               showInfo={false}
             />
           )}
         </div>
         <div className="loader-footer">
-          <span className="loader-app-name">{ appRef.current.name}</span>
-          <span className="loader-version">v{ appRef.current.version}</span>
+          <span className="loader-app-name">{appRef.current.name}</span>
+          <span className="loader-version">v{appRef.current.version}</span>
         </div>
       </div>
     </Layout>
-  )
-}
+  );
+};
 
-export default App
+export default App;
