@@ -39,3 +39,5 @@ draft/*.AppImage
 config.ini
 app-update.yml
 test/*
+# build stamp généré par scripts/stamp_build.js
+src/main/build_info.json
