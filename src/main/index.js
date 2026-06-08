@@ -18,6 +18,7 @@ const log = require("./helpers/electron_log");
 const showDialogError = require("./dialog_err");
 const createAppLog = require("./helpers/create_app_log");
 const configureProtocol = require("./helpers/register_file_protocol");
+const hardenWebContents = require("./helpers/harden_web_contents");
 const nodeIpcConnect = require("./helpers/node_ipc");
 const generateLoaderWindow = require("./loader_window");
 const generateContainerWindow = require("./container_window");
@@ -287,6 +288,12 @@ getConfig(store.path.conf, undefined, argv.url)
       })
       .then(() => {
         configureProtocol(store);
+      })
+      .then(() => {
+        // Gardes sécurité sur tous les webContents (fenêtres + webview POS) :
+        // bloque les popups natifs, sanitize les webview, surveille les
+        // navigations hors allowlist. À enregistrer avant createWindows.
+        hardenWebContents(store);
       })
       .then(() => {
         innerGlobalShortcut(store, log);

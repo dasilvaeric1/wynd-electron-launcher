@@ -83,6 +83,7 @@ grep -c "<symbole>" dist/win-unpacked/resources/app.asar
 | `EL_SCREEN_REQUIRE_CONSENT=1` | Affiche le popup de consentement caissier. **Par défaut : auto-accept** (télémaintenance non surveillée). |
 | `EL_SCREEN_SHOW_INDICATOR=1` | Affiche l'indicateur "Support en observation" côté caisse. **Par défaut : masqué** (session discrète). |
 | `EL_USE_WEBRTC=0\|1` | Force/désactive WebRTC sans toucher la DB (sinon suit `session.useWebrtc`). |
+| `EL_STRICT_NAV=1` | Bloque les navigations hors origines autorisées (POS + localhost + file). Par défaut : log-only (cf `helpers/harden_web_contents.js`). |
 
 ## Screen-session (`src/main/screen_session.js`)
 

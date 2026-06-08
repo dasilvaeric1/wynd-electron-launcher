@@ -7,14 +7,10 @@ Backlog des chantiers structurants du launcher (hors features ponctuelles).
 
 ## A. Hygiène & process
 
-### 🔴 A1 — Assainir l'état git
-25 fichiers non commités mêlant le travail screen-session/WebRTC de cette
-session + du WIP antérieur. Pire : la version **commitée** d'`index.js`
-(HEAD) ne câble pas `initScreenSessions` → le module ne s'initialise pas sur
-un checkout propre. Un changement **sécurité** (`container_window.js` :
-`nodeIntegration:false` + `contextIsolation:true`) traîne non commité.
-→ **Action** : revue fichier par fichier, séparer le WIP, committer la
-feature screen-session en bloc cohérent. Bloque tout le reste.
+### ✅ A1 — Assainir l'état git (FAIT — commit c73bd93)
+Le travail non commité était en fait un corps cohérent (contextIsolation +
+screen-session + reformat repo-wide), pas du WIP étranger. Committé en bloc.
+Arbre propre.
 
 ### 🟠 A2 — CI incomplète
 La CI build le portable x64 (ajouté) mais : pas de `lint`, pas de `test` en
@@ -41,18 +37,16 @@ CVE Chromium non corrigées.
 (28+). Gros chantier (API breaking, rebuild natifs, nut.js, electron-builder
 24+) mais structurant.
 
-### 🔴 B2 — Aucun garde de navigation
-Aucun handler `will-navigate`, `setWindowOpenHandler`,
-`web-contents-created`, `will-attach-webview`. Une page POS compromise (ou un
-lien) peut naviguer ailleurs ou ouvrir des fenêtres arbitraires.
-→ **Action** : whitelist d'origines + bloquer `window.open` non prévus +
-verrouiller les attributs du `<webview>` à l'attach.
+### ✅ B2 — Gardes de navigation (FAIT)
+`helpers/harden_web_contents.js` : `setWindowOpenHandler` (deny + openExternal
+des liens http(s)), `will-attach-webview` (force nodeIntegration:false /
+contextIsolation:true + check src), `will-navigate` (log par défaut, bloque
+si `EL_STRICT_NAV=1`). Câblé dans index.js avant createWindows.
 
-### 🟠 B3 — Preload = passthrough IPC générique
-`preload.js` expose `send(channel, …args)` / `on(channel, …)` sur **n'importe
-quel** channel → défait en partie le bénéfice du `contextIsolation` qu'on
-vient d'activer. Une page hostile peut émettre/écouter tous les IPC.
-→ **Action** : remplacer par une API explicite (whitelist de channels).
+### ✅ B3 — Whitelist IPC (FAIT — dans le commit c73bd93)
+Les preloads container + loader exposent désormais des whitelists explicites
+`SEND_CHANNELS` / `RECEIVE_CHANNELS` via contextBridge (`electronAPI`), fini
+le passthrough générique.
 
 ### 🟠 B4 — Pas de CSP sur le contenu rendu
 Le webview/iframe charge le POS sans Content-Security-Policy ni contrôle des
