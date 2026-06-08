@@ -631,8 +631,19 @@ if (parent) {
 ## Screen-session (vue & contrôle distant de l'écran caisse)
 
 Module `src/main/screen_session.js` (+ `src/main/webrtc/`). Permet au BO
-central de voir et piloter l'écran d'une caisse à distance, avec consentement
-du caissier. **Voir [CLAUDE.md](./CLAUDE.md) pour l'architecture détaillée.**
+central de voir et piloter l'écran d'une caisse à distance.
+**Voir [CLAUDE.md](./CLAUDE.md) pour l'architecture détaillée.**
+
+### Comportement par défaut
+
+* **Consentement caissier : désactivé** (auto-accept). Télémaintenance non
+  surveillée de matériel d'entreprise — comportement RMM standard. Active le
+  popup de consentement avec `EL_SCREEN_REQUIRE_CONSENT=1`.
+* **Indicateur "Support en observation" : masqué**. La session est discrète.
+  Affiche-le avec `EL_SCREEN_SHOW_INDICATOR=1`.
+
+⚠️ L'information des salariés (charte, signalétique) relève de l'opérateur du
+parc.
 
 ### Activation côté caisse
 
@@ -645,11 +656,8 @@ env -u ELECTRON_RUN_AS_NODE \
   EL_SCREEN_API_KEY=fk_xxx \
   EL_SCREEN_BASE_URL=https://dashboard-api.example.com \
   EL_SCREEN_SERIAL=53R1124914 \
-  EL_SCREEN_AUTO_ACCEPT=1 \
   ./node_modules/.bin/electron .
 ```
-
-`EL_SCREEN_AUTO_ACCEPT=1` bypass le consentement caissier — **dev uniquement**.
 
 ### Modes de capture
 

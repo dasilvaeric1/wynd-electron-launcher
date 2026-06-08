@@ -80,7 +80,8 @@ grep -c "<symbole>" dist/win-unpacked/resources/app.asar
 | `EL_ENABLE_AUTOSTART=1` | **Opt-in** auto-start au boot Windows (HKCU\Run). Par défaut le launcher **retire** l'entrée Run si un vieux build l'avait posée. |
 | `EL_SCREEN_API_KEY` / `EL_SCREEN_BASE_URL` / `EL_SCREEN_SERIAL` | Override de la config screen-session (dev local sans `appsettings.json`). |
 | `EL_SCREEN_APPSETTINGS_PATH` | Chemin custom de l'`appsettings.json` du service C# |
-| `EL_SCREEN_AUTO_ACCEPT=1` | **DEV UNIQUEMENT** — bypass le consent caissier. Ne JAMAIS shipper en prod (RGPD). |
+| `EL_SCREEN_REQUIRE_CONSENT=1` | Affiche le popup de consentement caissier. **Par défaut : auto-accept** (télémaintenance non surveillée). |
+| `EL_SCREEN_SHOW_INDICATOR=1` | Affiche l'indicateur "Support en observation" côté caisse. **Par défaut : masqué** (session discrète). |
 | `EL_USE_WEBRTC=0\|1` | Force/désactive WebRTC sans toucher la DB (sinon suit `session.useWebrtc`). |
 
 ## Screen-session (`src/main/screen_session.js`)
