@@ -83,6 +83,7 @@ build:win:
       - .cache/electron-builder
   script:
     - yarn
+    - node scripts/stamp_build.js # identifiant de build unique (version+date+sha)
     - yarn electron-builder --win portable --x64
   artifacts:
     expire_in: 1 week

@@ -356,9 +356,12 @@ async function httpRequest(method, url, headers = {}, body) {
 // n'ont pas encore 1.23.0 sont en attente d'update").
 const launcherInfo = (() => {
   try {
-    const pkg = require("../../package.json");
+    // Identifiant de build complet (version+date+sha) — le BO affiche cette
+    // valeur dans le badge présence par caisse, donc on sait exactement quel
+    // build tourne où, sans toucher la caisse.
+    const version = require("./helpers/build_version")();
     return {
-      version: pkg.version,
+      version,
       platform: process.platform,
       arch: process.arch,
       pid: process.pid,
