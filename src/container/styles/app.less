@@ -31,12 +31,15 @@
 #e-launcher-menu {
     flex-grow: 1;
     display: flex;
-    font-size: 20px;
-		letter-spacing: 1px;
-		font-weight: bold;
+    font-size: 16px;
+		letter-spacing: 0.3px;
+		font-weight: 600;
     flex-direction: column;
     border-right: none;
 		position: relative;
+		// Menu transparent posé sur le panneau sombre.
+		background: transparent;
+		color: var(--text-color-inv);
 
     .ant-menu-item {
 			display: flex;
@@ -44,8 +47,9 @@
 			align-items: center;
 			margin: 0px;
 			position: relative;
+			color: color-mix(in srgb, var(--text-color-inv) 88%, transparent);
 			// Transitions douces au survol → ressenti moderne.
-			transition: background-color 0.2s ease, color 0.2s ease, transform 0.12s ease;
+			transition: background-color 0.2s ease, color 0.2s ease;
 
 			// Barre d'accent qui se révèle à gauche au survol/sélection.
 			&::before {
@@ -55,13 +59,15 @@
 				top: 0;
 				bottom: 0;
 				width: 0;
-				background: @antd-menu-background;
+				background: var(--menu-background);
 				transition: width 0.2s ease;
 			}
 
 			.ant-menu-title-content {
 				span.anticon {
 					margin-right: 10px;
+					font-size: 22px;
+					vertical-align: -4px;
 				}
 			}
     }
@@ -71,7 +77,7 @@
     }
 
     .ant-menu-item:not(:last-child) {
-        border-bottom: 1px solid color-mix(in srgb, @antd-submenu-background 60%, transparent);
+        border-bottom: 1px solid color-mix(in srgb, var(--text-color-inv) 8%, transparent);
         flex-grow: 1;
 
     }
@@ -80,8 +86,8 @@
     & .ant-menu-item:active,
     & .ant-menu-submenu-title:active,
     &.ant-menu:not(.ant-menu-horizontal) .ant-menu-item-selected {
-        background-color: color-mix(in srgb, @antd-menu-background 12%, transparent);
-        color: @antd-text-color;
+        background-color: color-mix(in srgb, var(--text-color-inv) 8%, transparent);
+        color: var(--text-color-inv);
 			}
 
     & .ant-menu-item:hover::before,
@@ -103,10 +109,39 @@
 	&:not(.ant-drawer-open) {
 		transform: translateX(-1px);
 	}
+	// Panneau sombre cohérent avec l'écran de chargement : dégradé + halo
+	// d'accent → look moderne et unifié.
 	.ant-drawer-body {
 			padding: 0px;
 			display: flex;
 			flex-direction: column;
+			color: var(--text-color-inv);
+			background:
+				radial-gradient(
+					100% 30% at 0% 0%,
+					color-mix(in srgb, var(--menu-background) 30%, transparent) 0%,
+					transparent 55%
+				),
+				linear-gradient(
+					180deg,
+					color-mix(in srgb, var(--text-color) 94%, white) 0%,
+					var(--text-color) 100%
+				);
+	}
+	// Zone logo : encadrée, séparée du menu par un filet discret.
+	#e-launcher-logo {
+		height: auto;
+		flex: 0 0 auto;
+		padding: 20px 18px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-bottom: 1px solid color-mix(in srgb, var(--text-color-inv) 10%, transparent);
+		& > img, & > svg {
+			max-height: 64px;
+			width: auto;
+			object-fit: contain;
+		}
 	}
 	.menu-title {
 		position: absolute;
@@ -134,10 +169,9 @@
 		line-height: 1;
 		padding: 4px 9px;
 		border-radius: 999px;
-		opacity: 0.65;
-		color: var(--menu-background);
-		background: color-mix(in srgb, var(--menu-background) 10%, transparent);
-		border: 1px solid color-mix(in srgb, var(--menu-background) 18%, transparent);
+		color: color-mix(in srgb, var(--text-color-inv) 75%, transparent);
+		background: color-mix(in srgb, var(--text-color-inv) 8%, transparent);
+		border: 1px solid color-mix(in srgb, var(--text-color-inv) 12%, transparent);
 		user-select: text;
 	}
 }
