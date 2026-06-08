@@ -8,8 +8,6 @@ import axios from 'axios'
 
 import { Button, Theme, TThemeColorTypes } from 'react-antd-cssvars'
 
-import { ipcRenderer, webFrame, WebContents } from 'electron'
-
 import { ICustomWindow } from '../helpers/interface'
 import computeTheme from '../helpers/compute_theme'
 import { generateDates } from './helpers/generate'
@@ -53,7 +51,7 @@ window.store = store
 window.theme = new Theme<TThemeColorTypes>(undefined, computeTheme(store))
 window.theme.set('primary-color', window.theme.get('menu-background'), true)
 
-window.main?.receive('request_wpt.error', (action: string, err: any) => {
+window.electronAPI.on('request_wpt.error', (action: string, err: any) => {
 	notification.open({
     message: err.code,
 		type: 'error',
@@ -63,33 +61,21 @@ window.main?.receive('request_wpt.error', (action: string, err: any) => {
 	store.dispatch(setAskAction(false))
 })
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-ipcRenderer.on('request_wpt.error', (_event, action, err) => {
-	notification.open({
-    message: err.code,
-		type: 'error',
-    description: err.message,
-    duration: 3,
-  })
-
-	store.dispatch(setAskAction(false))
-})
-
-ipcRenderer.on('app_infos', (event, appInfos: IAppInfo) => {
+window.electronAPI.on('app_infos', (appInfos: IAppInfo) => {
   store.dispatch(setAppInfos(appInfos))
 })
 
-ipcRenderer.on('container.request', (event, action) => {
+window.electronAPI.on('container.request', (action: string) => {
 	if (action === 'get.state') {
 		const state = store.getState()
 		// eslint-disable-next-line no-console
 		console.log(action, state)
-		ipcRenderer.send('container.response', action, state)
+		window.electronAPI.send('container.response', action, state)
 	}
 
 })
 
-ipcRenderer.on('request_wpt.done', (event, action, data) => {
+window.electronAPI.on('request_wpt.done', (action: string, data: any) => {
 
 	const state = store.getState()
 
@@ -124,9 +110,9 @@ ipcRenderer.on('request_wpt.done', (event, action, data) => {
 	}
 })
 
-ipcRenderer.on('conf', (event, conf) => {
-	if (conf && conf.log && conf.log.renderer) {
-		window.log.level = conf.log.renderer
+window.electronAPI.on('conf', (conf: any) => {
+	if (conf && conf.log && conf.log.renderer) {
+		window.log.setLevel(conf.log.renderer)
 	}
 
   store.dispatch(setConfigAction(conf))
@@ -140,12 +126,12 @@ ipcRenderer.on('conf', (event, conf) => {
     }
   }
 
-  if (conf.zoom && webFrame) {
+  if (conf.zoom) {
     if (conf.zoom.level) {
-      webFrame.setZoomLevel(conf.zoom.level)
+      window.electronAPI.setZoomLevel?.(conf.zoom.level)
     }
     if (conf.zoom.factor) {
-      webFrame.setZoomFactor(conf.zoom.factor)
+      window.electronAPI.setZoomFactor?.(conf.zoom.factor)
     }
   }
 
@@ -164,32 +150,32 @@ ipcRenderer.on('conf', (event, conf) => {
 
 })
 
-ipcRenderer.on('toggle_menu', (event, toggle) => {
+window.electronAPI.on('toggle_menu', (toggle: boolean) => {
   store.dispatch(setToggleMenu(toggle))
 })
 
-ipcRenderer.on('screens', (event, screens) => {
+window.electronAPI.on('screens', (screens: any) => {
   store.dispatch(setScreensAction(screens))
 })
 
-ipcRenderer.on('ready', (event, ready) => {
+window.electronAPI.on('ready', (ready: boolean) => {
   store.dispatch(iFrameReadyAction(ready))
 })
 
-ipcRenderer.on('wpt_plugin_state.init', (event, state: TWPTPluginState) => {
+window.electronAPI.on('wpt_plugin_state.init', (state: TWPTPluginState) => {
 	store.dispatch(wptPluginsStateAction(state))
 })
 
-ipcRenderer.on('wpt_plugin_state.update', (event, wptprefix: string, status: TPluginStatus) => {
+window.electronAPI.on('wpt_plugin_state.update', (wptprefix: string, status: TPluginStatus) => {
 	store.dispatch(wptPluginsStateUpdateAction(wptprefix, status))
 })
 
-ipcRenderer.on('wpt_connect', (event, connected) => {
+window.electronAPI.on('wpt_connect', (connected: boolean) => {
   store.dispatch(wptConnectAction(connected))
 })
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-ipcRenderer.on('ask_password', (event, action, action2) => {
+window.electronAPI.on('ask_password', (action: string, action2: string) => {
 
   const state: IRootState = store.getState()
   if (state.menu.open) {
@@ -199,7 +185,7 @@ ipcRenderer.on('ask_password', (event, action, action2) => {
     store.dispatch(openPinpadAction(TNextAction.OPEN_DEV_TOOLS, state.conf?.menu.password))
   } else if (action === 'open_dev_tools' && state.conf?.view === 'webview') {
 		let count = 0
-		let webview: WebContents | null = document.getElementById('e-launcher-frame') as unknown as WebContents
+		let webview: any = document.getElementById('e-launcher-frame')
 		if (webview) {
 
 			webview.openDevTools()
@@ -207,7 +193,7 @@ ipcRenderer.on('ask_password', (event, action, action2) => {
 
 			const interval = setInterval(() => {
 				count++
-				webview = document.getElementById('e-launcher-frame') as unknown as WebContents
+				webview = document.getElementById('e-launcher-frame')
 				if (webview) {
 					clearInterval(interval)
 					webview.openDevTools()
@@ -222,7 +208,7 @@ ipcRenderer.on('ask_password', (event, action, action2) => {
   }
 })
 
-ipcRenderer.on('notification', (event, notif) => {
+window.electronAPI.on('notification', (notif: any) => {
 	if (typeof notif === 'string') {
 		notification.open({
 			message: notif,
@@ -267,7 +253,7 @@ ipcRenderer.on('notification', (event, notif) => {
 	}
 })
 
-ipcRenderer.on('menu.action', (event, action) => {
+window.electronAPI.on('menu.action', (action: any) => {
   if (action) {
     const conf = store.getState().conf
     const display = store.getState().display
@@ -284,10 +270,10 @@ ipcRenderer.on('menu.action', (event, action) => {
   }
 })
 
-ipcRenderer.send('ready', 'main')
+window.electronAPI.send('ready', 'main')
 
 const sendChildAction = (event: string, ...data: any) => {
-	ipcRenderer.send('child.action', event, ...data )
+	window.electronAPI.send('child.action', event, ...data )
 }
 
 const reloadAndClearCache = (clearSession: boolean) => {
@@ -295,17 +281,17 @@ const reloadAndClearCache = (clearSession: boolean) => {
 		localStorage.clear()
 		sessionStorage.clear()
 	}
-	ipcRenderer.send('main.action', 'reload', clearSession)
+	window.electronAPI.send('main.action', 'reload', clearSession)
 }
 
 const onCallback = (action: TNextAction, ...data: any) => {
   const state = store.getState()
   switch (action) {
     case TNextAction.EMERGENCY:
-      ipcRenderer.send('main.action', 'emergency')
+      window.electronAPI.send('main.action', 'emergency')
       break
     case TNextAction.CLOSE:
-      ipcRenderer.send('main.action', 'close')
+      window.electronAPI.send('main.action', 'close')
       break
     case TNextAction.RELOAD:
 
@@ -336,14 +322,14 @@ const onCallback = (action: TNextAction, ...data: any) => {
 
       break
 		case TNextAction.NOTIFICATION:
-			ipcRenderer.send('main.action', 'notification', data[0])
+			window.electronAPI.send('main.action', 'notification', data[0])
 			break
     case TNextAction.REQUEST_WPT:
       store.dispatch(setAskAction(true))
       // ipcRenderer.send('main_action', 'plugins')
 			if (data && data.length > 0) {
 				const keyMessage: string = data.shift()
-				ipcRenderer.send('request_wpt', keyMessage, ...data)
+				window.electronAPI.send('request_wpt', keyMessage, ...data)
 			}
       break
     case TNextAction.REPORT:
@@ -368,7 +354,7 @@ const onCallback = (action: TNextAction, ...data: any) => {
         }
 
         store.dispatch(setLoader(true))
-				ipcRenderer.send('request_wpt', 'fastprinter.defaultprinterdata')
+				window.electronAPI.send('request_wpt', 'fastprinter.defaultprinterdata')
         axios
           .get<IEnvInfo>(`http://localhost:${state.conf?.http.port}/env.json`)
           .then((response) => {
@@ -412,14 +398,14 @@ const onCallback = (action: TNextAction, ...data: any) => {
       }
       break
     case TNextAction.OPEN_DEV_TOOLS:
-      ipcRenderer.send('main.action', 'open_dev_tools')
+      window.electronAPI.send('main.action', 'open_dev_tools')
       break
     default:
       break
   }
 }
 
-ipcRenderer.on('ask_reload', (event, cleaCache: boolean) => {
+window.electronAPI.on('ask_reload', (cleaCache: boolean) => {
 	reloadAndClearCache(cleaCache)
 })
 

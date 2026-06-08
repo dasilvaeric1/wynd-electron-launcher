@@ -23,9 +23,10 @@ module.exports = function generateLoaderWindow(store) {
 		paintWhenInitiallyHidden: false,
 		alwaysOnTop: true,
 		webPreferences: {
-		nodeIntegration: true,
-		contextIsolation: false,
-		preload: path.join(__dirname, '..', 'loader', 'assets', 'preload.js'),
+			nodeIntegration: false,
+			contextIsolation: true,
+			sandbox: false,
+			preload: path.join(__dirname, '..', 'loader', 'assets', 'preload.js'),
 		},
 	})
 

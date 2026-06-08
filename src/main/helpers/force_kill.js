@@ -8,6 +8,8 @@ module.exports =  function forceKill(port) {
 			command = `netstat -ltnp | grep -w ':${port}' | awk '{split($7,a, \"/\"); print  a[1]}'`
 		} else if (process.platform === "win32") {
 			command =  `netstat -a -n -o -p tcp | findstr 0.0.0.0:${9963}`
+		} else if (process.platform === "darwin") {
+			command = `lsof -ti :${port}`
 		}
 
 		if (command) {

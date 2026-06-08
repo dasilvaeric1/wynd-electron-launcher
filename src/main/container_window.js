@@ -37,9 +37,9 @@ module.exports = function generatecontainerWindow(store) {
 		// height: store.choosen_screen.height,
 		webPreferences: {
 			webviewTag: true,
-			nodeIntegration: true,
-			contextIsolation: false,
-			enableRemoteModule: true,
+			nodeIntegration: false,
+			contextIsolation: true,
+			sandbox: false,
 			devTools: process.env.EL_DEBUG || store.conf.debug,
 			preload: path.join(__dirname, '..', 'container', 'assets', 'preload.js'),
 		},

@@ -3,8 +3,6 @@ import ReactDOM from 'react-dom/client'
 
 import { Theme } from 'react-antd-cssvars'
 
-import { ipcRenderer } from 'electron'
-
 import App from './App'
 
 import './index.less'
@@ -15,7 +13,7 @@ declare let window: ICustomWindow
 
 window.theme = new Theme(undefined, computeTheme())
 
-ipcRenderer.send('ready', 'loader')
+window.electronAPI.send('ready', 'loader')
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 

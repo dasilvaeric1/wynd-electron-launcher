@@ -4,6 +4,9 @@ const package = require('../package.json')
 const processName = package.pm2.process[1].name
 function startReact() {
 
+	// Collect extra CLI args (e.g. --url https://...) to forward to electron main process
+	const extraArgs = process.argv.slice(2).join(' ')
+
 	return new Promise((resolve, reject) => {
 		pm2.connect(false, function(err) {
 			if (err) {
@@ -20,6 +23,9 @@ function startReact() {
 					watch: false,
 					env: {
 						"NODE_ENV": "development",
+						"NODE_OPTIONS": "--openssl-legacy-provider",
+						"START_MAIN": process.env.START_MAIN || "",
+						"EL_EXTRA_ARGS": extraArgs || "",
 					},
 				}, function(err, apps) {
 					// eslint-disable-next-line no-console

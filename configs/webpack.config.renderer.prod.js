@@ -17,32 +17,42 @@ const baseConfig = require('./webpack.config.base')
 const prodConfig = merge(baseConfig, {
 	devtool: 'source-map',
 	mode: 'production',
-	target: 'electron-renderer',
+	// PATCH dev macOS : 'electron-renderer' suppose require() Node dispo dans
+	// le renderer, mais nos windows ont nodeIntegration:false + contextIsolation:true.
+	// On bundle pour le web et on poly-remplit `events` (seul Node built-in importé
+	// par le code renderer ; tout le reste passe par contextBridge dans les preloads).
+	target: 'web',
 	entry: {
-    container: './src/container/index.tsx',
-    loader: './src/loader/index.tsx'
-  },
+		container: './src/container/index.tsx',
+		loader: './src/loader/index.tsx',
+	},
 	output: {
 		path: path.join(__dirname, '../src'),
 		filename: '[name]/dist/index.js',
 	},
+	resolve: {
+		fallback: {
+			events: require.resolve('events/'),
+		},
+	},
 	optimization: {
 		minimize: true,
-		minimizer:
-			[
-				new TerserPlugin({
-					parallel: true,
-				}),
-				new CssMinimizerPlugin(),
-			],
+		minimizer: [
+			new TerserPlugin({
+				parallel: true,
+			}),
+			new CssMinimizerPlugin(),
+		],
 	},
 	plugins: [
 		new webpack.EnvironmentPlugin({
 			NODE_ENV: 'production',
 			DEBUG_PROD: false,
+			DEV: '',
+			EL_DEBUG: '',
 		}),
 		new MiniCssExtractPlugin({
-			filename: "[name]/dist/index.css",
+			filename: '[name]/dist/index.css',
 		}),
 		new BundleAnalyzerPlugin({
 			analyzerMode:
@@ -50,7 +60,7 @@ const prodConfig = merge(baseConfig, {
 			openAnalyzer: process.env.OPEN_ANALYZER === 'true',
 		}),
 	],
-});
+})
 
 prodConfig.module.rules[0].use.unshift({
 	loader: MiniCssExtractPlugin.loader,

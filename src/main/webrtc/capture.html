@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Wynd capture (webrtc)</title>
+    <style>
+      body {
+        margin: 0;
+        background: #111;
+        color: #fff;
+        font-family: system-ui, sans-serif;
+        font-size: 11px;
+        padding: 6px;
+      }
+      #status {
+        white-space: pre-wrap;
+      }
+      video {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="status">webrtc-capture: bootstrapping…</div>
+    <video id="self" autoplay muted playsinline></video>
+    <script src="./capture.js"></script>
+  </body>
+</html>

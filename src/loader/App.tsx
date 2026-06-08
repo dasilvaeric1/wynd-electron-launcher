@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
 
-import { ipcRenderer } from 'electron'
 import { Layout, Tooltip, Progress } from 'antd'
 
 import './App.less'
@@ -12,6 +11,9 @@ import {
   IStore,
 } from './interface'
 import { getTotal } from './helpers/get_total'
+import { ICustomWindow } from '../helpers/interface'
+
+declare let window: ICustomWindow
 
 export interface IAppProps {}
 export interface IAppState {}
@@ -30,9 +32,9 @@ const App: React.FunctionComponent<IAppProps> = () => {
   const appRef = useRef<IStore>(appState)
 
   useEffect(() => {
-    ipcRenderer.on(
+    window.electronAPI.on(
       'current_status',
-      (event, status: EStatusKeys, data: any) => {
+      (status: EStatusKeys, data: any) => {
         const newState: IStore = {
           ...appRef.current,
         }
@@ -66,7 +68,7 @@ const App: React.FunctionComponent<IAppProps> = () => {
 
         if (
           (process.env.NODE_ENV === 'development' ) ||
-          process.env.DEV === 'LOADER'
+          window.electronAPI.env?.DEV === 'LOADER'
         ) {
 
 					if (!EStatus[status]) {
@@ -97,21 +99,21 @@ const App: React.FunctionComponent<IAppProps> = () => {
       }
     )
 
-    ipcRenderer.on('download_progress', (event, action) => {
+    window.electronAPI.on('download_progress', (action: any) => {
       appRef.current = {
         ...appRef.current,
         progress: action,
       }
     })
 
-    ipcRenderer.on('app_infos', (event, action) => {
+    window.electronAPI.on('app_infos', (action: any) => {
 			appRef.current = {
         ...appRef.current,
         ...action,
       }
     })
 
-    ipcRenderer.on('loader.action', (event, action: EActionKeys) => {
+    window.electronAPI.on('loader.action', (action: EActionKeys) => {
       appRef.current = {
         ...appRef.current,
         current: 0,
@@ -120,7 +122,7 @@ const App: React.FunctionComponent<IAppProps> = () => {
       }
     })
 
-    ipcRenderer.on('error', (event, data) => {
+    window.electronAPI.on('error', (data: any) => {
 			appRef.current = {
         ...appRef.current,
         status: data.message,

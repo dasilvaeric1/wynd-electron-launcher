@@ -32,6 +32,9 @@ dll
 .npmrc
 token
 src/local/*
+# La page HTML du consent screen-sessions est versionnée — elle est
+# packagée dans le zip electron-builder via "files: [src/local/]"
+!src/local/screen_consent.html
 draft/*.AppImage
 config.ini
 app-update.yml

@@ -58,6 +58,8 @@ const devConfig = merge(baseConfig, {
     }),
     new webpack.EnvironmentPlugin({
       NODE_ENV: 'development',
+      DEV: '',
+      EL_DEBUG: '',
     }),
     new ReactRefreshWebpackPlugin({
       exclude: [
@@ -93,8 +95,10 @@ const devConfig = merge(baseConfig, {
 		before (app, server) {
 
 			if (process.env.START_MAIN) {
+				// Forward CLI args (e.g. --url) from EL_EXTRA_ARGS env to electron main process
+				const extraArgs = process.env.EL_EXTRA_ARGS || undefined
 				// eslint-disable-next-line no-console
-				startMain().catch(console.error)
+				startMain(extraArgs).catch(console.error)
 			}
 		}
   },

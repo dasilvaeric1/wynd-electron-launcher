@@ -1,7 +1,7 @@
 {
   "name": "wynd-electron-launcher",
   "productName": "electron-launcher",
-  "version": "1.22.0",
+  "version": "1.23.0",
   "main": "src/main/index.js",
   "scripts": {
     "prepare": "npx cross-env NODE_ENV=development webpack --config ./configs/webpack.config.renderer.dll.js --progress",
@@ -25,6 +25,7 @@
     "build": "electron-builder",
     "build:win": "electron-builder --win",
     "build:linux": "rm -rf dist/__appImage-x64 && mkdir -p dist/__appImage-x64 && electron-builder --linux",
+    "build:mac": "electron-builder --mac",
     "lint": "npx eslint",
     "test": "npx jest __tests__"
   },
@@ -44,6 +45,15 @@
       ],
       "artifactName": "${productName}-${version}.${ext}",
       "category": "Office"
+    },
+    "mac": {
+      "icon": "assets/icons/mac/icon.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "category": "public.app-category.business"
     },
     "win": {
       "icon": "assets/icons/win/icon.ico",
@@ -66,7 +76,9 @@
       "verifyUpdateCodeSignature": false
     },
     "portable": {
-      "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
+      "artifactName": "${productName}-${version}-${arch}-portable.${ext}",
+      "unpackDirName": "electron-launcher-portable",
+      "requestExecutionLevel": "user"
     },
     "nsis": {
       "perMachine": true,
@@ -200,6 +212,8 @@
     "styled-components": "5.3.5",
     "winston": "3.7.2",
     "winston-daily-rotate-file": "4.7.1",
+    "ws": "^8.18.0",
+    "@nut-tree-fork/nut-js": "^4.2.0",
     "yargs": "17.0.0-candidate.13"
   }
 }

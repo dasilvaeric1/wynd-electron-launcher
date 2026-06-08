@@ -3,7 +3,10 @@ const pm2 = require('pm2');
 const package = require('../package.json')
 const processName = package.pm2.process[0].name
 
-function startMain() {
+function startMain(extraArgs) {
+
+	const baseCmd = "npx electron . --config ../config.ini"
+	const cmd = extraArgs ? `${baseCmd} ${extraArgs}` : baseCmd
 
 	return new Promise((resolve, reject) => {
 		pm2.connect(true, function(err) {
@@ -15,10 +18,11 @@ function startMain() {
 				errDelete && console.error(`${processName}`, errDelete.message)
 				pm2.start({
 					name: processName,
-					script: "npx electron . --config ../config.ini",
+					script: cmd,
 					watch: ["src/main"],
 					env: {
 						"NODE_ENV": "development",
+						"NODE_OPTIONS": "",
 					},
 				}, function(err, apps) {
 					if (err) return reject(err)
