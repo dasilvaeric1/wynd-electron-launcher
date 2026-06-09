@@ -41,3 +41,6 @@ app-update.yml
 test/*
 # build stamp généré par scripts/stamp_build.js
 src/main/build_info.json
+# fichiers buildés injectés dans le scaffold (ne pas committer le binaire)
+deploy/scaffold/Electron-Launcher/portable/*.exe
+deploy/out/
