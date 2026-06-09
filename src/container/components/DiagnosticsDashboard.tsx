@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import {
   PrinterOutlined,
@@ -14,7 +14,10 @@ import {
 import { IRootState, IDiagnostics, IWPT, TWPTPluginState } from "../interface";
 
 // Events WPT requêtés au reload — réponses stockées dans le slice diagnostics.
+// 'plugins' (instantané) peuple wpt.plugins → status fiable par plugin activé,
+// indépendamment du scan matériel (lent/faillible) des requêtes device.
 export const DIAGNOSTIC_EVENTS = [
+  "plugins",
   "fastprinter.defaultprinterdata",
   "fastprinter.printers",
   "universalterminal.plugin",
@@ -81,22 +84,42 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
   );
   const wpt = useSelector<IRootState, IWPT>((s) => s.wpt);
 
-  // Reload auto à l'ouverture.
+  // Horloge live (tick chaque seconde).
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const i = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(i);
+  }, []);
+
+  // Reload à l'ouverture + auto-refresh périodique (données fraîches).
   useEffect(() => {
     onReload();
+    const i = window.setInterval(() => onReload(), 30000);
+    return () => window.clearInterval(i);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cards = useMemo<ICard[]>(() => {
     const byEvent = diagnostics.byEvent || {};
+    const plugins = wpt.plugins || [];
+    // Cherche un plugin WPT par clé (insensible casse/séparateurs) :
+    // 'fastprinter' → "FastPrinter", 'universalterminal' → "UniversalTerminal".
+    const findPlugin = (key: string) =>
+      plugins.find(
+        (p) => (p?.name || "").toLowerCase().replace(/[^a-z]/g, "") === key
+      );
     // Ensemble des clés : celles suivies en live (pluginState) + les
     // priorités (toujours montrées si WPT connecté).
     const keys = new Set<string>(Object.keys(pluginState || {}));
     ["fastprinter", "universalterminal", "central"].forEach((k) => keys.add(k));
 
+    // Status : live pluginState en priorité, sinon plugin chargé/activé
+    // (wpt.plugins) → ne dépend PAS de la requête matériel (lente/faillible).
     const statusOf = (key: string): TStatus => {
       const s = pluginState?.[key]?.status;
       if (s === "online" || s === "offline" || s === "initializing") return s;
+      const pl = findPlugin(key);
+      if (pl) return pl.enabled ? "online" : "offline";
       return "unknown";
     };
 
@@ -147,7 +170,7 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
 
       return { key, label: meta.label, icon: meta.icon, status, lines };
     });
-  }, [diagnostics, pluginState]);
+  }, [diagnostics, pluginState, wpt.plugins]);
 
   return (
     // Clic sur le fond (hors header/cards) → ferme le panneau (retour caisse).
@@ -165,6 +188,7 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
           </span>
         </div>
         <div className="diag-actions">
+          <span className="diag-clock">{fmtTime(now)}</span>
           <span className="diag-update">
             MAJ : {fmtTime(diagnostics.lastUpdate)}
           </span>
