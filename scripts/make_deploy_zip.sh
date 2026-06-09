@@ -56,32 +56,50 @@ if [[ ! -f "$BUILT_EXE" ]]; then
   exit 1
 fi
 
-# 2. Assemblage du stage à partir du scaffold versionné
-echo "[deploy] assemblage de l'arborescence…"
-rm -rf "$STAGE"
-mkdir -p "$STAGE"
-cp -R "$SCAFFOLD/." "$STAGE/"
-mkdir -p "$STAGE/portable"
-# .gitkeep ne sert qu'à versionner le dossier portable/ vide — hors archive.
-rm -f "$STAGE/portable/.gitkeep"
-cp "$BUILT_EXE" "$STAGE/portable/${PORTABLE_NAME}"
-
-# 3. Zip (root = Electron-Launcher/)
-echo "[deploy] création du zip…"
+# 2/3. Production de l'artefact selon le mode
+#
+#   MODE=bare    (défaut) → l'artefact .zip EST le PE brut renommé.
+#                 C'est ce qu'attend `control_center.ps1 -update electron` :
+#                 la fonction copie le fichier téléchargé DIRECTEMENT comme
+#                 electron-launcher.exe, SANS décompresser. Un vrai zip
+#                 produirait « application 16 bits / incompatible 64 bits ».
+#   MODE=archive          → vraie archive avec arborescence Electron-Launcher/
+#                 (cfg/launch/portable). Format du provisioning autodeploy,
+#                 PAS de `update electron`.
+MODE="${MODE:-bare}"
 mkdir -p "$OUT_DIR"
 rm -f "$ZIP_PATH"
-( cd "deploy/out/stage" && zip -r -q "$ROOT/$ZIP_PATH" "Electron-Launcher" )
+
+if [[ "$MODE" == "bare" ]]; then
+  echo "[deploy] mode=bare → PE brut renommé (compatible 'update electron')"
+  cp "$BUILT_EXE" "$ZIP_PATH"
+elif [[ "$MODE" == "archive" ]]; then
+  echo "[deploy] mode=archive → arborescence Electron-Launcher/ (provisioning autodeploy)"
+  rm -rf "$STAGE"
+  mkdir -p "$STAGE/portable"
+  cp -R "$SCAFFOLD/." "$STAGE/"
+  rm -f "$STAGE/portable/.gitkeep"
+  cp "$BUILT_EXE" "$STAGE/portable/${PORTABLE_NAME}"
+  ( cd "deploy/out/stage" && zip -r -q "$ROOT/$ZIP_PATH" "Electron-Launcher" )
+else
+  echo "[deploy] ERREUR : MODE inconnu '$MODE' (attendu: bare|archive)" >&2
+  exit 1
+fi
 
 # 4. Manifest (intégrité)
 SHA="$(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')"
 SIZE="$(stat -f%z "$ZIP_PATH")"
-echo "[deploy] OK"
+MAGIC="$(xxd -l 2 -p "$ZIP_PATH")"   # 4d5a=MZ (PE)  504b=PK (zip)
+echo "[deploy] OK (mode=$MODE)"
 echo "         fichier : $ZIP_PATH"
 echo "         taille  : $SIZE octets"
 echo "         sha256  : $SHA"
+echo "         magic   : $MAGIC $([[ "$MAGIC" == 4d5a ]] && echo '(MZ = PE Windows ✓ pour update electron)' || echo '(PK = archive zip)')"
 echo
-echo "         contenu :"
-unzip -l "$ZIP_PATH" | sed 's/^/         /'
-echo
+if [[ "$MODE" == "archive" ]]; then
+  echo "         contenu :"
+  unzip -l "$ZIP_PATH" | sed 's/^/         /'
+  echo
+fi
 echo "         → upload Nexus : product/electron_zip/Electron-Launcher_${VERSION}.zip"
 echo "         → BO .env       : ELECTRONLAUNCHER_VERSION=${VERSION}"
