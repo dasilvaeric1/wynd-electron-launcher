@@ -39,43 +39,71 @@ interface ICard {
   label: string;
   icon: React.ReactNode;
   status: TStatus;
+  category: string;
   lines: string[];
 }
 
 const STATUS_META: Record<TStatus, { label: string; cls: string }> = {
   online: { label: "Connecté", cls: "online" },
   offline: { label: "Déconnecté", cls: "offline" },
-  initializing: { label: "Initialisation…", cls: "initializing" },
+  initializing: { label: "Initialisation", cls: "initializing" },
   unknown: { label: "Inconnu", cls: "unknown" },
 };
 
-// Libellé + icône par clé de plugin connue (clé = celle de display_plugin_state).
-const PLUGIN_META: Record<string, { label: string; icon: React.ReactNode }> = {
-  fastprinter: { label: "Imprimante", icon: <PrinterOutlined /> },
-  universalterminal: { label: "TPE / Paiement", icon: <CreditCardOutlined /> },
-  central: { label: "Central", icon: <CloudServerOutlined /> },
-  cashdrawer: { label: "Tiroir-caisse", icon: <InboxOutlined /> },
-  rfidupos: { label: "Lecteur RFID", icon: <ScanOutlined /> },
-  balance: { label: "Balance", icon: <WalletOutlined /> },
+// Libellé + icône + catégorie par clé de plugin connue.
+const PLUGIN_META: Record<
+  string,
+  { label: string; icon: React.ReactNode; category: string }
+> = {
+  fastprinter: {
+    label: "Imprimante",
+    icon: <PrinterOutlined />,
+    category: "Encaissement",
+  },
+  cashdrawer: {
+    label: "Tiroir-caisse",
+    icon: <InboxOutlined />,
+    category: "Encaissement",
+  },
+  universalterminal: {
+    label: "TPE / Paiement",
+    icon: <CreditCardOutlined />,
+    category: "Paiement",
+  },
+  central: {
+    label: "Central",
+    icon: <CloudServerOutlined />,
+    category: "Système",
+  },
+  rfidupos: {
+    label: "Lecteur RFID",
+    icon: <ScanOutlined />,
+    category: "Système",
+  },
+  balance: { label: "Balance", icon: <WalletOutlined />, category: "Système" },
 };
 
+const CATEGORY_ORDER = ["Encaissement", "Paiement", "Système", "Autres"];
+
 const metaFor = (key: string) =>
-  PLUGIN_META[key] || { label: key, icon: <ApiOutlined /> };
+  PLUGIN_META[key] || {
+    label: key,
+    icon: <ApiOutlined />,
+    category: "Autres",
+  };
 
 const fmtTime = (ts: number | null) =>
   ts ? new Date(ts).toLocaleTimeString() : "—";
 
 /**
  * Dashboard "Périphériques" affiché dans la zone principale quand le panneau
- * latéral est ouvert. Cards par plugin WPT avec statut (connecté / déconnecté
- * / init) + détails device (imprimante : papier/capot/tiroir ; TPE : plugin de
- * paiement + initialisé ; Central : nb applications). Données via le slice
- * diagnostics (réponses request_wpt) + pluginState live.
+ * latéral est ouvert. Cards par plugin WPT regroupées par catégorie, avec
+ * pastille d'icône, pill de statut et détails device. Données via wpt.plugins
+ * (fiable) + slice diagnostics (réponses request_wpt) + pluginState live.
  */
-const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> = ({
-  onReload,
-  onClose,
-}) => {
+const DiagnosticsDashboard: React.FunctionComponent<
+  IDiagnosticsDashboardProps
+> = ({ onReload, onClose }) => {
   const diagnostics = useSelector<IRootState, IDiagnostics>(
     (s) => s.diagnostics
   );
@@ -99,22 +127,25 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Sous-titre : poste · serial (depuis wpt.infos).
+  const subtitle = useMemo(() => {
+    const i = wpt.infos || {};
+    const host = i.hostname || i.host || null;
+    const serial = i.hardwareserial || i.serial || null;
+    return [host, serial].filter(Boolean).join("  ·  ");
+  }, [wpt.infos]);
+
   const cards = useMemo<ICard[]>(() => {
     const byEvent = diagnostics.byEvent || {};
     const plugins = wpt.plugins || [];
-    // Cherche un plugin WPT par clé (insensible casse/séparateurs) :
-    // 'fastprinter' → "FastPrinter", 'universalterminal' → "UniversalTerminal".
     const findPlugin = (key: string) =>
       plugins.find(
         (p) => (p?.name || "").toLowerCase().replace(/[^a-z]/g, "") === key
       );
-    // Ensemble des clés : celles suivies en live (pluginState) + les
-    // priorités (toujours montrées si WPT connecté).
+
     const keys = new Set<string>(Object.keys(pluginState || {}));
     ["fastprinter", "universalterminal", "central"].forEach((k) => keys.add(k));
 
-    // Status : live pluginState en priorité, sinon plugin chargé/activé
-    // (wpt.plugins) → ne dépend PAS de la requête matériel (lente/faillible).
     const statusOf = (key: string): TStatus => {
       const s = pluginState?.[key]?.status;
       if (s === "online" || s === "offline" || s === "initializing") return s;
@@ -127,16 +158,14 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
       const meta = metaFor(key);
       let status = statusOf(key);
       const lines: string[] = [];
+      const pl = findPlugin(key);
+      if (pl?.version) lines.push(`v${pl.version}`);
 
       if (key === "fastprinter") {
-        // defaultprinterdata = CONFIG (name, type, maxlinesize), pas le status
-        // live. printers = liste configurée. Si l'un répond → imprimante
-        // présente/fonctionnelle → 'online'. Les champs live (online/paper/
-        // cover) ne sont affichés que si le driver les fournit réellement.
         const p = byEvent["fastprinter.defaultprinterdata"];
         const list = byEvent["fastprinter.printers"];
-        const hasData = !!p || Array.isArray(list);
-        if (hasData && status === "unknown") status = "online";
+        if ((!!p || Array.isArray(list)) && status === "unknown")
+          status = "online";
         if (p) {
           if (p.name || p.printerName)
             lines.push(`Défaut : ${p.name || p.printerName}`);
@@ -168,9 +197,59 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
         if (Array.isArray(apps)) lines.push(`${apps.length} application(s)`);
       }
 
-      return { key, label: meta.label, icon: meta.icon, status, lines };
+      return {
+        key,
+        label: meta.label,
+        icon: meta.icon,
+        status,
+        category: meta.category,
+        lines,
+      };
     });
   }, [diagnostics, pluginState, wpt.plugins]);
+
+  // Regroupement par catégorie (ordre fixe, catégories vides ignorées).
+  const groups = useMemo(() => {
+    const m = new Map<string, ICard[]>();
+    for (const c of cards) {
+      const arr = m.get(c.category);
+      if (arr) arr.push(c);
+      else m.set(c.category, [c]);
+    }
+    return CATEGORY_ORDER.filter((cat) => m.has(cat)).map((cat) => ({
+      cat,
+      items: (m.get(cat) as ICard[]).sort((a, b) =>
+        a.label.localeCompare(b.label)
+      ),
+    }));
+  }, [cards]);
+
+  // 1er fetch en cours : WPT connecté mais aucune donnée encore reçue.
+  const loading =
+    wpt.connect &&
+    diagnostics.lastUpdate === null &&
+    (wpt.plugins?.length ?? 0) === 0;
+
+  const renderCard = (c: ICard) => {
+    const sm = STATUS_META[c.status];
+    return (
+      <div key={c.key} className={`diag-card ${sm.cls}`}>
+        <div className={`diag-card-icon ${sm.cls}`}>{c.icon}</div>
+        <div className="diag-card-name">{c.label}</div>
+        <span className={`diag-pill ${sm.cls}`}>
+          <i className="dot" />
+          {sm.label}
+        </span>
+        {c.lines.length > 0 && (
+          <ul className="diag-card-lines">
+            {c.lines.map((l, i) => (
+              <li key={`${c.key}-${i}`}>{l}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
 
   return (
     // Clic sur le fond (hors header/cards) → ferme le panneau (retour caisse).
@@ -180,17 +259,20 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
         onClick={(e) => e.stopPropagation()}
         role="presentation"
       >
-        <div className="diag-title">
-          <span>Périphériques</span>
-          <span className={`diag-conn ${wpt.connect ? "online" : "offline"}`}>
-            <i className="dot" />
-            {wpt.connect ? "WPT connecté" : "WPT déconnecté"}
-          </span>
+        <div className="diag-title-block">
+          <div className="diag-title">
+            <span>Périphériques</span>
+            <span className={`diag-conn ${wpt.connect ? "online" : "offline"}`}>
+              <i className="dot" />
+              {wpt.connect ? "WPT connecté" : "WPT déconnecté"}
+            </span>
+          </div>
+          {subtitle && <div className="diag-subtitle">{subtitle}</div>}
         </div>
         <div className="diag-actions">
           <span className="diag-clock">{fmtTime(now)}</span>
           <span className="diag-update">
-            MAJ : {fmtTime(diagnostics.lastUpdate)}
+            MAJ {fmtTime(diagnostics.lastUpdate)}
           </span>
           <button type="button" className="diag-reload" onClick={onReload}>
             <ReloadOutlined /> Actualiser
@@ -198,38 +280,34 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
         </div>
       </div>
 
-      {cards.length === 0 ? (
-        <div className="diag-empty">
-          {wpt.connect ? "Aucun plugin détecté." : "WyndPosTools non connecté."}
-        </div>
-      ) : (
-        <div
-          className="diag-grid"
-          onClick={(e) => e.stopPropagation()}
-          role="presentation"
-        >
-          {cards.map((c) => {
-            const sm = STATUS_META[c.status];
-            return (
-              <div key={c.key} className={`diag-card ${sm.cls}`}>
-                <div className="diag-card-icon">{c.icon}</div>
-                <div className="diag-card-name">{c.label}</div>
-                <div className={`diag-card-status ${sm.cls}`}>
-                  <i className="dot" />
-                  {sm.label}
-                </div>
-                {c.lines.length > 0 && (
-                  <ul className="diag-card-lines">
-                    {c.lines.map((l, i) => (
-                      <li key={i}>{l}</li>
-                    ))}
-                  </ul>
-                )}
+      <div
+        className="diag-body"
+        onClick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        {loading ? (
+          <div className="diag-grid">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="diag-card skeleton">
+                <div className="diag-card-icon" />
+                <div className="sk sk-name" />
+                <div className="sk sk-pill" />
               </div>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        ) : cards.length === 0 ? (
+          <div className="diag-empty">
+            {wpt.connect ? "Aucun plugin détecté." : "WyndPosTools non connecté."}
+          </div>
+        ) : (
+          groups.map((g) => (
+            <section key={g.cat} className="diag-section">
+              <h3 className="diag-section-title">{g.cat}</h3>
+              <div className="diag-grid">{g.items.map(renderCard)}</div>
+            </section>
+          ))
+        )}
+      </div>
     </div>
   );
 };
