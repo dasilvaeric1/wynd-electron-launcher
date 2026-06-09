@@ -62,6 +62,8 @@ rm -rf "$STAGE"
 mkdir -p "$STAGE"
 cp -R "$SCAFFOLD/." "$STAGE/"
 mkdir -p "$STAGE/portable"
+# .gitkeep ne sert qu'à versionner le dossier portable/ vide — hors archive.
+rm -f "$STAGE/portable/.gitkeep"
 cp "$BUILT_EXE" "$STAGE/portable/${PORTABLE_NAME}"
 
 # 3. Zip (root = Electron-Launcher/)
