@@ -255,7 +255,22 @@ module.exports = function generateIpc(store, initCallback) {
         }
       }
 
-      requestWPT(store.wpt.socket, { emit: action, datas: datas })
+      // Les requêtes "device" (imprimante surtout) scannent le matériel et
+      // peuvent dépasser 3s → on leur laisse un délai plus long. Et on évite
+      // de popper une Notification système quand c'est une requête de
+      // diagnostic en arrière-plan (le dashboard gère l'absence de réponse).
+      const DIAGNOSTIC_EVENTS = [
+        "fastprinter.defaultprinterdata",
+        "fastprinter.printers",
+        "universalterminal.plugin",
+        "universalterminal.isinitialized",
+        "central.applications",
+      ];
+      const isDeviceQuery = action.indexOf("fastprinter") === 0;
+      const isDiagnostic = DIAGNOSTIC_EVENTS.includes(action);
+      const delay = isDeviceQuery ? 12 : undefined;
+
+      requestWPT(store.wpt.socket, { emit: action, datas: datas }, delay)
         .then((data) => {
           store.windows.container.current.webContents.send(
             "request_wpt.done",
@@ -264,11 +279,13 @@ module.exports = function generateIpc(store, initCallback) {
           );
         })
         .catch((err) => {
-          const notification = {
-            title: err.api_code || err.code || "An error as occured",
-            body: err.message,
-          };
-          new Notification(notification).show();
+          if (!isDiagnostic) {
+            const notification = {
+              title: err.api_code || err.code || "An error as occured",
+              body: err.message,
+            };
+            new Notification(notification).show();
+          }
 
           if (store.windows.container.current) {
             store.windows.container.current.webContents.send(

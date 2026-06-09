@@ -87,6 +87,16 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
     }
   }, [wpt, readyToDiplayApp]);
 
+  // Quand on bascule sur une vue plein écran (WPT config, Report), on ferme le
+  // panneau latéral : sinon le drawer (mask off) + le dashboard recouvraient
+  // l'iframe WPT et la rendaient inutilisable.
+  useEffect(() => {
+    if (display.switch !== "CONTAINER" && menu.open) {
+      dispatch(setToggleMenu(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [display.switch]);
+
   useEffect(() => {
     if (urlApp) {
       const iFrame = document.getElementById(
@@ -316,7 +326,13 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
         conf.menu.enable &&
         conf.wpt &&
         conf.wpt.enable &&
-        menu.open && <DiagnosticsDashboard onReload={onDiagReload} />}
+        menu.open &&
+        display.switch === "CONTAINER" && (
+          <DiagnosticsDashboard
+            onReload={onDiagReload}
+            onClose={() => dispatch(setToggleMenu(false))}
+          />
+        )}
       {readyToDiplayApp && urlApp && conf?.view === "webview" && (
         <webview
           title="wyndpos"
