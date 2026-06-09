@@ -106,6 +106,38 @@ async function startCapture() {
   }
 }
 
+// Qualité d'encodage courante — pilotée à distance depuis le BO via les
+// messages `set-quality`. Défaut "Normal" (au lieu du flux non plafonné qui
+// pouvait monter à plusieurs Mbps en 1080p25). Appliqué à chaque sender vidéo
+// via setParameters → ajustable À CHAUD, sans renégociation.
+const currentQuality = {
+  maxFramerate: 12,
+  maxBitrate: 800_000, // bps
+  scaleResolutionDownBy: 1,
+};
+
+async function applyQualityToPeer(pc) {
+  try {
+    for (const sender of pc.getSenders()) {
+      if (!sender.track || sender.track.kind !== "video") continue;
+      const params = sender.getParameters();
+      if (!params.encodings || params.encodings.length === 0) {
+        params.encodings = [{}];
+      }
+      params.encodings[0].maxBitrate = currentQuality.maxBitrate;
+      params.encodings[0].maxFramerate = currentQuality.maxFramerate;
+      params.encodings[0].scaleResolutionDownBy =
+        currentQuality.scaleResolutionDownBy;
+      // 'maintain-resolution' : sous contrainte de débit, on sacrifie le fps
+      // avant la netteté (lisibilité d'un écran POS > fluidité).
+      params.degradationPreference = "maintain-resolution";
+      await sender.setParameters(params);
+    }
+  } catch (e) {
+    logError(`applyQuality setParameters failed: ${e.message}`);
+  }
+}
+
 async function createPeerFor(browserPeerId) {
   if (peers.has(browserPeerId)) return peers.get(browserPeerId);
   const pc = new RTCPeerConnection(RTC_CONFIG);
@@ -115,6 +147,9 @@ async function createPeerFor(browserPeerId) {
     for (const track of localStream.getTracks()) {
       pc.addTrack(track, localStream);
     }
+    // Applique la qualité courante au nouveau peer (cap par défaut + tout
+    // réglage déjà reçu du BO).
+    applyQualityToPeer(pc);
   }
   pc.onicecandidate = (ev) => {
     if (!ev.candidate) return;
@@ -219,6 +254,20 @@ window.webrtcBridge.onSignal(async (msg) => {
       break;
     case "webrtc-bye":
       tearDownPeer(msg.from);
+      break;
+    case "set-quality":
+      // Pilotage à distance depuis le BO : module fps/bitrate/résolution à
+      // chaud sur tous les flux en cours. Valeurs partielles tolérées.
+      if (typeof msg.maxFramerate === "number")
+        currentQuality.maxFramerate = msg.maxFramerate;
+      if (typeof msg.maxBitrate === "number")
+        currentQuality.maxBitrate = msg.maxBitrate;
+      if (typeof msg.scaleResolutionDownBy === "number")
+        currentQuality.scaleResolutionDownBy = msg.scaleResolutionDownBy;
+      logDebug(
+        `set-quality fps=${currentQuality.maxFramerate} br=${currentQuality.maxBitrate} scale=${currentQuality.scaleResolutionDownBy}`
+      );
+      for (const pc of peers.values()) applyQualityToPeer(pc);
       break;
     default:
       // pas pour nous

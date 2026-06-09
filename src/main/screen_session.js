@@ -49,6 +49,9 @@ const WEBRTC_SIGNAL_TYPES = new Set([
   "webrtc-answer",
   "webrtc-ice",
   "webrtc-bye",
+  // Pilotage qualité à distance depuis le BO — routé vers le capture renderer
+  // qui applique fps/bitrate/résolution à chaud via setParameters.
+  "set-quality",
 ]);
 
 // Path par défaut sur Windows (caisse en production). Surchargeable via env
