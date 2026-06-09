@@ -43,11 +43,12 @@
 
     .ant-menu-item {
 			display: flex;
-			justify-content: center;
+			justify-content: flex-start;
 			align-items: center;
 			margin: 0px;
+			padding-left: 24px !important;
 			position: relative;
-			color: color-mix(in srgb, var(--text-color-inv) 88%, transparent);
+			color: color-mix(in srgb, var(--text-color-inv) 82%, transparent);
 			// Transitions douces au survol → ressenti moderne.
 			transition: background-color 0.2s ease, color 0.2s ease;
 
@@ -128,19 +129,21 @@
 					var(--text-color) 100%
 				);
 	}
-	// Zone logo : encadrée, séparée du menu par un filet discret.
+	// Zone logo : bande dédiée en haut, logo blanc aligné à gauche.
 	#e-launcher-logo {
 		height: auto;
 		flex: 0 0 auto;
-		padding: 20px 18px;
+		padding: 22px 22px 18px;
 		display: flex;
 		align-items: center;
-		justify-content: center;
+		justify-content: flex-start;
 		border-bottom: 1px solid color-mix(in srgb, var(--text-color-inv) 10%, transparent);
 		& > img, & > svg {
-			max-height: 64px;
+			max-height: 30px;
+			max-width: 150px;
 			width: auto;
 			object-fit: contain;
+			opacity: 0.95;
 		}
 	}
 	.menu-title {
@@ -649,7 +652,11 @@
 
 	.diag-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(220px, 260px));
+		justify-content: start;
+		// Cards ajustées à leur contenu (pas d'étirement vertical d'une card
+		// seule dans sa ligne).
+		align-items: start;
 		gap: 16px;
 	}
 

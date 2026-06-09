@@ -236,7 +236,14 @@ module.exports = function generateIpc(store, initCallback) {
     if (store.wpt.socket) {
       let err = null;
       if (action.indexOf("fastprinter") === 0) {
-        await checkWptPlugin(store.wpt.socket, "FastPrinter");
+        // Un échec du check (plugin absent/désactivé, ou socket lent) ne doit
+        // PAS bloquer la requête réelle — on tente quand même, la requête
+        // renverra ses propres données ou son erreur.
+        try {
+          await checkWptPlugin(store.wpt.socket, "FastPrinter");
+        } catch (e) {
+          // ignore — on poursuit avec la requête
+        }
       }
 
       if (err) {
