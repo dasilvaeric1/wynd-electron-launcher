@@ -331,6 +331,9 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
           <DiagnosticsDashboard
             onReload={onDiagReload}
             onClose={() => dispatch(setToggleMenu(false))}
+            onAction={(ev, ...d) =>
+              props.onCallback(TNextAction.REQUEST_WPT, ev, ...d)
+            }
           />
         )}
       {readyToDiplayApp && urlApp && conf?.view === "webview" && (
