@@ -12,6 +12,7 @@ import {
   BulbOutlined,
   BarcodeOutlined,
   DesktopOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 
 import { IRootState, IDiagnostics, IWPT, TWPTPluginState } from "../interface";
@@ -434,6 +435,9 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
           <span className="diag-clock">{fmtTime(now)}</span>
           <button type="button" className="diag-reload" onClick={onReload}>
             <ReloadOutlined /> Actualiser
+          </button>
+          <button type="button" className="diag-close" onClick={onClose}>
+            <CloseOutlined /> Retour caisse
           </button>
         </div>
       </div>

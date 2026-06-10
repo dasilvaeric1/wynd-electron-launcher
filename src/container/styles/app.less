@@ -647,6 +647,24 @@
 		transition: background 0.15s ease;
 		&:hover { background: rgba(37, 99, 235, 0.1); }
 	}
+	// Bouton plein, bien visible et tactile : ferme le panneau → retour POS.
+	.diag-close {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		border: none;
+		background: #2563eb;
+		color: #fff;
+		font-size: 14px;
+		font-weight: 700;
+		cursor: pointer;
+		padding: 10px 18px;
+		border-radius: 10px;
+		box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+		transition: background 0.15s ease, transform 0.1s ease;
+		&:hover { background: #1d4ed8; }
+		&:active { transform: translateY(1px); }
+	}
 
 	.diag-empty {
 		color: #6b7280;
