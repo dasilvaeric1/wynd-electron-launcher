@@ -9,6 +9,9 @@ import {
   InboxOutlined,
   ApiOutlined,
   ReloadOutlined,
+  BulbOutlined,
+  BarcodeOutlined,
+  DesktopOutlined,
 } from "@ant-design/icons";
 
 import { IRootState, IDiagnostics, IWPT, TWPTPluginState } from "../interface";
@@ -95,10 +98,29 @@ const PLUGIN_META: Record<
     category: "Système",
   },
   balance: { label: "Balance", icon: <WalletOutlined />, category: "Système" },
+  lights: { label: "Lights", icon: <BulbOutlined />, category: "Système" },
+  linedisplay: {
+    label: "Afficheur client",
+    icon: <DesktopOutlined />,
+    category: "Encaissement",
+  },
+  barcodereadersopos: {
+    label: "Scanner code-barres",
+    icon: <BarcodeOutlined />,
+    category: "Encaissement",
+  },
 };
 
+// Plugins additionnels à afficher SI présents côté WPT (clé normalisée).
+const OPTIONAL_PLUGIN_KEYS = ["lights", "linedisplay", "barcodereadersopos"];
+
+// Clé normalisée : "barcode-readers-opos" → "barcodereadersopos" — fait le
+// pont entre les clés de config (display_plugin_state), les noms de plugins
+// WPT et nos clés PLUGIN_META.
+const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z]/g, "");
+
 const metaFor = (key: string) =>
-  PLUGIN_META[key] || {
+  PLUGIN_META[norm(key)] || {
     label: key,
     icon: <ApiOutlined />,
     category: "Autres",
@@ -163,7 +185,10 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
       : null;
     return fromList || cfg || null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [byEvent["fastprinter.printers"], byEvent["fastprinter.defaultprinterdata"]]);
+  }, [
+    byEvent["fastprinter.printers"],
+    byEvent["fastprinter.defaultprinterdata"],
+  ]);
 
   // Status live du device : la réponse printerdata prime (fraîche, complète),
   // sinon les champs éventuellement présents dans la liste.
@@ -200,12 +225,20 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
   const cards = useMemo<ICard[]>(() => {
     const plugins = wpt.plugins || [];
     const findPlugin = (key: string) =>
-      plugins.find(
-        (p) => (p?.name || "").toLowerCase().replace(/[^a-z]/g, "") === key
-      );
+      plugins.find((p) => norm(p?.name || "") === norm(key));
 
-    const keys = new Set<string>(Object.keys(pluginState || {}));
-    ["fastprinter", "universalterminal", "central"].forEach((k) => keys.add(k));
+    // Clés à afficher, dédupliquées par clé normalisée : celles suivies en
+    // live (pluginState, clés de la config) + les 3 principales toujours +
+    // les optionnelles (lights, linedisplay, barcode opos) si le plugin est
+    // présent côté WPT.
+    const keyByNorm = new Map<string, string>();
+    Object.keys(pluginState || {}).forEach((k) => keyByNorm.set(norm(k), k));
+    ["fastprinter", "universalterminal", "central"].forEach((k) => {
+      if (!keyByNorm.has(k)) keyByNorm.set(k, k);
+    });
+    OPTIONAL_PLUGIN_KEYS.forEach((k) => {
+      if (!keyByNorm.has(k) && findPlugin(k)) keyByNorm.set(k, k);
+    });
 
     const statusOf = (key: string): TStatus => {
       const s = pluginState?.[key]?.status;
@@ -215,7 +248,7 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
       return "unknown";
     };
 
-    return Array.from(keys).map((key) => {
+    return Array.from(keyByNorm.entries()).map(([nk, key]) => {
       const meta = metaFor(key);
       let status = statusOf(key);
       const rows: IRow[] = [];
@@ -224,7 +257,7 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
       const pl = findPlugin(key);
       if (pl?.version) footer = `v${pl.version}`;
 
-      if (key === "fastprinter") {
+      if (nk === "fastprinter") {
         const d = printerLive;
         if (d && status === "unknown") status = "online";
 
@@ -267,7 +300,9 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
         if (d?.type)
           rows.push({
             label: "Liaison",
-            value: `${TYPE_LABEL[d.type] || d.type}${d.address ? ` · ${d.address}` : ""}`,
+            value: `${TYPE_LABEL[d.type] || d.type}${
+              d.address ? ` · ${d.address}` : ""
+            }`,
           });
         if (d?.maxlinesize)
           rows.push({ label: "Largeur", value: `${d.maxlinesize} car./ligne` });
@@ -275,7 +310,11 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
 
         // Statut card : reflète le device réel quand on le connaît.
         if (onlineKnown)
-          status = d.online ? "online" : d.detected ? "initializing" : "offline";
+          status = d.online
+            ? "online"
+            : d.detected
+            ? "initializing"
+            : "offline";
 
         action = {
           label: "Test impression",
@@ -289,7 +328,7 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
               allprinters: true,
             }),
         };
-      } else if (key === "universalterminal") {
+      } else if (nk === "universalterminal") {
         const plugin = byEvent["universalterminal.plugin"];
         const init = byEvent["universalterminal.isinitialized"];
         if (plugin?.name) rows.push({ label: "Plugin", value: plugin.name });
@@ -301,7 +340,7 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
         });
         if (initKnown && status === "unknown")
           status = init ? "online" : "offline";
-      } else if (key === "central") {
+      } else if (nk === "central") {
         const apps = byEvent["central.applications"];
         if (Array.isArray(apps))
           rows.push({ label: "Applications", value: String(apps.length) });
