@@ -85,10 +85,16 @@ build:win:
     - yarn
     - node scripts/stamp_build.js # identifiant de build unique (version+date+sha)
     - yarn electron-builder --win portable --x64
+    # Artefact de déploiement Nexus : archive Electron-Launcher_<version>.zip
+    # (arborescence Electron-Launcher/cfg|launch|portable — format consommé
+    # par le canal de déploiement). zip absent de certaines images → install.
+    - which zip || (apt-get update -qq && apt-get install -y -qq zip)
+    - SKIP_BUILD=1 MODE=archive bash scripts/make_deploy_zip.sh
   artifacts:
     expire_in: 1 week
     paths:
       - dist/*-x64-portable.exe
+      - deploy/out/electron_zip/Electron-Launcher_*.zip
   rules:
     - if: $CI_COMMIT_TAG # auto sur release
     - if: $CI_COMMIT_BRANCH # manuel sur n'importe quelle branche

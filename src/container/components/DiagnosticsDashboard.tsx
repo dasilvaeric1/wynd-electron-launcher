@@ -345,6 +345,23 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
         const apps = byEvent["central.applications"];
         if (Array.isArray(apps))
           rows.push({ label: "Applications", value: String(apps.length) });
+      } else if (nk === "linedisplay") {
+        // Test visuel : affiche 2 lignes sur l'afficheur client. Pas de
+        // réponse socket en succès → vérification sur le device physique.
+        action = {
+          label: "Test affichage",
+          onClick: () =>
+            onAction("linedisplay.print", {
+              line1: "*** TEST AFFICHEUR ***",
+              line2: new Date().toLocaleTimeString(),
+            }),
+        };
+      } else if (nk === "lights") {
+        // Endpoint REST testLight du plugin lights (géré côté main process).
+        action = {
+          label: "Test lights",
+          onClick: () => onAction("lights.test"),
+        };
       }
 
       return {

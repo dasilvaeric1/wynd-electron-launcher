@@ -66,7 +66,11 @@ fi
 #   MODE=archive          → vraie archive avec arborescence Electron-Launcher/
 #                 (cfg/launch/portable). Format du provisioning autodeploy,
 #                 PAS de `update electron`.
-MODE="${MODE:-bare}"
+# Défaut = archive (arborescence Electron-Launcher/cfg|launch|portable) :
+# c'est le format consommé par le canal de déploiement réel. MODE=bare (PE
+# brut renommé) reste dispo pour l'ancien `update electron` qui copie le
+# fichier tel quel sans décompresser.
+MODE="${MODE:-archive}"
 mkdir -p "$OUT_DIR"
 rm -f "$ZIP_PATH"
 
@@ -87,9 +91,11 @@ else
 fi
 
 # 4. Manifest (intégrité)
-SHA="$(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')"
-SIZE="$(stat -f%z "$ZIP_PATH")"
-MAGIC="$(xxd -l 2 -p "$ZIP_PATH")"   # 4d5a=MZ (PE)  504b=PK (zip)
+# Portables macOS (BSD) ET Linux (CI) : stat -f%z vs -c%s, shasum vs sha256sum,
+# xxd peut manquer sur l'image CI.
+SHA="$( (shasum -a 256 "$ZIP_PATH" 2>/dev/null || sha256sum "$ZIP_PATH") | awk '{print $1}')"
+SIZE="$(stat -f%z "$ZIP_PATH" 2>/dev/null || stat -c%s "$ZIP_PATH")"
+MAGIC="$(command -v xxd >/dev/null 2>&1 && xxd -l 2 -p "$ZIP_PATH" || head -c2 "$ZIP_PATH" | od -An -tx1 | tr -d ' \n')"   # 4d5a=MZ (PE)  504b=PK (zip)
 echo "[deploy] OK (mode=$MODE)"
 echo "         fichier : $ZIP_PATH"
 echo "         taille  : $SIZE octets"

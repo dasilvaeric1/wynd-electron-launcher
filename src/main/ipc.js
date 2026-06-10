@@ -262,10 +262,54 @@ module.exports = function generateIpc(store, initCallback) {
         }
       }
 
+      // "lights.test" n'est pas un event socket : le plugin lights (V2)
+      // expose une API REST. On résout le 1er device et on déclenche son
+      // test via HTTP (fetch natif Node 22), puis on répond sur le canal
+      // request_wpt.done habituel.
+      if (action === "lights.test") {
+        const base = (
+          store.conf?.wpt?.url?.href || "http://localhost:9963"
+        ).replace(/\/+$/, "");
+        try {
+          const devRes = await fetch(`${base}/lights/api/devices`);
+          if (!devRes.ok) throw new Error(`GET devices: HTTP ${devRes.status}`);
+          const devices = await devRes.json();
+          const dev = Array.isArray(devices)
+            ? devices.find((d) => d && d.connected) || devices[0]
+            : null;
+          if (!dev || !dev.name) throw new Error("No lights device found");
+          const testRes = await fetch(
+            `${base}/lights/api/devices/${encodeURIComponent(dev.name)}/test`,
+            { method: "POST" }
+          );
+          if (!testRes.ok) throw new Error(`POST test: HTTP ${testRes.status}`);
+          if (store.windows.container.current) {
+            store.windows.container.current.webContents.send(
+              "request_wpt.done",
+              action,
+              { ok: true, device: dev.name }
+            );
+          }
+        } catch (e) {
+          log.warn(`[LIGHTS] test failed: ${e.message}`);
+          if (store.windows.container.current) {
+            store.windows.container.current.webContents.send(
+              "request_wpt.error",
+              action,
+              { message: e.message }
+            );
+          }
+        }
+        return;
+      }
+
       // Les requêtes "device" (imprimante surtout) scannent le matériel et
       // peuvent dépasser 3s → on leur laisse un délai plus long. Et on évite
       // de popper une Notification système quand c'est une requête de
       // diagnostic en arrière-plan (le dashboard gère l'absence de réponse).
+      // linedisplay.print n'émet AUCUNE réponse en succès (seulement .error)
+      // → le timeout est attendu, on l'avale silencieusement (le test se
+      // vérifie sur l'afficheur physique).
       const DIAGNOSTIC_EVENTS = [
         "fastprinter.defaultprinterdata",
         "fastprinter.printers",
@@ -273,6 +317,7 @@ module.exports = function generateIpc(store, initCallback) {
         "universalterminal.plugin",
         "universalterminal.isinitialized",
         "central.applications",
+        "linedisplay.print",
       ];
       const isDeviceQuery = action.indexOf("fastprinter") === 0;
       const isDiagnostic = DIAGNOSTIC_EVENTS.includes(action);
