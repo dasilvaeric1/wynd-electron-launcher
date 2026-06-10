@@ -18,6 +18,12 @@ const log = require("./electron_log");
 const TPE_TTL_MS = 60_000;
 const PRINTER_TTL_MS = 300_000;
 
+// Normalise un nom de plugin pour matcher les clés de plugins_state
+// (préfixes d'event, ex. "FastPrinter" → "fastprinter").
+function normKey(s) {
+  return (s || "").toLowerCase().replace(/[^a-z]/g, "");
+}
+
 const cache = {
   tpe: null, // { initialized, plugin }
   tpeAt: 0,
@@ -110,6 +116,24 @@ function getDeviceSummary(store) {
   }
 
   const central = store.central || {};
+
+  // Liste complète des plugins — 100% en mémoire (registre `plugins` +
+  // états live `plugins_state` poussés), AUCUN scan matériel → pas de
+  // sollicitation des ports COM. Donne au BO le statut de tous les plugins
+  // (lights, linedisplay, scanner, tiroir, balance…), pas seulement les 3
+  // détaillés ci-dessus.
+  const states = store.wpt.plugins_state || {};
+  const plugins = Array.isArray(store.wpt.plugins)
+    ? store.wpt.plugins.map((p) => {
+        const st = states[normKey(p && p.name)];
+        return {
+          name: p && p.name ? p.name : "?",
+          enabled: !!(p && p.enabled),
+          status: st && st.status ? st.status : null,
+        };
+      })
+    : null;
+
   return {
     wpt: wptConnected,
     printer: cache.printer,
@@ -118,6 +142,7 @@ function getDeviceSummary(store) {
       registered: !!central.registered,
       status: central.status || null,
     },
+    plugins,
   };
 }
 
