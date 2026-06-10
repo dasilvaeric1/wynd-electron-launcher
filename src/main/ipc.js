@@ -262,10 +262,35 @@ module.exports = function generateIpc(store, initCallback) {
         }
       }
 
-      // "lights.test" n'est pas un event socket : le plugin lights (V2)
-      // expose une API REST. On résout le 1er device et on déclenche son
-      // test via HTTP (fetch natif Node 22), puis on répond sur le canal
+      // "lights.*" ne sont pas des events socket : le plugin lights (V2)
+      // expose une API REST. fetch natif Node 22, réponse sur le canal
       // request_wpt.done habituel.
+      if (action === "lights.devices") {
+        const base = (
+          store.conf?.wpt?.url?.href || "http://localhost:9963"
+        ).replace(/\/+$/, "");
+        try {
+          const devRes = await fetch(`${base}/lights/api/devices`);
+          if (!devRes.ok) throw new Error(`GET devices: HTTP ${devRes.status}`);
+          const raw = await devRes.json();
+          const devices = Array.isArray(raw)
+            ? raw
+            : Array.isArray(raw?.devices)
+            ? raw.devices
+            : [];
+          if (store.windows.container.current) {
+            store.windows.container.current.webContents.send(
+              "request_wpt.done",
+              action,
+              devices
+            );
+          }
+        } catch (e) {
+          log.debug(`[LIGHTS] devices failed: ${e.message}`);
+          // diagnostic silencieux — pas de notif, pas d'erreur renderer
+        }
+        return;
+      }
       if (action === "lights.test") {
         const base = (
           store.conf?.wpt?.url?.href || "http://localhost:9963"

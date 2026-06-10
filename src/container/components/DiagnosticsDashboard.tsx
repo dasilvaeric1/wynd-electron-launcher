@@ -30,6 +30,7 @@ export const DIAGNOSTIC_EVENTS = [
   "universalterminal.plugin",
   "universalterminal.isinitialized",
   "central.applications",
+  "lights.devices",
 ];
 
 export interface IDiagnosticsDashboardProps {
@@ -357,11 +358,51 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
             }),
         };
       } else if (nk === "lights") {
-        // Endpoint REST testLight du plugin lights (géré côté main process).
-        action = {
-          label: "Test lights",
-          onClick: () => onAction("lights.test"),
-        };
+        // Statut basé sur les devices RÉELS (lights.devices, REST via main) —
+        // plugin activé ≠ une light branchée et connectée.
+        const devs = byEvent["lights.devices"];
+        const isConn = (d: any) =>
+          d?.connected === true ||
+          d?.isConnected === true ||
+          d?.status === "connected";
+        if (Array.isArray(devs)) {
+          const connected = devs.filter(isConn);
+          rows.push({
+            label: "Périphériques",
+            value: String(devs.length),
+            state: devs.length > 0 ? undefined : "muted",
+          });
+          if (devs.length === 0) {
+            status = "offline";
+            rows.push({
+              label: "État",
+              value: "Aucune light",
+              state: "muted",
+            });
+          } else {
+            rows.push({
+              label: "Connectées",
+              value: `${connected.length}/${devs.length}`,
+              state: connected.length > 0 ? "ok" : "bad",
+            });
+            status = connected.length > 0 ? "online" : "offline";
+            const names = devs
+              .map((d: any) => d?.name)
+              .filter(Boolean)
+              .join(", ");
+            if (names) rows.push({ label: "Noms", value: names });
+          }
+          // Test seulement s'il y a au moins un device.
+          if (devs.length > 0) {
+            action = {
+              label: "Test lights",
+              onClick: () => onAction("lights.test"),
+            };
+          }
+        } else {
+          // Liste pas encore reçue → on ne sur-promet pas.
+          status = "unknown";
+        }
       }
 
       return {

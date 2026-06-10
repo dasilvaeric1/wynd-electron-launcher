@@ -37,6 +37,7 @@ const {
   webContents: ElectronWebContents,
 } = require("electron");
 const log = require("./helpers/electron_log");
+const getDeviceSummary = require("./helpers/device_summary");
 const {
   createCaptureWindow,
   destroyCaptureWindow,
@@ -381,12 +382,24 @@ async function pollOnce() {
   // Skip poll si une session est déjà active ou un consent est ouvert
   if (activeSession || activeConsentWindow) return;
   const uptimeSeconds = Math.floor((Date.now() - launcherStartedAt) / 1000);
+  // Résumé périphériques (imprimante/TPE/Central) pour la vue flotte BO.
+  // Collecte throttlée (voir device_summary.js) — l'échec n'empêche pas le poll.
+  let devicesParam = "";
+  try {
+    const summary = getDeviceSummary(sharedStore);
+    if (summary) {
+      devicesParam = `&devices=${encodeURIComponent(JSON.stringify(summary))}`;
+    }
+  } catch {
+    // non-bloquant
+  }
   const url =
     `${cfg.baseUrl}/api/screen-sessions/pending` +
     `?caisseSerial=${encodeURIComponent(cfg.serial)}` +
     `&launcherVersion=${encodeURIComponent(launcherInfo.version)}` +
     `&platform=${encodeURIComponent(launcherInfo.platform)}` +
-    `&uptime=${uptimeSeconds}`;
+    `&uptime=${uptimeSeconds}` +
+    devicesParam;
   try {
     const r = await httpRequest("GET", url, { "x-api-key": cfg.apiKey });
     if (r.status === 401 || r.status === 403) {

@@ -121,6 +121,8 @@ window.electronAPI.on("request_wpt.done", (action: string, data: any) => {
     "universalterminal.plugin",
     "universalterminal.isinitialized",
     "central.applications",
+    "lights.devices",
+    "lights.test",
   ];
   if (DIAGNOSTIC_EVENTS.includes(action)) {
     store.dispatch(setDiagnosticAction(action, data));
