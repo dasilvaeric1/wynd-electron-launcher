@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import {
   PrinterOutlined,
@@ -16,6 +16,9 @@ import { IRootState, IDiagnostics, IWPT, TWPTPluginState } from "../interface";
 // Events WPT requêtés au reload — réponses stockées dans le slice diagnostics.
 // 'plugins' (instantané) peuple wpt.plugins → status fiable par plugin activé,
 // indépendamment du scan matériel (lent/faillible) des requêtes device.
+// NB : fastprinter.printerdata (status live d'UNE imprimante) n'est pas ici —
+// il exige un payload {type,address} et est émis par le dashboard quand
+// l'imprimante par défaut est connue (voir effet ci-dessous).
 export const DIAGNOSTIC_EVENTS = [
   "plugins",
   "fastprinter.defaultprinterdata",
@@ -30,11 +33,18 @@ export interface IDiagnosticsDashboardProps {
   onReload: () => void;
   // Ferme le panneau (clic sur le fond du dashboard, hors cards/actions).
   onClose: () => void;
-  // Émet une action WPT arbitraire (ex. test d'impression).
+  // Émet une action WPT arbitraire (ex. test d'impression, printerdata).
   onAction: (event: string, ...datas: any[]) => void;
 }
 
 type TStatus = "online" | "offline" | "initializing" | "unknown";
+type TRowState = "ok" | "warn" | "bad" | "muted";
+
+interface IRow {
+  label: string;
+  value: string;
+  state?: TRowState;
+}
 
 interface ICard {
   key: string;
@@ -42,7 +52,8 @@ interface ICard {
   icon: React.ReactNode;
   status: TStatus;
   category: string;
-  lines: string[];
+  rows: IRow[];
+  footer?: string;
   action?: { label: string; onClick: () => void };
 }
 
@@ -86,8 +97,6 @@ const PLUGIN_META: Record<
   balance: { label: "Balance", icon: <WalletOutlined />, category: "Système" },
 };
 
-const CATEGORY_ORDER = ["Encaissement", "Paiement", "Système", "Autres"];
-
 const metaFor = (key: string) =>
   PLUGIN_META[key] || {
     label: key,
@@ -98,11 +107,19 @@ const metaFor = (key: string) =>
 const fmtTime = (ts: number | null) =>
   ts ? new Date(ts).toLocaleTimeString() : "—";
 
+const TYPE_LABEL: Record<string, string> = {
+  usb: "USB",
+  serial: "Série",
+  network: "Réseau",
+};
+
 /**
- * Dashboard "Périphériques" affiché dans la zone principale quand le panneau
- * latéral est ouvert. Cards par plugin WPT regroupées par catégorie, avec
- * pastille d'icône, pill de statut et détails device. Données via wpt.plugins
- * (fiable) + slice diagnostics (réponses request_wpt) + pluginState live.
+ * Dashboard "Périphériques" — mur d'état dense affiché à droite du panneau
+ * latéral. Une seule grille de cards compactes (catégorie en chip), chaque
+ * card = pastille d'icône + nom + pill de statut + lignes label/valeur avec
+ * point coloré (capot, papier, tiroir…). Pour l'imprimante, le status live
+ * est garanti en interrogeant directement le device (fastprinter.printerdata)
+ * quand la liste ne fournit pas les champs live.
  */
 const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> = ({
   onReload,
@@ -132,6 +149,46 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const byEvent = diagnostics.byEvent || {};
+
+  // Imprimante par défaut : la `registered` de la liste, sinon la 1ère
+  // détectée, sinon la config defaultprinterdata.
+  const defaultPrinter = useMemo(() => {
+    const list = byEvent["fastprinter.printers"];
+    const cfg = byEvent["fastprinter.defaultprinterdata"];
+    const fromList = Array.isArray(list)
+      ? list.find((x: any) => x?.registered) ||
+        list.find((x: any) => x?.detected) ||
+        list[0]
+      : null;
+    return fromList || cfg || null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [byEvent["fastprinter.printers"], byEvent["fastprinter.defaultprinterdata"]]);
+
+  // Status live du device : la réponse printerdata prime (fraîche, complète),
+  // sinon les champs éventuellement présents dans la liste.
+  const printerLive = byEvent["fastprinter.printerdata"] || defaultPrinter;
+
+  // Si l'imprimante par défaut est connue mais que ses champs live (online/
+  // cover/paper) manquent, interroge directement le device. Garde-fou : une
+  // seule requête par cycle de refresh (lastUpdate).
+  const printerProbeRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!defaultPrinter || !defaultPrinter.type) return;
+    const hasLive =
+      typeof printerLive?.online === "boolean" &&
+      typeof printerLive?.cover_opened === "boolean";
+    if (hasLive) return;
+    if (printerProbeRef.current === diagnostics.lastUpdate) return;
+    printerProbeRef.current = diagnostics.lastUpdate;
+    onAction("fastprinter.printerdata", {
+      type: defaultPrinter.type,
+      address: defaultPrinter.address,
+      name: defaultPrinter.name,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultPrinter, diagnostics.lastUpdate]);
+
   // Sous-titre : poste · serial (depuis wpt.infos).
   const subtitle = useMemo(() => {
     const i = wpt.infos || {};
@@ -141,7 +198,6 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
   }, [wpt.infos]);
 
   const cards = useMemo<ICard[]>(() => {
-    const byEvent = diagnostics.byEvent || {};
     const plugins = wpt.plugins || [];
     const findPlugin = (key: string) =>
       plugins.find(
@@ -162,57 +218,65 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
     return Array.from(keys).map((key) => {
       const meta = metaFor(key);
       let status = statusOf(key);
-      const lines: string[] = [];
+      const rows: IRow[] = [];
+      let footer: string | undefined;
       let action: ICard["action"];
       const pl = findPlugin(key);
-      if (pl?.version) lines.push(`v${pl.version}`);
+      if (pl?.version) footer = `v${pl.version}`;
 
       if (key === "fastprinter") {
-        const cfg = byEvent["fastprinter.defaultprinterdata"]; // config
-        const list = byEvent["fastprinter.printers"]; // Printer[] + status live
-        // Imprimante par défaut : la registered, sinon la 1ère détectée.
-        const def = Array.isArray(list)
-          ? list.find((x: any) => x?.registered) ||
-            list.find((x: any) => x?.detected) ||
-            list[0]
-          : null;
-        const d = def || cfg; // fallback config si la liste n'a pas répondu
-        if ((d || Array.isArray(list)) && status === "unknown")
-          status = "online";
+        const d = printerLive;
+        if (d && status === "unknown") status = "online";
 
-        const TYPE_LABEL: Record<string, string> = {
-          usb: "USB",
-          serial: "Série",
-          network: "Réseau",
-        };
-        if (d) {
-          if (d.name) lines.push(d.name);
-          if (d.type) lines.push(`Liaison : ${TYPE_LABEL[d.type] || d.type}`);
-          if (d.address) lines.push(`Adresse : ${d.address}`);
-          if (typeof d.detected === "boolean")
-            lines.push(d.detected ? "Détectée" : "⚠️ Non détectée");
-          if (typeof d.online === "boolean") {
-            lines.push(d.online ? "En ligne" : "Hors ligne");
-            status = d.online
-              ? "online"
-              : d.detected
-              ? "initializing"
-              : "offline";
-          }
-          if (d.paper && typeof d.paper.end === "boolean")
-            lines.push(d.paper.end ? "⚠️ Papier épuisé" : "Papier OK");
-          if (typeof d.cover_opened === "boolean")
-            lines.push(d.cover_opened ? "⚠️ Capot ouvert" : "Capot fermé");
-          if (d.cashdrawer)
-            lines.push(
-              `Tiroir : ${d.cashdrawer === "opened" ? "ouvert" : "fermé"}`
-            );
-          if (d.maxlinesize) lines.push(`${d.maxlinesize} car./ligne`);
-        }
-        if (Array.isArray(list) && list.length > 1)
-          lines.push(`${list.length} imprimantes configurées`);
+        // Bool helpers → row {value, state}. undefined → "—" (muted) : les
+        // rangées vitales (en ligne/papier/capot/tiroir) sont TOUJOURS
+        // affichées pour que l'opérateur voie ce qui manque.
+        const onlineKnown = typeof d?.online === "boolean";
+        rows.push({
+          label: "En ligne",
+          value: onlineKnown ? (d.online ? "Oui" : "Non") : "—",
+          state: onlineKnown ? (d.online ? "ok" : "bad") : "muted",
+        });
+        const paperKnown = typeof d?.paper?.end === "boolean";
+        rows.push({
+          label: "Papier",
+          value: paperKnown ? (d.paper.end ? "Épuisé" : "OK") : "—",
+          state: paperKnown ? (d.paper.end ? "bad" : "ok") : "muted",
+        });
+        const coverKnown = typeof d?.cover_opened === "boolean";
+        rows.push({
+          label: "Capot",
+          value: coverKnown ? (d.cover_opened ? "Ouvert" : "Fermé") : "—",
+          state: coverKnown ? (d.cover_opened ? "warn" : "ok") : "muted",
+        });
+        const drawerKnown =
+          d?.cashdrawer === "opened" || d?.cashdrawer === "closed";
+        rows.push({
+          label: "Tiroir",
+          value: drawerKnown
+            ? d.cashdrawer === "opened"
+              ? "Ouvert"
+              : "Fermé"
+            : "—",
+          state: drawerKnown
+            ? d.cashdrawer === "opened"
+              ? "warn"
+              : "ok"
+            : "muted",
+        });
+        if (d?.type)
+          rows.push({
+            label: "Liaison",
+            value: `${TYPE_LABEL[d.type] || d.type}${d.address ? ` · ${d.address}` : ""}`,
+          });
+        if (d?.maxlinesize)
+          rows.push({ label: "Largeur", value: `${d.maxlinesize} car./ligne` });
+        if (d?.name) footer = [d.name, footer].filter(Boolean).join("  ·  ");
 
-        // Bouton test d'impression (fastprinter.printtext).
+        // Statut card : reflète le device réel quand on le connaît.
+        if (onlineKnown)
+          status = d.online ? "online" : d.detected ? "initializing" : "offline";
+
         action = {
           label: "Test impression",
           onClick: () =>
@@ -228,14 +292,19 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
       } else if (key === "universalterminal") {
         const plugin = byEvent["universalterminal.plugin"];
         const init = byEvent["universalterminal.isinitialized"];
-        if (plugin?.name) lines.push(`Paiement : ${plugin.name}`);
-        if (typeof init === "boolean") {
-          lines.push(init ? "TPE initialisé" : "TPE non initialisé");
-          if (status === "unknown") status = init ? "online" : "offline";
-        }
+        if (plugin?.name) rows.push({ label: "Plugin", value: plugin.name });
+        const initKnown = typeof init === "boolean";
+        rows.push({
+          label: "Initialisé",
+          value: initKnown ? (init ? "Oui" : "Non") : "—",
+          state: initKnown ? (init ? "ok" : "bad") : "muted",
+        });
+        if (initKnown && status === "unknown")
+          status = init ? "online" : "offline";
       } else if (key === "central") {
         const apps = byEvent["central.applications"];
-        if (Array.isArray(apps)) lines.push(`${apps.length} application(s)`);
+        if (Array.isArray(apps))
+          rows.push({ label: "Applications", value: String(apps.length) });
       }
 
       return {
@@ -244,28 +313,13 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
         icon: meta.icon,
         status,
         category: meta.category,
-        lines,
+        rows,
+        footer,
         action,
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [diagnostics, pluginState, wpt.plugins]);
-
-  // Regroupement par catégorie (ordre fixe, catégories vides ignorées).
-  const groups = useMemo(() => {
-    const m = new Map<string, ICard[]>();
-    for (const c of cards) {
-      const arr = m.get(c.category);
-      if (arr) arr.push(c);
-      else m.set(c.category, [c]);
-    }
-    return CATEGORY_ORDER.filter((cat) => m.has(cat)).map((cat) => ({
-      cat,
-      items: (m.get(cat) as ICard[]).sort((a, b) =>
-        a.label.localeCompare(b.label)
-      ),
-    }));
-  }, [cards]);
+  }, [diagnostics, pluginState, wpt.plugins, printerLive]);
 
   // 1er fetch en cours : WPT connecté mais aucune donnée encore reçue.
   const loading =
@@ -277,27 +331,43 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
     const sm = STATUS_META[c.status];
     return (
       <div key={c.key} className={`diag-card ${sm.cls}`}>
-        <div className={`diag-card-icon ${sm.cls}`}>{c.icon}</div>
-        <div className="diag-card-name">{c.label}</div>
-        <span className={`diag-pill ${sm.cls}`}>
-          <i className="dot" />
-          {sm.label}
-        </span>
-        {c.lines.length > 0 && (
-          <ul className="diag-card-lines">
-            {c.lines.map((l, i) => (
-              <li key={`${c.key}-${i}`}>{l}</li>
+        <div className="diag-card-head">
+          <div className={`diag-card-icon ${sm.cls}`}>{c.icon}</div>
+          <div className="diag-card-headtext">
+            <div className="diag-card-name">{c.label}</div>
+            <div className="diag-cat">{c.category}</div>
+          </div>
+          <span className={`diag-pill ${sm.cls}`}>
+            <i className="dot" />
+            {sm.label}
+          </span>
+        </div>
+        {c.rows.length > 0 && (
+          <div className="diag-rows">
+            {c.rows.map((r) => (
+              <div key={`${c.key}-${r.label}`} className="diag-row">
+                <span className="diag-row-label">{r.label}</span>
+                <span className={`diag-row-value ${r.state || ""}`}>
+                  {r.state && r.state !== "muted" && <i className="dot" />}
+                  {r.value}
+                </span>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
-        {c.action && (
-          <button
-            type="button"
-            className="diag-card-action"
-            onClick={c.action.onClick}
-          >
-            {c.action.label}
-          </button>
+        {(c.action || c.footer) && (
+          <div className="diag-card-foot">
+            {c.action && (
+              <button
+                type="button"
+                className="diag-card-action"
+                onClick={c.action.onClick}
+              >
+                {c.action.label}
+              </button>
+            )}
+            {c.footer && <span className="diag-card-footer">{c.footer}</span>}
+          </div>
         )}
       </div>
     );
@@ -338,9 +408,13 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
           <div className="diag-grid">
             {[0, 1, 2].map((i) => (
               <div key={i} className="diag-card skeleton">
-                <div className="diag-card-icon" />
-                <div className="sk sk-name" />
-                <div className="sk sk-pill" />
+                <div className="diag-card-head">
+                  <div className="diag-card-icon" />
+                  <div className="diag-card-headtext">
+                    <div className="sk sk-name" />
+                    <div className="sk sk-pill" />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -351,12 +425,7 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
               : "WyndPosTools non connecté."}
           </div>
         ) : (
-          groups.map((g) => (
-            <section key={g.cat} className="diag-section">
-              <h3 className="diag-section-title">{g.cat}</h3>
-              <div className="diag-grid">{g.items.map(renderCard)}</div>
-            </section>
-          ))
+          <div className="diag-grid">{cards.map(renderCard)}</div>
         )}
       </div>
     </div>

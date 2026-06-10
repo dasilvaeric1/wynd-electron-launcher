@@ -117,6 +117,7 @@ window.electronAPI.on("request_wpt.done", (action: string, data: any) => {
   const DIAGNOSTIC_EVENTS = [
     "fastprinter.defaultprinterdata",
     "fastprinter.printers",
+    "fastprinter.printerdata",
     "universalterminal.plugin",
     "universalterminal.isinitialized",
     "central.applications",

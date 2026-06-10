@@ -269,6 +269,7 @@ module.exports = function generateIpc(store, initCallback) {
       const DIAGNOSTIC_EVENTS = [
         "fastprinter.defaultprinterdata",
         "fastprinter.printers",
+        "fastprinter.printerdata",
         "universalterminal.plugin",
         "universalterminal.isinitialized",
         "central.applications",
