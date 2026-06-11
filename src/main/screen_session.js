@@ -39,6 +39,7 @@ const {
 const log = require("./helpers/electron_log");
 const getDeviceSummary = require("./helpers/device_summary");
 const wptProxyTunnel = require("./helpers/wpt_proxy_tunnel");
+const netCapture = require("./helpers/net_capture");
 const {
   createCaptureWindow,
   destroyCaptureWindow,
@@ -703,6 +704,30 @@ function attachWsHandlers(ws, sessionId, mode) {
         }
       }, CAPTURE_INTERVAL_MS);
     }
+
+    // Capture réseau live → panneau « Réseau » du BO. Démarrée une seule fois
+    // (le send pointe sur activeSession.ws, transparent au reconnect).
+    if (!activeSession.netStarted) {
+      activeSession.netStarted = true;
+      const w = getContainerWindow();
+      const sessions = [];
+      if (w?.webContents?.session) sessions.push(w.webContents.session);
+      const guest = getWebviewWebContents(w?.webContents);
+      if (guest?.session) sessions.push(guest.session);
+      const sendNet = (msg) => {
+        const cw = activeSession?.ws;
+        if (cw && cw.readyState === WebSocketImpl.OPEN) {
+          cw.send(JSON.stringify(msg));
+        }
+      };
+      netCapture.start(sessions, sendNet);
+      // Le webview POS peut être monté tardivement → on retente d'attacher sa
+      // session après quelques secondes.
+      setTimeout(() => {
+        const g = getWebviewWebContents(getContainerWindow()?.webContents);
+        if (g?.session) netCapture.attachSession(g.session);
+      }, 3_000);
+    }
   });
 
   ws.on("message", (data, isBinary) => {
@@ -1289,6 +1314,7 @@ async function injectInputScreen(msg) {
 
 function stopSession() {
   if (!activeSession) return;
+  netCapture.stop();
   if (activeSession.captureTimer) clearInterval(activeSession.captureTimer);
   if (activeSession.resizeHandler) {
     const { win, fn } = activeSession.resizeHandler;
