@@ -38,6 +38,7 @@ const {
 } = require("electron");
 const log = require("./helpers/electron_log");
 const getDeviceSummary = require("./helpers/device_summary");
+const wptProxyTunnel = require("./helpers/wpt_proxy_tunnel");
 const {
   createCaptureWindow,
   destroyCaptureWindow,
@@ -412,6 +413,13 @@ async function pollOnce() {
     if (!r.ok) {
       log.debug(`[SCREEN] poll non-OK: ${r.status}`);
       return;
+    }
+    // Tunnel WPT demandé par le BO → ouverture d'une WS sortante dédiée
+    // (canal indépendant des sessions écran). open() est idempotent.
+    if (r.body && r.body.wptTunnel && r.body.wptTunnel.open) {
+      wptProxyTunnel
+        .open(cfg, sharedStore, httpRequest)
+        .catch((e) => log.debug(`[WPT-TUNNEL] open: ${e.message}`));
     }
     const session = r.body && r.body.session;
     if (session && session.id) {
@@ -1374,6 +1382,7 @@ function teardownScreenSessions() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = null;
   stopSession();
+  wptProxyTunnel.close();
   if (activeConsentWindow && !activeConsentWindow.isDestroyed()) {
     activeConsentWindow.close();
   }
