@@ -57,24 +57,55 @@ function flattenHeaders(h) {
 }
 
 /** Effectue la requête loopback vers le WPT local. */
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
+
 function doRequest(base, msg) {
   return new Promise((resolve) => {
+    const rawPath = msg.path || "/";
+    // Anti-SSRF : on NE concatène PAS base+path (un path type "@evil.com/"
+    // ou "//host" pourrait détourner l'hôte). On exige un chemin absolu
+    // simple, puis on reconstruit l'URL depuis la base PARSÉE (l'hôte ne peut
+    // plus changer), et on revérifie host/port/protocole après coup.
+    if (
+      typeof rawPath !== "string" ||
+      !rawPath.startsWith("/") ||
+      rawPath.startsWith("//") ||
+      /[\\\x00-\x1f]/.test(rawPath)
+    ) {
+      resolve({ status: 400, headers: {}, body: Buffer.from("bad path") });
+      return;
+    }
+    let baseObj;
     let urlObj;
     try {
-      urlObj = new URL(base + (msg.path || "/"));
+      baseObj = new URL(base);
+      urlObj = new URL(base);
+      const qIdx = rawPath.indexOf("?");
+      urlObj.pathname = qIdx === -1 ? rawPath : rawPath.slice(0, qIdx);
+      urlObj.search = qIdx === -1 ? "" : rawPath.slice(qIdx);
     } catch (e) {
       resolve({ status: 400, headers: {}, body: Buffer.from("bad path") });
       return;
     }
+    // L'hôte/port/protocole doivent rester ceux de la base (le WPT local).
+    if (
+      urlObj.hostname !== baseObj.hostname ||
+      urlObj.port !== baseObj.port ||
+      urlObj.protocol !== baseObj.protocol
+    ) {
+      resolve({ status: 400, headers: {}, body: Buffer.from("host mismatch") });
+      return;
+    }
+    const isLoopback = LOOPBACK_HOSTS.has(urlObj.hostname);
     const mod = urlObj.protocol === "https:" ? https : http;
     const req = mod.request(
       urlObj,
       {
         method: (msg.method || "GET").toUpperCase(),
         headers: msg.headers || {},
-        // Loopback auto-signé uniquement (127.0.0.1) → pas de surface MITM
-        // réseau. Scopé à CET appel, jamais global.
-        rejectUnauthorized: false,
+        // On n'ignore le cert auto-signé QUE pour le loopback (127.0.0.1).
+        // Hors loopback (config inattendue), on garde la vérif TLS.
+        rejectUnauthorized: !isLoopback,
       },
       (res) => {
         const chunks = [];
@@ -105,7 +136,11 @@ function doRequest(base, msg) {
       }
     );
     req.on("error", (e) =>
-      resolve({ status: 502, headers: {}, body: Buffer.from(String(e.message)) })
+      resolve({
+        status: 502,
+        headers: {},
+        body: Buffer.from(String(e.message)),
+      })
     );
     req.setTimeout(REQUEST_TIMEOUT_MS, () => req.destroy(new Error("timeout")));
     req.end();
@@ -154,7 +189,9 @@ async function open(cfg, store, httpRequest) {
   try {
     const r = await httpRequest(
       "POST",
-      `${cfg.baseUrl}/api/wpt-proxy/${encodeURIComponent(cfg.serial)}/tunnel-ticket`,
+      `${cfg.baseUrl}/api/wpt-proxy/${encodeURIComponent(
+        cfg.serial
+      )}/tunnel-ticket`,
       { "x-api-key": cfg.apiKey, "content-type": "application/json" },
       "{}"
     );
