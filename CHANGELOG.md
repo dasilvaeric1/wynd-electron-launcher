@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.X]
+
+### [2.6.3]
+
+- net capture: switch to CDP (webContents.debugger + Network domain) to capture
+  request/response headers and bodies for XHR/Fetch calls (bodies capped 32 KB,
+  binary skipped), with webRequest fallback (metadata-only) when the debugger
+  cannot attach → no regression on the request list
+- BO Réseau panel: expandable rows showing sent/received headers and bodies
+
 ## [1.19.X]
 
 ### [1.19.0]
