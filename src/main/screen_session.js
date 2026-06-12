@@ -659,7 +659,19 @@ async function startCaptureLoop(cfg, session) {
       // resize de la BrowserWindow). Coût négligeable (executeJavaScript
       // sur un getBoundingClientRect ~1ms).
       const overlayRefresher = setInterval(() => {
-        refreshWebviewBounds(w.webContents).catch(() => {});
+        // Si la window est détruite (fermeture app sans stopSession), l'accès
+        // à w.webContents throw SYNCHRONIQUEMENT « Object has been destroyed » —
+        // le .catch() ne couvre que le rejet de promesse, pas ce throw → on
+        // garde explicitement, sinon exception non catchée en boucle (1,5 s).
+        if (!w || w.isDestroyed()) {
+          clearInterval(overlayRefresher);
+          return;
+        }
+        try {
+          refreshWebviewBounds(w.webContents).catch(() => {});
+        } catch (_) {
+          /* window détruite entre le check et l'accès */
+        }
       }, 1_500);
       activeSession.resizeHandler = { win: w, fn: onResize };
       activeSession.overlayRefresher = overlayRefresher;
