@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [2.6.X]
 
+### [2.6.4]
+
+- net capture: also emit statusText, mimeType, response size and request
+  duration (ms) from CDP timings → richer detail + HAR export in the BO
+
 ### [2.6.3]
 
 - net capture: switch to CDP (webContents.debugger + Network domain) to capture

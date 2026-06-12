@@ -1,4 +1,7 @@
-const { session: electronSession, webContents: ElectronWebContents } = require("electron");
+const {
+  session: electronSession,
+  webContents: ElectronWebContents,
+} = require("electron");
 const log = require("./electron_log");
 
 /**
@@ -50,7 +53,8 @@ function emit(ev) {
 function clip(value) {
   if (value == null) return { body: undefined, truncated: false };
   const s = typeof value === "string" ? value : String(value);
-  if (s.length > BODY_MAX) return { body: s.slice(0, BODY_MAX), truncated: true };
+  if (s.length > BODY_MAX)
+    return { body: s.slice(0, BODY_MAX), truncated: true };
   return { body: s, truncated: false };
 }
 
@@ -72,11 +76,17 @@ function attachDebugger(wc) {
   // État par requestId entre requestWillBeSent → responseReceived → finished.
   const pending = new Map();
 
-  async function finalize(requestId, errorText) {
+  async function finalize(requestId, opts = {}) {
+    const { errorText, finishTs, size } = opts;
     const p = pending.get(requestId);
     pending.delete(requestId);
     if (!p) return;
     const detail = DETAIL_TYPES.has(p.resourceType);
+    // Timestamps CDP en secondes (monotones) → ms.
+    const durationMs =
+      finishTs != null && p.ts != null
+        ? Math.max(0, Math.round((finishTs - p.ts) * 1000))
+        : undefined;
 
     if (errorText) {
       emit({
@@ -86,6 +96,7 @@ function attachDebugger(wc) {
         error: errorText,
         resourceType: p.resourceType,
         ts: p.ts,
+        durationMs,
         reqHeaders: detail ? p.reqHeaders : undefined,
         reqBody: detail ? clip(p.reqBody).body : undefined,
       });
@@ -142,8 +153,12 @@ function attachDebugger(wc) {
       url: p.url,
       method: p.method,
       status: p.status,
+      statusText: p.statusText,
+      mimeType: p.mimeType,
       resourceType: p.resourceType,
       ts: p.ts,
+      durationMs,
+      resSize: size,
       reqHeaders: detail ? p.reqHeaders : undefined,
       reqBody: reqClip.body,
       reqBodyTruncated: reqClip.truncated,
@@ -173,16 +188,23 @@ function attachDebugger(wc) {
         if (p) {
           const resp = params.response || {};
           p.status = resp.status;
+          p.statusText = resp.statusText;
           p.resHeaders = resp.headers;
           p.mimeType = resp.mimeType;
           if (params.type) p.resourceType = params.type;
         }
       } else if (method === "Network.loadingFinished") {
-        finalize(params.requestId);
+        finalize(params.requestId, {
+          finishTs: params.timestamp,
+          size: params.encodedDataLength,
+        });
       } else if (method === "Network.loadingFailed") {
         // net::ERR_ABORTED = bruit normal (navigations annulées) → ignoré.
         if (params.errorText !== "net::ERR_ABORTED") {
-          finalize(params.requestId, params.errorText);
+          finalize(params.requestId, {
+            errorText: params.errorText,
+            finishTs: params.timestamp,
+          });
         } else {
           pending.delete(params.requestId);
         }
