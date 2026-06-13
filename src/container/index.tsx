@@ -60,13 +60,24 @@ window.theme = new Theme<TThemeColorTypes>(undefined, computeTheme(store));
 window.theme.set("primary-color", window.theme.get("menu-background"), true);
 
 window.electronAPI.on("request_wpt.error", (action: string, err: any) => {
+  store.dispatch(setAskAction(false));
+  // Pas de notif pour les erreurs génériques sans info actionnable (ex. WPT non
+  // connecté → message par défaut "Something went INVALID") : c'était du bruit
+  // qui s'empilait en haut à droite.
+  const code = err?.code;
+  if (
+    !code ||
+    code === "Something went INVALID" ||
+    err?.message === "Something went INVALID"
+  ) {
+    return;
+  }
   notification.open({
-    message: err.code,
+    message: code,
     type: "error",
     description: err.message,
     duration: 3,
   });
-  store.dispatch(setAskAction(false));
 });
 
 window.electronAPI.on("app_infos", (appInfos: IAppInfo) => {
@@ -82,14 +93,21 @@ window.electronAPI.on("container.request", (action: string) => {
   }
 });
 
+// Singleton de la modale "Activate plugins" : le déclencheur (ask=true) est
+// rejoué en boucle par le poll/reconnexion WPT → sans garde, des dizaines de
+// modales s'empilent tant qu'on reste sur le panneau. On n'en autorise qu'UNE
+// ouverte à la fois (et ask=false dès l'ouverture).
+let pluginsModal: { destroy: () => void } | null = null;
+
 window.electronAPI.on("request_wpt.done", (action: string, data: any) => {
   const state = store.getState();
 
   switch (action) {
     case "plugins":
       store.dispatch(setWPTPluginsAction(data));
-      if (state.wpt.ask) {
-        const modal = info({
+      if (state.wpt.ask && !pluginsModal) {
+        store.dispatch(setAskAction(false));
+        pluginsModal = info({
           className: "modal-plugins",
           title: "Activate plugins",
           icon: null,
@@ -97,7 +115,8 @@ window.electronAPI.on("request_wpt.done", (action: string, data: any) => {
           centered: true,
           content: <Plugins plugins={data} />,
           onOk: () => {
-            modal.destroy();
+            pluginsModal?.destroy();
+            pluginsModal = null;
           },
         });
       }
@@ -191,7 +210,7 @@ window.electronAPI.on(
   "wpt_plugin_state.update",
   (wptprefix: string, status: TPluginStatus) => {
     store.dispatch(wptPluginsStateUpdateAction(wptprefix, status));
-  }
+  },
 );
 
 window.electronAPI.on("wpt_connect", (connected: boolean) => {
@@ -206,7 +225,7 @@ window.electronAPI.on("ask_password", (action: string, action2: string) => {
   }
   if (state.conf?.menu.password) {
     store.dispatch(
-      openPinpadAction(TNextAction.OPEN_DEV_TOOLS, state.conf?.menu.password)
+      openPinpadAction(TNextAction.OPEN_DEV_TOOLS, state.conf?.menu.password),
     );
   } else if (action === "open_dev_tools" && state.conf?.view === "webview") {
     let count = 0;
@@ -357,10 +376,12 @@ const onCallback = (action: TNextAction, ...data: any) => {
       window.electronAPI.send("main.action", "notification", data[0]);
       break;
     case TNextAction.REQUEST_WPT:
-      store.dispatch(setAskAction(true));
-      // ipcRenderer.send('main_action', 'plugins')
       if (data && data.length > 0) {
         const keyMessage: string = data.shift();
+        // ask=true SEULEMENT pour "plugins" (clic explicite sur le picto, via
+        // Menu.tsx). Les autres requêtes WPT (infos, fastprinter, devices…)
+        // sont automatiques et NE doivent PAS ouvrir la modale d'activation.
+        store.dispatch(setAskAction(keyMessage === "plugins"));
         window.electronAPI.send("request_wpt", keyMessage, ...data);
       }
       break;
@@ -388,7 +409,7 @@ const onCallback = (action: TNextAction, ...data: any) => {
         store.dispatch(setLoader(true));
         window.electronAPI.send(
           "request_wpt",
-          "fastprinter.defaultprinterdata"
+          "fastprinter.defaultprinterdata",
         );
         axios
           .get<IEnvInfo>(`http://localhost:${state.conf?.http.port}/env.json`)
@@ -427,8 +448,8 @@ const onCallback = (action: TNextAction, ...data: any) => {
       if (state.display.ready) {
         store.dispatch(
           iFrameDisplayAction(
-            state.display.switch === "CONTAINER" ? "WPT" : "CONTAINER"
-          )
+            state.display.switch === "CONTAINER" ? "WPT" : "CONTAINER",
+          ),
         );
       }
       break;
@@ -445,7 +466,7 @@ window.electronAPI.on("ask_reload", (cleaCache: boolean) => {
 });
 
 const root = ReactDOM.createRoot(
-  document.getElementById("electron-launcher-root") as HTMLElement
+  document.getElementById("electron-launcher-root") as HTMLElement,
 );
 
 root.render(
@@ -453,7 +474,7 @@ root.render(
     <Provider store={store}>
       <App onCallback={onCallback} sendChildAction={sendChildAction} />
     </Provider>
-  </React.Fragment>
+  </React.Fragment>,
 );
 
 // win.fullscreen = true
