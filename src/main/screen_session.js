@@ -659,7 +659,19 @@ async function startCaptureLoop(cfg, session) {
       // resize de la BrowserWindow). Coût négligeable (executeJavaScript
       // sur un getBoundingClientRect ~1ms).
       const overlayRefresher = setInterval(() => {
-        refreshWebviewBounds(w.webContents).catch(() => {});
+        // Si la window est détruite (fermeture app sans stopSession), l'accès
+        // à w.webContents throw SYNCHRONIQUEMENT « Object has been destroyed » —
+        // le .catch() ne couvre que le rejet de promesse, pas ce throw → on
+        // garde explicitement, sinon exception non catchée en boucle (1,5 s).
+        if (!w || w.isDestroyed()) {
+          clearInterval(overlayRefresher);
+          return;
+        }
+        try {
+          refreshWebviewBounds(w.webContents).catch(() => {});
+        } catch (_) {
+          /* window détruite entre le check et l'accès */
+        }
       }, 1_500);
       activeSession.resizeHandler = { win: w, fn: onResize };
       activeSession.overlayRefresher = overlayRefresher;
@@ -710,22 +722,24 @@ function attachWsHandlers(ws, sessionId, mode) {
     if (!activeSession.netStarted) {
       activeSession.netStarted = true;
       const w = getContainerWindow();
-      const sessions = [];
-      if (w?.webContents?.session) sessions.push(w.webContents.session);
+      // On passe les webContents (et non les sessions) : net_capture attache le
+      // debugger CDP dessus pour capter headers + corps req/res.
+      const contents = [];
+      if (w?.webContents) contents.push(w.webContents);
       const guest = getWebviewWebContents(w?.webContents);
-      if (guest?.session) sessions.push(guest.session);
+      if (guest) contents.push(guest);
       const sendNet = (msg) => {
         const cw = activeSession?.ws;
         if (cw && cw.readyState === WebSocketImpl.OPEN) {
           cw.send(JSON.stringify(msg));
         }
       };
-      netCapture.start(sessions, sendNet);
-      // Le webview POS peut être monté tardivement → on retente d'attacher sa
-      // session après quelques secondes.
+      netCapture.start(contents, sendNet);
+      // Le webview POS peut être monté tardivement → on retente d'attacher son
+      // webContents après quelques secondes.
       setTimeout(() => {
         const g = getWebviewWebContents(getContainerWindow()?.webContents);
-        if (g?.session) netCapture.attachSession(g.session);
+        if (g) netCapture.attachWebContents(g);
       }, 3_000);
     }
   });

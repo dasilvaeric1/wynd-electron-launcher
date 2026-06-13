@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.X]
+
+### [2.6.5]
+
+- fix(screen): "Object has been destroyed" looping on close — the overlay-bounds
+  refresher (setInterval 1.5s) accessed w.webContents after the window was
+  destroyed without going through stopSession; the .catch() didn't cover the
+  synchronous throw. Now guards isDestroyed() and self-clears.
+
+### [2.6.4]
+
+- net capture: also emit statusText, mimeType, response size and request
+  duration (ms) from CDP timings → richer detail + HAR export in the BO
+
+### [2.6.3]
+
+- net capture: switch to CDP (webContents.debugger + Network domain) to capture
+  request/response headers and bodies for XHR/Fetch calls (bodies capped 32 KB,
+  binary skipped), with webRequest fallback (metadata-only) when the debugger
+  cannot attach → no regression on the request list
+- BO Réseau panel: expandable rows showing sent/received headers and bodies
+
 ## [1.19.X]
 
 ### [1.19.0]
