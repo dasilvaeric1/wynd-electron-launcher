@@ -376,10 +376,12 @@ const onCallback = (action: TNextAction, ...data: any) => {
       window.electronAPI.send("main.action", "notification", data[0]);
       break;
     case TNextAction.REQUEST_WPT:
-      store.dispatch(setAskAction(true));
-      // ipcRenderer.send('main_action', 'plugins')
       if (data && data.length > 0) {
         const keyMessage: string = data.shift();
+        // ask=true SEULEMENT pour "plugins" (clic explicite sur le picto, via
+        // Menu.tsx). Les autres requêtes WPT (infos, fastprinter, devices…)
+        // sont automatiques et NE doivent PAS ouvrir la modale d'activation.
+        store.dispatch(setAskAction(keyMessage === "plugins"));
         window.electronAPI.send("request_wpt", keyMessage, ...data);
       }
       break;
