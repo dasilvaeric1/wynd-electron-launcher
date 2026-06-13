@@ -64,6 +64,10 @@ export default defineConfig({
 		rollupOptions: {
 			input: `src/${RENDERER}/index.tsx`,
 			output: {
+				// IIFE = script classique chargeable via <script src> (pas type=module),
+				// comme le faisait webpack. assets/index.html charge ../dist/index.js
+				// en script classique → sinon "Unexpected token 'export'".
+				format: 'iife',
 				entryFileNames: 'index.js',
 				chunkFileNames: 'index.js',
 				assetFileNames: 'index.[ext]',
