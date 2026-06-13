@@ -26,11 +26,16 @@ workflow:
 # ---------------------------------------------------------------------------
 dist:
   stage: dist
-  image: node:16
+  image: node:20
   tags:
     - docker
+  variables:
+    # webpack 5.36 sur node ≥17 → erreur OpenSSL "digital envelope routines"
+    # sans ce flag (le pin node:16 historique servait à l'éviter). node:20
+    # requis car des deps transitives exigent désormais node ≥18 (color@5…).
+    NODE_OPTIONS: "--openssl-legacy-provider"
   cache:
-    key: node16-modules
+    key: node20-modules
     paths:
       - node_modules/
   script:
@@ -47,9 +52,11 @@ dist:
 # ---------------------------------------------------------------------------
 build:linux:
   stage: build
-  image: node:16
+  image: node:20
   tags:
     - docker
+  variables:
+    NODE_OPTIONS: "--openssl-legacy-provider"
   needs:
     - dist
   rules:
