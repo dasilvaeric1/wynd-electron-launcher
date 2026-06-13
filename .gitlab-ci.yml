@@ -26,7 +26,7 @@ workflow:
 # ---------------------------------------------------------------------------
 dist:
   stage: dist
-  image: node:20
+  image: node:22
   tags:
     - docker
   variables:
@@ -52,7 +52,7 @@ dist:
 # ---------------------------------------------------------------------------
 build:linux:
   stage: build
-  image: node:20
+  image: node:22
   tags:
     - docker
   variables:
