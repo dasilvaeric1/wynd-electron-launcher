@@ -92,7 +92,7 @@ build:win:
   script:
     - pnpm install --frozen-lockfile
     - node scripts/stamp_build.js # identifiant de build unique (version+date+sha)
-    - pnpm electron-builder --win portable --x64
+    - pnpm electron-builder --win portable --x64 --publish never
     # Artefact de déploiement Nexus : archive Electron-Launcher_<version>.zip
     # (arborescence Electron-Launcher/cfg|launch|portable). zip parfois absent → install.
     - which zip || (apt-get update -qq && apt-get install -y -qq zip)
