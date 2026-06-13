@@ -60,13 +60,24 @@ window.theme = new Theme<TThemeColorTypes>(undefined, computeTheme(store));
 window.theme.set("primary-color", window.theme.get("menu-background"), true);
 
 window.electronAPI.on("request_wpt.error", (action: string, err: any) => {
+  store.dispatch(setAskAction(false));
+  // Pas de notif pour les erreurs génériques sans info actionnable (ex. WPT non
+  // connecté → message par défaut "Something went INVALID") : c'était du bruit
+  // qui s'empilait en haut à droite.
+  const code = err?.code;
+  if (
+    !code ||
+    code === "Something went INVALID" ||
+    err?.message === "Something went INVALID"
+  ) {
+    return;
+  }
   notification.open({
-    message: err.code,
+    message: code,
     type: "error",
     description: err.message,
     duration: 3,
   });
-  store.dispatch(setAskAction(false));
 });
 
 window.electronAPI.on("app_infos", (appInfos: IAppInfo) => {
@@ -89,6 +100,10 @@ window.electronAPI.on("request_wpt.done", (action: string, data: any) => {
     case "plugins":
       store.dispatch(setWPTPluginsAction(data));
       if (state.wpt.ask) {
+        // Une seule modale par demande : on retombe ask=false immédiatement,
+        // sinon chaque push WPT "plugins" (socket) rouvre une modale → elles
+        // s'empilent tant qu'on reste sur le panneau.
+        store.dispatch(setAskAction(false));
         const modal = info({
           className: "modal-plugins",
           title: "Activate plugins",
@@ -191,7 +206,7 @@ window.electronAPI.on(
   "wpt_plugin_state.update",
   (wptprefix: string, status: TPluginStatus) => {
     store.dispatch(wptPluginsStateUpdateAction(wptprefix, status));
-  }
+  },
 );
 
 window.electronAPI.on("wpt_connect", (connected: boolean) => {
@@ -206,7 +221,7 @@ window.electronAPI.on("ask_password", (action: string, action2: string) => {
   }
   if (state.conf?.menu.password) {
     store.dispatch(
-      openPinpadAction(TNextAction.OPEN_DEV_TOOLS, state.conf?.menu.password)
+      openPinpadAction(TNextAction.OPEN_DEV_TOOLS, state.conf?.menu.password),
     );
   } else if (action === "open_dev_tools" && state.conf?.view === "webview") {
     let count = 0;
@@ -388,7 +403,7 @@ const onCallback = (action: TNextAction, ...data: any) => {
         store.dispatch(setLoader(true));
         window.electronAPI.send(
           "request_wpt",
-          "fastprinter.defaultprinterdata"
+          "fastprinter.defaultprinterdata",
         );
         axios
           .get<IEnvInfo>(`http://localhost:${state.conf?.http.port}/env.json`)
@@ -427,8 +442,8 @@ const onCallback = (action: TNextAction, ...data: any) => {
       if (state.display.ready) {
         store.dispatch(
           iFrameDisplayAction(
-            state.display.switch === "CONTAINER" ? "WPT" : "CONTAINER"
-          )
+            state.display.switch === "CONTAINER" ? "WPT" : "CONTAINER",
+          ),
         );
       }
       break;
@@ -445,7 +460,7 @@ window.electronAPI.on("ask_reload", (cleaCache: boolean) => {
 });
 
 const root = ReactDOM.createRoot(
-  document.getElementById("electron-launcher-root") as HTMLElement
+  document.getElementById("electron-launcher-root") as HTMLElement,
 );
 
 root.render(
@@ -453,7 +468,7 @@ root.render(
     <Provider store={store}>
       <App onCallback={onCallback} sendChildAction={sendChildAction} />
     </Provider>
-  </React.Fragment>
+  </React.Fragment>,
 );
 
 // win.fullscreen = true
