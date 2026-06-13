@@ -127,11 +127,11 @@ deploy:nexus:
   rules:
     - if: $CI_COMMIT_TAG
   script:
-    - apk add --no-cache curl
-    - ZIP=$(ls deploy/out/electron_zip/Electron-Launcher_*.zip 2>/dev/null | head -1)
-    - test -n "$ZIP" || { echo "ERREUR : aucune archive à publier"; exit 1; }
-    - NAME=$(basename "$ZIP")
-    - TARGET="https://nexus.wynd.eu/repository/integration/product/electron_zip/$NAME"
-    - echo "Uploading $NAME ($(du -h "$ZIP" | cut -f1)) -> $TARGET"
-    - curl --fail -u "${NEXUS_USER}:${NEXUS_PASSWORD}" --upload-file "$ZIP" "$TARGET"
-    - echo "Upload OK -> $TARGET"
+    - 'apk add --no-cache curl'
+    - 'ZIP=$(ls deploy/out/electron_zip/Electron-Launcher_*.zip 2>/dev/null | head -1)'
+    - 'if [ -z "$ZIP" ]; then echo "ERREUR aucune archive a publier"; exit 1; fi'
+    - 'NAME=$(basename "$ZIP")'
+    - 'TARGET="https://nexus.wynd.eu/repository/integration/product/electron_zip/$NAME"'
+    - 'echo "Uploading $NAME vers $TARGET"'
+    - 'curl --fail -u "${NEXUS_USER}:${NEXUS_PASSWORD}" --upload-file "$ZIP" "$TARGET"'
+    - 'echo "Upload OK -> $TARGET"'
