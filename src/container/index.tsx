@@ -93,18 +93,21 @@ window.electronAPI.on("container.request", (action: string) => {
   }
 });
 
+// Singleton de la modale "Activate plugins" : le déclencheur (ask=true) est
+// rejoué en boucle par le poll/reconnexion WPT → sans garde, des dizaines de
+// modales s'empilent tant qu'on reste sur le panneau. On n'en autorise qu'UNE
+// ouverte à la fois (et ask=false dès l'ouverture).
+let pluginsModal: { destroy: () => void } | null = null;
+
 window.electronAPI.on("request_wpt.done", (action: string, data: any) => {
   const state = store.getState();
 
   switch (action) {
     case "plugins":
       store.dispatch(setWPTPluginsAction(data));
-      if (state.wpt.ask) {
-        // Une seule modale par demande : on retombe ask=false immédiatement,
-        // sinon chaque push WPT "plugins" (socket) rouvre une modale → elles
-        // s'empilent tant qu'on reste sur le panneau.
+      if (state.wpt.ask && !pluginsModal) {
         store.dispatch(setAskAction(false));
-        const modal = info({
+        pluginsModal = info({
           className: "modal-plugins",
           title: "Activate plugins",
           icon: null,
@@ -112,7 +115,8 @@ window.electronAPI.on("request_wpt.done", (action: string, data: any) => {
           centered: true,
           content: <Plugins plugins={data} />,
           onOk: () => {
-            modal.destroy();
+            pluginsModal?.destroy();
+            pluginsModal = null;
           },
         });
       }
