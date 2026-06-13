@@ -127,7 +127,7 @@ if (process.env.NODE_ENV === "development") {
     "..",
     "..",
     "dist",
-    `${app.name}-1.0.0.AppImage`
+    `${app.name}-1.0.0.AppImage`,
   );
 }
 
@@ -175,8 +175,8 @@ if (argv.config_path !== default_path) {
 store.path.conf = path.isAbsolute(argv.config_path)
   ? argv.config_path
   : app.isPackaged
-  ? path.resolve(path.dirname(process.execPath), argv.config_path)
-  : path.resolve(__dirname, argv.config_path);
+    ? path.resolve(path.dirname(process.execPath), argv.config_path)
+    : path.resolve(__dirname, argv.config_path);
 
 store.version = app.getVersion();
 
@@ -198,7 +198,7 @@ const createWindows = () => {
     throw new CustomError(
       500,
       err.api_code || err.code || CustomError.CODE.GENERATE_WINDOWS,
-      err.message
+      err.message,
     );
   }
 };
