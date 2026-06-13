@@ -27,6 +27,8 @@ workflow:
 dist:
   stage: dist
   image: node:16
+  tags:
+    - docker
   cache:
     key: node16-modules
     paths:
@@ -46,6 +48,8 @@ dist:
 build:linux:
   stage: build
   image: node:16
+  tags:
+    - docker
   needs:
     - dist
   rules:
@@ -70,6 +74,8 @@ build:linux:
 build:win:
   stage: build
   image: electronuserland/builder:wine
+  tags:
+    - docker
   needs:
     - dist
   variables:
@@ -113,6 +119,8 @@ build:win:
 deploy:nexus:
   stage: deploy
   image: alpine:latest
+  tags:
+    - docker
   needs:
     - job: build:win
       artifacts: true
