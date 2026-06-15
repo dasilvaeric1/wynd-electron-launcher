@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [2.6.X]
 
+### [2.6.6]
+
+- fix(launch): anycommerce.bat — `cd` vers local-stack-maintenance remonté avant
+  le 1er appel `control_center.ps1 -restart wsl` (sinon chemin relatif KO →
+  "L'argument control_center.ps1 n'existe pas"). `> null` → `> nul`.
+
 ### [2.6.5]
 
 - fix(screen): "Object has been destroyed" looping on close — the overlay-bounds
