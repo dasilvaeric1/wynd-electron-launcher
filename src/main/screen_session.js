@@ -140,7 +140,7 @@ async function readCentralConfig() {
       if (!warnedMissing) {
         log.warn(
           `[SCREEN] appsettings non trouvé (${APPSETTINGS_PATH}), screen-session désactivé. ` +
-            `Pour dev local, set EL_SCREEN_API_KEY + EL_SCREEN_BASE_URL + EL_SCREEN_SERIAL.`
+            `Pour dev local, set EL_SCREEN_API_KEY + EL_SCREEN_BASE_URL + EL_SCREEN_SERIAL.`,
         );
         warnedMissing = true;
       }
@@ -152,7 +152,7 @@ async function readCentralConfig() {
     if (!c || !c.BaseUrl || !c.ApiKey) {
       if (!warnedMissing) {
         log.warn(
-          "[SCREEN] CentralApi incomplet dans appsettings (BaseUrl/ApiKey requis), screen-session désactivé"
+          "[SCREEN] CentralApi incomplet dans appsettings (BaseUrl/ApiKey requis), screen-session désactivé",
         );
         warnedMissing = true;
       }
@@ -170,7 +170,7 @@ async function readCentralConfig() {
     if (!serial) {
       if (!warnedMissing) {
         log.warn(
-          "[SCREEN] CaisseSerialNumber vide et endpoint /api/identity indispo (RetailScheduler éteint ?) — screen-session désactivé"
+          "[SCREEN] CaisseSerialNumber vide et endpoint /api/identity indispo (RetailScheduler éteint ?) — screen-session désactivé",
         );
         warnedMissing = true;
       }
@@ -219,7 +219,7 @@ function getWebviewWebContents(parentWc) {
       (wc) =>
         !wc.isDestroyed() &&
         wc.getType() === "webview" &&
-        wc.hostWebContents?.id === parentWc.id
+        wc.hostWebContents?.id === parentWc.id,
     ) ?? null
   );
 }
@@ -270,7 +270,7 @@ async function refreshWebviewBounds(parentWc) {
         ].filter(Boolean);
         return { webview, overlays };
       })()`,
-      true
+      true,
     );
     if (
       activeSession &&
@@ -281,7 +281,7 @@ async function refreshWebviewBounds(parentWc) {
       activeSession.webviewBounds = result.webview;
       activeSession.overlayBounds = result.overlays || [];
       log.info(
-        `[SCREEN] webview = ${result.webview.x},${result.webview.y} ${result.webview.w}×${result.webview.h} | ${result.overlays.length} overlay(s)`
+        `[SCREEN] webview = ${result.webview.x},${result.webview.y} ${result.webview.w}×${result.webview.h} | ${result.overlays.length} overlay(s)`,
       );
     }
   } catch (err) {
@@ -327,7 +327,7 @@ async function captureFrame(mode) {
   const source = sources[idx] ?? sources[0];
   if (idx > 0 && !sources[idx]) {
     log.warn(
-      `[SCREEN] screenIndex=${idx} demandé mais seulement ${sources.length} écran(s) — fallback 0`
+      `[SCREEN] screenIndex=${idx} demandé mais seulement ${sources.length} écran(s) — fallback 0`,
     );
   }
   return source.thumbnail.toJPEG(JPEG_QUALITY);
@@ -406,7 +406,7 @@ async function pollOnce() {
     const r = await httpRequest("GET", url, { "x-api-key": cfg.apiKey });
     if (r.status === 401 || r.status === 403) {
       log.warn(
-        `[SCREEN] poll auth refusé (${r.status}), invalide cache config`
+        `[SCREEN] poll auth refusé (${r.status}), invalide cache config`,
       );
       clearCachedConfig();
       return;
@@ -425,7 +425,7 @@ async function pollOnce() {
     const session = r.body && r.body.session;
     if (session && session.id) {
       log.info(
-        `[SCREEN] session pending détectée: ${session.id} (requestedBy=${session.requestedBy})`
+        `[SCREEN] session pending détectée: ${session.id} (requestedBy=${session.requestedBy})`,
       );
       // Consentement caissier : DÉSACTIVÉ par défaut (télémaintenance non
       // surveillée de matériel d'entreprise, comportement RMM standard). Le
@@ -437,7 +437,7 @@ async function pollOnce() {
       const requireConsent = process.env.EL_SCREEN_REQUIRE_CONSENT === "1";
       if (!requireConsent) {
         respondToSession(cfg, session, true).catch((err) =>
-          log.error(`[SCREEN] auto-accept failed: ${err.message}`)
+          log.error(`[SCREEN] auto-accept failed: ${err.message}`),
         );
         return;
       }
@@ -480,7 +480,7 @@ function showConsentDialog(cfg, session) {
     clearTimeout(autoCloseTimer);
     ipcMain.removeListener("screen-consent:answer", handler);
     respondToSession(cfg, session, accepted).catch((err) =>
-      log.error(`[SCREEN] respondToSession: ${err.message}`)
+      log.error(`[SCREEN] respondToSession: ${err.message}`),
     );
     if (!win.isDestroyed()) win.close();
   };
@@ -508,16 +508,16 @@ async function respondToSession(cfg, session, accepted) {
       "POST",
       `${cfg.baseUrl}/api/screen-sessions/${session.id}/${path}`,
       { "x-api-key": cfg.apiKey, "content-type": "application/json" },
-      "{}"
+      "{}",
     );
     if (!r.ok) {
       log.error(
-        `[SCREEN] ${path} failed: ${r.status} ${JSON.stringify(r.body)}`
+        `[SCREEN] ${path} failed: ${r.status} ${JSON.stringify(r.body)}`,
       );
       return;
     }
     log.info(
-      `[SCREEN] session ${session.id} → ${accepted ? "accepted" : "declined"}`
+      `[SCREEN] session ${session.id} → ${accepted ? "accepted" : "declined"}`,
     );
     if (accepted) {
       startCaptureLoop(cfg, session);
@@ -540,7 +540,7 @@ async function startCaptureLoop(cfg, session) {
       "POST",
       `${cfg.baseUrl}/api/screen-sessions/${session.id}/ticket`,
       { "x-api-key": cfg.apiKey, "content-type": "application/json" },
-      "{}"
+      "{}",
     );
     if (!r.ok || !r.body || !r.body.ticket) {
       log.error(`[SCREEN] ticket grant failed: ${r.status}`);
@@ -568,7 +568,7 @@ async function startCaptureLoop(cfg, session) {
   let mode = session.mode === "screen" ? "screen" : "window";
   if (mode === "window" && !getContainerWindow()) {
     log.warn(
-      "[SCREEN] mode='window' demandé mais aucune container window — fallback 'screen'"
+      "[SCREEN] mode='window' demandé mais aucune container window — fallback 'screen'",
     );
     mode = "screen";
   }
@@ -696,10 +696,16 @@ function attachWsHandlers(ws, sessionId, mode) {
   ws.on("open", () => {
     log.info(`[SCREEN] WS open for session ${sessionId}`);
     activeSession.reconnectAttempts = 0; // reset le compteur sur succès
-    // Capture loop : démarrée une seule fois — sur reconnect le timer
+    // Capture loop JPEG : démarrée une seule fois — sur reconnect le timer
     // existe déjà et envoie via activeSession.ws (qui pointe maintenant
     // sur la nouvelle socket).
-    if (!activeSession.captureTimer) {
+    //
+    // ⚠️ EGRESS : en mode WebRTC, le flux vidéo passe par la RTCPeerConnection
+    // (P2P / TURN Cloudflare). On NE doit PAS lancer la boucle JPEG en plus,
+    // sinon elle relaie 10 fps (~0.5 Mo/s) À TRAVERS Railway en parallèle du
+    // WebRTC → double flux et egress Railway massif. La boucle JPEG n'est donc
+    // que le fallback quand WebRTC est désactivé.
+    if (!activeSession.captureTimer && !activeSession.useWebrtc) {
       activeSession.captureTimer = setInterval(async () => {
         try {
           const jpeg = await captureFrame(mode);
@@ -819,7 +825,7 @@ function scheduleReconnect() {
   const attempt = activeSession.reconnectAttempts + 1;
   if (attempt > MAX_RECONNECT_ATTEMPTS) {
     log.warn(
-      `[SCREEN] giving up after ${MAX_RECONNECT_ATTEMPTS} reconnect attempts`
+      `[SCREEN] giving up after ${MAX_RECONNECT_ATTEMPTS} reconnect attempts`,
     );
     stopSession();
     return;
@@ -829,7 +835,7 @@ function scheduleReconnect() {
   log.info(`[SCREEN] reconnect attempt ${attempt} in ${delay}ms`);
   activeSession.reconnectTimer = setTimeout(() => {
     reconnectWs().catch((err) =>
-      log.error(`[SCREEN] reconnect failed: ${err.message}`)
+      log.error(`[SCREEN] reconnect failed: ${err.message}`),
     );
   }, delay);
 }
@@ -842,7 +848,7 @@ async function reconnectWs() {
     "POST",
     `${cfg.baseUrl}/api/screen-sessions/${sessionId}/ticket`,
     { "x-api-key": cfg.apiKey, "content-type": "application/json" },
-    "{}"
+    "{}",
   );
   if (!r.ok || !r.body?.ticket) {
     log.warn(`[SCREEN] ticket refresh failed (${r.status}) — retry later`);
@@ -851,7 +857,7 @@ async function reconnectWs() {
   }
   const wsBase = cfg.baseUrl.replace(/^http/, "ws");
   const wsUrl = `${wsBase}/api/screen-sessions/${sessionId}/stream?ticket=${encodeURIComponent(
-    r.body.ticket
+    r.body.ticket,
   )}`;
   const WebSocketImpl = require("ws");
   const ws = new WebSocketImpl(wsUrl);
@@ -888,7 +894,7 @@ async function getNut() {
         err.code || err.message
       }) — mode 'screen' désactivé. ` +
         `Pour l'activer : cd electron-launcher/wynd-electron-launcher && npm i @nut-tree-fork/nut-js. ` +
-        `En attendant, utilise le mode 'Fenêtre POS' côté BO.`
+        `En attendant, utilise le mode 'Fenêtre POS' côté BO.`,
     );
     return null;
   }
@@ -1275,7 +1281,7 @@ async function probeNutPermission(nut) {
     log.warn(
       `[SCREEN] nut.js mouse.getPosition a échoué (${err.message}) — ` +
         `vérifie System Settings > Privacy & Security > Accessibility et ` +
-        `coche le binaire Electron utilisé pour le launcher.`
+        `coche le binaire Electron utilisé pour le launcher.`,
     );
   }
 }
@@ -1395,7 +1401,7 @@ function showSessionIndicator(mode) {
   @keyframes p{0%,100%{opacity:.4}50%{opacity:1}}
 </style></head>
 <body><div class="b"><span class="dot"></span>Support — ${scopeLabel}</div></body></html>
-		`)
+		`),
   );
   return win;
 }

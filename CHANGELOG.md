@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [2.6.X]
 
+### [2.6.7]
+
+- fix(egress): ne plus lancer la boucle de capture JPEG (10 fps) quand WebRTC
+  est actif. Elle relayait les frames a travers Railway EN PARALLELE du flux
+  WebRTC (P2P/TURN) -> double flux + egress Railway massif (~0.5 Mo/s/session,
+  ~55 Go/15j observe). JPEG = fallback uniquement quand WebRTC off.
+
 ### [2.6.6]
 
 - fix(launch): anycommerce.bat — `cd` vers local-stack-maintenance remonté avant
