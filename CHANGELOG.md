@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [2.6.X]
 
+### [2.6.8]
+
+- fix(net): plus de doublons dans le panneau Réseau du BO. CDP (détail complet,
+  scopé au webContents) et le fallback webRequest (métadonnées, scopé à la
+  SESSION entière) tournaient en parallèle : quand le CDP d'une webview échoue,
+  le fallback s'attachait sur la session partagée et re-captait tout le trafic
+  déjà capté en détail → 1 ligne pleine (CDP) + 1 ligne quasi vide (webRequest)
+  par requête, non fusionnables (id CDP string ≠ id webRequest entier). On
+  musele desormais le webRequest sur toute session deja couverte par un CDP
+  (garde au moment de l'event pour gerer l'ordre d'attache).
+
 ### [2.6.7]
 
 - fix(egress): ne plus lancer la boucle de capture JPEG (10 fps) quand WebRTC

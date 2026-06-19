@@ -40,6 +40,13 @@ const TEXT_CT = /(json|text|xml|javascript|x-www-form-urlencoded|graphql)/i;
 let send = null;
 let wrSessions = []; // sessions attachées via webRequest (fallback)
 let dbgContents = []; // webContents attachés via CDP
+// Sessions déjà couvertes en DÉTAIL par un debugger CDP. webRequest étant
+// scopé à la session entière (≠ CDP, scopé au webContents), si on laissait le
+// fallback émettre sur une session déjà CDP, on doublerait chaque requête :
+// 1 ligne pleine (CDP) + 1 ligne métadonnées (webRequest). On muselle donc le
+// webRequest sur ces sessions. Le fallback ne sert que pour les sessions SANS
+// aucun CDP (où il est la seule source).
+let cdpSessions = new Set();
 
 function emit(ev) {
   if (!send) return;
@@ -72,6 +79,11 @@ function attachDebugger(wc) {
     return false;
   }
   dbgContents.push(wc);
+  try {
+    if (wc.session) cdpSessions.add(wc.session);
+  } catch (_) {
+    /* wc sans session accessible */
+  }
 
   // État par requestId entre requestWillBeSent → responseReceived → finished.
   const pending = new Map();
@@ -245,6 +257,10 @@ function attachWebRequest(sess) {
   wrSessions.push(sess);
   try {
     sess.webRequest.onCompleted(FILTER, (d) => {
+      // Session couverte par CDP (détail complet) → on n'émet pas le doublon
+      // métadonnées. Garde au moment de l'event (≠ à l'attache) car le CDP
+      // peut s'attacher APRÈS le webRequest selon l'ordre de montage des wc.
+      if (cdpSessions.has(sess)) return;
       emit({
         id: d.id,
         url: d.url,
@@ -257,6 +273,7 @@ function attachWebRequest(sess) {
     });
     sess.webRequest.onErrorOccurred(FILTER, (d) => {
       if (d.error === "net::ERR_ABORTED") return;
+      if (cdpSessions.has(sess)) return;
       emit({
         id: d.id,
         url: d.url,
@@ -294,7 +311,7 @@ function start(contents, sendFn) {
     attachWebRequest(electronSession.defaultSession);
   }
   log.info(
-    `[NET] capture démarrée (cdp=${dbgContents.length}, webRequest=${wrSessions.length})`
+    `[NET] capture démarrée (cdp=${dbgContents.length}, webRequest=${wrSessions.length})`,
   );
 }
 
@@ -321,6 +338,7 @@ function stop() {
   }
   dbgContents = [];
   wrSessions = [];
+  cdpSessions = new Set();
   send = null;
   log.info("[NET] capture arrêtée");
 }
