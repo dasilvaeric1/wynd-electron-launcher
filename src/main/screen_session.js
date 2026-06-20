@@ -40,6 +40,7 @@ const log = require("./helpers/electron_log");
 const getDeviceSummary = require("./helpers/device_summary");
 const wptProxyTunnel = require("./helpers/wpt_proxy_tunnel");
 const netCapture = require("./helpers/net_capture");
+const sessionRecorder = require("./helpers/session_recorder");
 const {
   createCaptureWindow,
   destroyCaptureWindow,
@@ -735,6 +736,7 @@ function attachWsHandlers(ws, sessionId, mode) {
       const guest = getWebviewWebContents(w?.webContents);
       if (guest) contents.push(guest);
       const sendNet = (msg) => {
+        if (msg && msg.type === "net") sessionRecorder.addNet(msg);
         const cw = activeSession?.ws;
         if (cw && cw.readyState === WebSocketImpl.OPEN) {
           cw.send(JSON.stringify(msg));
@@ -745,7 +747,12 @@ function attachWsHandlers(ws, sessionId, mode) {
       // webContents après quelques secondes.
       setTimeout(() => {
         const g = getWebviewWebContents(getContainerWindow()?.webContents);
-        if (g) netCapture.attachWebContents(g);
+        if (g) {
+          netCapture.attachWebContents(g);
+          if (!g.isDestroyed()) {
+            g.on("did-finish-load", () => sessionRecorder.injectIfRecording(g));
+          }
+        }
       }, 3_000);
     }
   });
@@ -766,6 +773,22 @@ function attachWsHandlers(ws, sessionId, mode) {
         if (activeSession?.useWebrtc) {
           forwardSignalIn(msg);
         }
+        return;
+      }
+      // Contrôle rrweb recorder depuis le BO.
+      if (msg.type === "recorder-start") {
+        const posWc = getWebviewWebContents(getContainerWindow()?.webContents);
+        sessionRecorder.start({
+          posWc,
+          cfg: activeSession.cfg,
+          posUrl: posWc && !posWc.isDestroyed() ? posWc.getURL() : undefined,
+          clientHint: undefined,
+          onStatus: (s) => sendNet({ type: "recorder-status", ...s }),
+        });
+        return;
+      }
+      if (msg.type === "recorder-stop") {
+        sessionRecorder.stop();
         return;
       }
       // Phase 2 — Inject input events. `mouse-click` reste supporté en
@@ -1360,6 +1383,9 @@ function stopSession() {
   }
   if (activeSession.indicator && !activeSession.indicator.isDestroyed()) {
     activeSession.indicator.close();
+  }
+  if (sessionRecorder.isRecording()) {
+    sessionRecorder.stop().catch(() => {});
   }
   activeSession = null;
 }

@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [2.6.X]
 
+### [2.6.9]
+
+- feat(rec): session recorder (rrweb) controllable from the BO over the
+  screen-session WS. New control messages: `recorder-start` (resolves the POS
+  webContents and starts rrweb capture) and `recorder-stop` (stops and uploads).
+  Net events are buffered into the recorder via `sessionRecorder.addNet()`.
+  Re-injection on POS page reload via `did-finish-load` on the webview wc
+  (bound once in the late-mount setTimeout). Auto-stop with upload triggered
+  in `stopSession()` before session teardown. Status callbacks forwarded to BO
+  as `recorder-status` messages over the same WS.
+
 ### [2.6.8]
 
 - fix(net): plus de doublons dans le panneau Réseau du BO. CDP (détail complet,
