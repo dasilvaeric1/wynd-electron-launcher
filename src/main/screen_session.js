@@ -783,7 +783,15 @@ function attachWsHandlers(ws, sessionId, mode) {
           cfg: activeSession.cfg,
           posUrl: posWc && !posWc.isDestroyed() ? posWc.getURL() : undefined,
           clientHint: undefined,
-          onStatus: (s) => sendNet({ type: "recorder-status", ...s }),
+          // NB: ne PAS utiliser `sendNet` ici — il est const-scopé au bloc
+          // `if (!activeSession.netStarted)` et invisible dans ce closure
+          // (ws.on('message')). On envoie directement sur activeSession.ws.
+          onStatus: (s) => {
+            const cw = activeSession?.ws;
+            if (cw && cw.readyState === WebSocketImpl.OPEN) {
+              cw.send(JSON.stringify({ type: "recorder-status", ...s }));
+            }
+          },
         });
         return;
       }

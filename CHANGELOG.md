@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [2.6.X]
 
+### [2.6.10]
+
+- fix(rec): le recorder ne renvoyait jamais de `recorder-status` (ni recording,
+  ni uploading, ni ready) et n'uploadait rien. Cause : le callback `onStatus`
+  appelait `sendNet`, un `const` scopé au bloc `if (!activeSession.netStarted)`,
+  invisible depuis le closure `ws.on('message')` → `ReferenceError` avalé par le
+  try/catch à chaque changement d'état. `onStatus` envoie désormais directement
+  sur `activeSession.ws`. (Bug introduit en 2.6.9.)
+
 ### [2.6.9]
 
 - feat(rec): session recorder (rrweb) controllable from the BO over the
