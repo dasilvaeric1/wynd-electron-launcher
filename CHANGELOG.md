@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [2.6.X]
 
+### [2.6.13]
+
+- fix(rec): retire l'extension REDUX_DEVTOOLS de l'install debug. Cassée dans ce
+  contexte Electron (prepareInjection.js → `sendMessage` undefined) et en conflit
+  avec notre tap Redux (elle écrasait/n'installait pas proprement
+  `__REDUX_DEVTOOLS_EXTENSION_COMPOSE__`). Le mode debug se comporte désormais
+  comme la prod côté Redux → notre shim est seul à fournir le hook. React
+  DevTools conservé.
+
 ### [2.6.12]
 
 - fix(rec): le tap Redux ne s'installait jamais sur la caisse (`__elReduxInstalled`
