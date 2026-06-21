@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [2.6.X]
 
+### [2.6.12]
+
+- fix(rec): le tap Redux ne s'installait jamais sur la caisse (`__elReduxInstalled`
+  undefined). Cause : le shim était injecté via un `<script>` DOM inline, refusé
+  par la CSP de la page POS (script-src sans unsafe-inline) — violation CSP non
+  catchable. On l'exécute désormais dans le main world via
+  `webFrame.executeJavaScript` (non soumis à la CSP), avec résolution de chemin
+  robuste (fallback `process.resourcesPath`) et logs `[el-redux-tap]`.
+
 ### [2.6.11]
 
 - feat(rec): capture du state Redux dans le bundle de trace. Au démarrage de
