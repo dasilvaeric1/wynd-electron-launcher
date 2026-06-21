@@ -98,7 +98,7 @@ function start({ posWc, cfg, posUrl, clientHint, onStatus }) {
   // savoir pourquoi le state est vide (shim absent ? compose pas appelé ?).
   posWc
     ?.executeJavaScript?.(
-      "(()=>{try{return {installed:!!window.__elReduxInstalled,composeType:typeof window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__,extType:typeof window.__REDUX_DEVTOOLS_EXTENSION__,stores:Object.keys(window.__elReduxState||{}),bufLen:(window.__elRedux||[]).length,href:location&&location.href}}catch(e){return {err:String(e&&e.message)}}})()",
+      "(()=>{try{return {installed:!!window.__elReduxInstalled,composeType:typeof window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__,extType:typeof window.__REDUX_DEVTOOLS_EXTENSION__,stores:Object.keys(window.__elReduxState||{}),bufLen:(window.__elRedux||[]).length,preload:window.__elReduxPreloadStatus||null,href:location&&location.href}}catch(e){return {err:String(e&&e.message)}}})()",
       true,
     )
     .then((d) => {

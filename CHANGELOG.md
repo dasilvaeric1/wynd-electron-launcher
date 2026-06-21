@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [2.6.X]
 
+### [2.6.15]
+
+- fix(rec): shim Redux INLINE dans le preload (plus de readFileSync, qui ratait
+  en packagé asar = cause du tap absent, installed:false). + statut preload
+  expose via contextBridge (__elReduxPreloadStatus) lu dans le diag redux.json.
+
 ### [2.6.14]
 
 - chore(rec): diagnostic Redux embarqué dans redux.json (champ diag: installed,
