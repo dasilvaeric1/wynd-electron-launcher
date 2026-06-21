@@ -84,6 +84,7 @@ function start({ posWc, cfg, posUrl, clientHint, onStatus }) {
   };
   active.reduxInitial = {};
   active.redux = [];
+  active.reduxDiag = null;
   posWc
     ?.executeJavaScript?.(
       "(()=>{try{return JSON.parse(JSON.stringify(window.__elReduxState||{}))}catch(e){return {}}})()",
@@ -91,6 +92,17 @@ function start({ posWc, cfg, posUrl, clientHint, onStatus }) {
     )
     .then((snap) => {
       if (active) active.reduxInitial = snap || {};
+    })
+    .catch(() => {});
+  // Diagnostic embarqué (lisible depuis le bundle, sans console) : permet de
+  // savoir pourquoi le state est vide (shim absent ? compose pas appelé ?).
+  posWc
+    ?.executeJavaScript?.(
+      "(()=>{try{return {installed:!!window.__elReduxInstalled,composeType:typeof window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__,extType:typeof window.__REDUX_DEVTOOLS_EXTENSION__,stores:Object.keys(window.__elReduxState||{}),bufLen:(window.__elRedux||[]).length,href:location&&location.href}}catch(e){return {err:String(e&&e.message)}}})()",
+      true,
+    )
+    .then((d) => {
+      if (active) active.reduxDiag = d || null;
     })
     .catch(() => {});
   inject(posWc).then((ok) => {
@@ -137,7 +149,11 @@ async function stop() {
   zip.file("meta.json", JSON.stringify(meta));
   zip.file(
     "redux.json",
-    JSON.stringify({ initial: a.reduxInitial || {}, events: a.redux || [] }),
+    JSON.stringify({
+      initial: a.reduxInitial || {},
+      events: a.redux || [],
+      diag: a.reduxDiag || null,
+    }),
   );
   const buf = await zip.generateAsync({
     type: "nodebuffer",

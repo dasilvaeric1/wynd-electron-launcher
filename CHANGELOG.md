@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [2.6.X]
 
+### [2.6.14]
+
+- chore(rec): diagnostic Redux embarqué dans redux.json (champ diag: installed,
+  composeType, stores, bufLen, href) pour debug sans console DevTools.
+
 ### [2.6.13]
 
 - fix(rec): retire l'extension REDUX_DEVTOOLS de l'install debug. Cassée dans ce
