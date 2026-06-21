@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [2.6.X]
 
+### [2.6.11]
+
+- feat(rec): capture du state Redux dans le bundle de trace. Au démarrage de
+  l'enregistrement, un snapshot de `window.__elReduxState` (baseline) est lu en
+  best-effort et stocké dans `reduxInitial`. À chaque tick du drain, le buffer
+  `window.__elRedux` (actions/diffs) est vidé et accumulé dans `redux`. À
+  l'arrêt, `redux.json` est écrit dans le zip avec la structure
+  `{ initial, events }`. Garde-fou : auto-stop si `redux.length > 20000`
+  (cohérent avec le cap rrweb existant).
+
 ### [2.6.10]
 
 - fix(rec): le recorder ne renvoyait jamais de `recorder-status` (ni recording,

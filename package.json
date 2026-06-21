@@ -1,7 +1,7 @@
 {
   "name": "wynd-electron-launcher",
   "productName": "electron-launcher",
-  "version": "2.6.10",
+  "version": "2.6.11",
   "main": "src/main/index.js",
   "packageManager": "pnpm@10.30.3",
   "engines": {
