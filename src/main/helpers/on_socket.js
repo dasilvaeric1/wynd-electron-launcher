@@ -20,7 +20,7 @@ module.exports = function onSocket(store, socket, initCallback) {
 	const tryToRegister = (centralState) => {
 		if (centralState.ready && centralState.status === 'READY' && !centralState.registered && !centralState.registering) {
 			if (centralState.timeoutRegister) {
-				clearTimeout(timeoutRegister)
+				clearTimeout(centralState.timeoutRegister)
 				centralState.timeoutRegister = null
 			}
 			const register = getCentralRegister(store)
@@ -128,7 +128,7 @@ module.exports = function onSocket(store, socket, initCallback) {
 		centralState.registered = true
 		centralState.registering = false
 		if (centralState.timeoutRegister) {
-			clearTimeout(timeoutRegister)
+			clearTimeout(centralState.timeoutRegister)
 			centralState.timeoutRegister = null
 		}
 		if (initCallback && store.wpt.plugins_state.central) {
@@ -157,7 +157,8 @@ module.exports = function onSocket(store, socket, initCallback) {
 		centralState.registered = false
 		centralState.registering = false
 		if (!centralState.timeoutRegister) {
-			central.timeoutRegister = setTimeout(() => {
+			centralState.timeoutRegister = setTimeout(() => {
+				centralState.timeoutRegister = null
 				tryToRegister(centralState)
 			}, 10 * 1000)
 		}
