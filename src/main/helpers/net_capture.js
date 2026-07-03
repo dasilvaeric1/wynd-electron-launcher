@@ -37,7 +37,12 @@ const BODY_MAX = 32 * 1024; // 32 Ko par corps
 // Content-types dont on tente de lire le corps de réponse (texte exploitable).
 const TEXT_CT = /(json|text|xml|javascript|x-www-form-urlencoded|graphql)/i;
 
-let send = null;
+// Multi-abonnés : chaque event réseau est diffusé à TOUS les sinks enregistrés.
+// Permet la coexistence de la visu BO (sink session, éphémère) et d'un log
+// fichier persistant (sink fichier, durée de vie du launcher) sur UNE SEULE
+// attache debugger CDP (Electron n'autorise qu'un debugger par webContents).
+const subscribers = new Set();
+let sessionSink = null; // sink dédié à la session de visu (start/stop)
 let wrSessions = []; // sessions attachées via webRequest (fallback)
 let dbgContents = []; // webContents attachés via CDP
 // Sessions déjà couvertes en DÉTAIL par un debugger CDP. webRequest étant
@@ -49,11 +54,14 @@ let dbgContents = []; // webContents attachés via CDP
 let cdpSessions = new Set();
 
 function emit(ev) {
-  if (!send) return;
-  try {
-    send({ type: "net", ...ev });
-  } catch (_) {
-    /* socket fermée entre-temps */
+  if (subscribers.size === 0) return;
+  const msg = { type: "net", ...ev };
+  for (const fn of subscribers) {
+    try {
+      fn(msg);
+    } catch (_) {
+      /* sink en erreur (socket fermée…) → on n'interrompt pas les autres */
+    }
   }
 }
 
@@ -298,29 +306,8 @@ function attachTarget(wc) {
   }
 }
 
-/**
- * @param {Array} contents - webContents à écouter (container + webview POS).
- * @param {function} sendFn - (msg) => envoi sur la WS de session.
- */
-function start(contents, sendFn) {
-  send = sendFn;
-  for (const wc of contents || []) if (wc) attachTarget(wc);
-  // Si rien n'a pu être attaché (aucun wc fourni), filet de sécurité sur la
-  // defaultSession en mode métadonnées.
-  if (dbgContents.length === 0 && wrSessions.length === 0) {
-    attachWebRequest(electronSession.defaultSession);
-  }
-  log.info(
-    `[NET] capture démarrée (cdp=${dbgContents.length}, webRequest=${wrSessions.length})`,
-  );
-}
-
-/** Attache une cible supplémentaire à chaud (webview POS monté tardivement). */
-function attachWebContents(wc) {
-  if (send) attachTarget(wc);
-}
-
-function stop() {
+/** Détache tout (debuggers + webRequest) et réinitialise l'état d'attache. */
+function detachAll() {
   for (const wc of dbgContents) {
     try {
       if (wc && !wc.isDestroyed()) wc.debugger.detach();
@@ -339,8 +326,70 @@ function stop() {
   dbgContents = [];
   wrSessions = [];
   cdpSessions = new Set();
-  send = null;
-  log.info("[NET] capture arrêtée");
 }
 
-module.exports = { start, attachWebContents, stop };
+/**
+ * Enregistre un sink persistant (ex : log fichier) et attache les webContents
+ * fournis. Le sink reçoit tous les events réseau jusqu'à ce qu'on appelle la
+ * fonction de désabonnement retournée.
+ *
+ * @param {function} sink - (msg) => void
+ * @param {Array} [contents] - webContents à attacher immédiatement.
+ * @returns {function} unsubscribe
+ */
+function subscribe(sink, contents) {
+  if (typeof sink !== "function") return () => {};
+  subscribers.add(sink);
+  ensureAttached(contents);
+  return () => {
+    subscribers.delete(sink);
+    if (subscribers.size === 0) detachAll();
+  };
+}
+
+/** Attache les webContents demandés + filet defaultSession si rien d'attaché. */
+function ensureAttached(contents) {
+  for (const wc of contents || []) if (wc) attachTarget(wc);
+  if (dbgContents.length === 0 && wrSessions.length === 0) {
+    attachWebRequest(electronSession.defaultSession);
+  }
+}
+
+/**
+ * Démarre la capture pour la session de visu BO (sink éphémère). Coexiste avec
+ * d'éventuels sinks persistants (subscribe) : on réutilise la même attache CDP.
+ *
+ * @param {Array} contents - webContents à écouter (container + webview POS).
+ * @param {function} sendFn - (msg) => envoi sur la WS de session.
+ */
+function start(contents, sendFn) {
+  if (sessionSink) subscribers.delete(sessionSink);
+  sessionSink = sendFn;
+  subscribers.add(sessionSink);
+  ensureAttached(contents);
+  log.info(
+    `[NET] capture démarrée (cdp=${dbgContents.length}, webRequest=${wrSessions.length}, sinks=${subscribers.size})`,
+  );
+}
+
+/** Attache une cible supplémentaire à chaud (webview POS monté tardivement). */
+function attachWebContents(wc) {
+  if (subscribers.size > 0) attachTarget(wc);
+}
+
+/**
+ * Arrête la capture de session. Les sinks persistants (subscribe) restent
+ * actifs : on ne détache le debugger que s'il ne reste plus AUCUN sink.
+ */
+function stop() {
+  if (sessionSink) {
+    subscribers.delete(sessionSink);
+    sessionSink = null;
+  }
+  if (subscribers.size === 0) detachAll();
+  log.info(
+    `[NET] capture session arrêtée (sinks restants=${subscribers.size})`,
+  );
+}
+
+module.exports = { start, attachWebContents, stop, subscribe };
