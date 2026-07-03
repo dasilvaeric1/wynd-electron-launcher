@@ -19,6 +19,7 @@ const showDialogError = require("./dialog_err");
 const createAppLog = require("./helpers/create_app_log");
 const configureProtocol = require("./helpers/register_file_protocol");
 const hardenWebContents = require("./helpers/harden_web_contents");
+const captureJsErrors = require("./helpers/capture_js_errors");
 const nodeIpcConnect = require("./helpers/node_ipc");
 const generateLoaderWindow = require("./loader_window");
 const generateContainerWindow = require("./container_window");
@@ -294,6 +295,9 @@ getConfig(store.path.conf, undefined, argv.url)
         // bloque les popups natifs, sanitize les webview, surveille les
         // navigations hors allowlist. À enregistrer avant createWindows.
         hardenWebContents(store);
+        // Capture des erreurs JS non catchées du POS en webview (opt-in
+        // config.log.capture_errors). À enregistrer avant createWindows.
+        captureJsErrors(store);
       })
       .then(() => {
         innerGlobalShortcut(store, log);

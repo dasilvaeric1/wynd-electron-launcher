@@ -15,7 +15,7 @@ const reinitialize = require("./helpers/reinitialize");
 const checkWptPlugin = require("./helpers/check_wpt_plugin");
 const openLoaderDevTools = require("./helpers/open_loader_dev_tools");
 const sendOnReady = require("./helpers/send_on_ready");
-const hasLevel = require("./helpers/has_level");
+const handleScoLog = require("./helpers/handle_sco_log");
 const log = require("./helpers/electron_log");
 const getCentralRegister = require("./helpers/get_central_register");
 const clearCache = require("./helpers/clear_cache");
@@ -30,7 +30,7 @@ module.exports = function generateIpc(store, initCallback) {
       store.ready = true;
       store.windows.container.current.webContents.send(
         "user_path",
-        store.infos.user_path
+        store.infos.user_path,
       );
 
       const name =
@@ -44,25 +44,25 @@ module.exports = function generateIpc(store, initCallback) {
       if (store.screens.length > 0) {
         store.windows.container.current.webContents.send(
           "screens",
-          store.screens
+          store.screens,
         );
       }
       store.windows.container.current.webContents.send(
         "wpt_connect",
-        store.wpt.connect
+        store.wpt.connect,
       );
       if (store.wpt.infos) {
         store.windows.container.current.webContents.send(
           "request_wpt.done",
           "infos",
-          store.wpt.infos
+          store.wpt.infos,
         );
       }
       if (store.wpt.plugins) {
         store.windows.container.current.webContents.send(
           "request_wpt.done",
           "plugins",
-          store.wpt.plugins
+          store.wpt.plugins,
         );
       }
 
@@ -77,7 +77,7 @@ module.exports = function generateIpc(store, initCallback) {
       if (store.windows.container.current) {
         store.windows.container.current.webContents.send(
           "user_path",
-          store.infos.user_path
+          store.infos.user_path,
         );
       }
       count++;
@@ -96,7 +96,7 @@ module.exports = function generateIpc(store, initCallback) {
 
           store.windows.loader.current.webContents.send(
             "loader.action",
-            "initialize"
+            "initialize",
           );
           store.windows.loader.current.webContents.send("app_infos", {
             version: buildVersion(),
@@ -110,7 +110,7 @@ module.exports = function generateIpc(store, initCallback) {
         }
         await initialize(
           { conf: store.conf || store.path.conf, version: store.infos.version },
-          initCallback
+          initCallback,
         );
 
         if (store.conf && store.conf.extensions) {
@@ -169,42 +169,9 @@ module.exports = function generateIpc(store, initCallback) {
           tmpLogMessage = others[0];
         }
 
-        if (tmpLogMessage.length > 0) {
-          switch (level) {
-            case "DEBUG":
-              // store.appLog && store.appLog.debug(tmpLogMessage)
-              break;
-            case "ERROR":
-              // store.appLog && store.appLog.error(tmpLogMessage)
-              break;
-            case "INFO":
-              // store.appLog && store.appLog.info(tmpLogMessage)
-              break;
-            default:
-              // store.appLog && store.appLog.default(tmpLogMessage)
-              break;
-          }
-        }
-        if (
-          store.conf &&
-          store.conf.central &&
-          store.conf.central.log &&
-          hasLevel(store.conf.central.log, level)
-        ) {
-          const timestamp = Date.now();
-          const messageContainer = {
-            id: timestamp,
-            event: "log",
-            type: "PUSH",
-            data: {
-              type: level.toLowerCase(),
-              message: others[0],
-            },
-          };
-          if (store.wpt && store.wpt.socket) {
-            store.wpt.socket.emit("central.message", messageContainer);
-          }
-        }
+        // Sink unique : persistance fichier locale (opt-in log.persist_app) +
+        // relais central (historique, filtré par central.log).
+        handleScoLog(store, level, { flat: tmpLogMessage, raw: others[0] });
         break;
 
       case "central.register":
@@ -251,7 +218,7 @@ module.exports = function generateIpc(store, initCallback) {
           store.windows.container.current.webContents.send(
             "request_wpt.error",
             action,
-            err
+            err,
           );
         } else {
           const notification = {
@@ -276,13 +243,13 @@ module.exports = function generateIpc(store, initCallback) {
           const devices = Array.isArray(raw)
             ? raw
             : Array.isArray(raw?.devices)
-            ? raw.devices
-            : [];
+              ? raw.devices
+              : [];
           if (store.windows.container.current) {
             store.windows.container.current.webContents.send(
               "request_wpt.done",
               action,
-              devices
+              devices,
             );
           }
         } catch (e) {
@@ -305,14 +272,14 @@ module.exports = function generateIpc(store, initCallback) {
           if (!dev || !dev.name) throw new Error("No lights device found");
           const testRes = await fetch(
             `${base}/lights/api/devices/${encodeURIComponent(dev.name)}/test`,
-            { method: "POST" }
+            { method: "POST" },
           );
           if (!testRes.ok) throw new Error(`POST test: HTTP ${testRes.status}`);
           if (store.windows.container.current) {
             store.windows.container.current.webContents.send(
               "request_wpt.done",
               action,
-              { ok: true, device: dev.name }
+              { ok: true, device: dev.name },
             );
           }
         } catch (e) {
@@ -321,7 +288,7 @@ module.exports = function generateIpc(store, initCallback) {
             store.windows.container.current.webContents.send(
               "request_wpt.error",
               action,
-              { message: e.message }
+              { message: e.message },
             );
           }
         }
@@ -353,7 +320,7 @@ module.exports = function generateIpc(store, initCallback) {
           store.windows.container.current.webContents.send(
             "request_wpt.done",
             action,
-            data
+            data,
           );
         })
         .catch((err) => {
@@ -369,7 +336,7 @@ module.exports = function generateIpc(store, initCallback) {
             store.windows.container.current.webContents.send(
               "request_wpt.error",
               action,
-              err
+              err,
             );
           }
         });
@@ -431,12 +398,12 @@ module.exports = function generateIpc(store, initCallback) {
               await requestWPT(
                 store.wpt.socket,
                 { emit: "fastprinter.cashdrawer", datas: null },
-                3
+                3,
               );
               log.info(`[ACTION] > ${action} : fastprinter.cashdrawer sent`);
             } catch (err) {
               log.error(
-                `[ACTION] > ${action} : fastprinter.cashdrawer sent error, ${err}`
+                `[ACTION] > ${action} : fastprinter.cashdrawer sent error, ${err}`,
               );
             }
             log.info(`[ACTION] > ${action} : fastprinter.cashdrawer sent`);
@@ -450,12 +417,12 @@ module.exports = function generateIpc(store, initCallback) {
               await requestWPT(
                 store.wpt.socket,
                 { emit: "cashdrawer.open", datas: null },
-                3
+                3,
               );
               log.info(`[ACTION] > ${action} : cashdrawer.open sent`);
             } catch (err) {
               log.error(
-                `[ACTION] > ${action} : cashdrawer.open sent error, ${err}`
+                `[ACTION] > ${action} : cashdrawer.open sent error, ${err}`,
               );
             }
             store.wpt.socket.emit("cashdrawer.open");
