@@ -366,6 +366,32 @@ Display a line of icons
   * default: false
   * description: set level of the app log. If the app is in iframe mode. It can send the log to store
 
+* persist_app:
+  * required: false
+  * value: 0/1, false/true
+  * default: false (disabled if absent)
+  * description: write SCO/POS JS logs to the `logs/app/` file (master switch for local file persistence — replaces the legacy NW.js HTTP logserver)
+
+* capture_errors:
+  * required: false
+  * value: 0/1, false/true
+  * default: false (disabled if absent)
+  * description: capture uncaught JS errors of the POS (window.onerror + unhandledrejection). Works in `view=webview` and `view=iframe`
+
+* capture_console:
+  * required: false
+  * value: 0/1, false/true
+  * default: false (disabled if absent)
+  * description: capture the POS `console.error` / `console.warn`
+
+* capture_network:
+  * required: false
+  * value: 0/1, false/true
+  * default: false (disabled if absent)
+  * description: capture failed network requests of the POS (HTTP >= 400 or network error), with truncated bodies, via CDP
+
+> Note: captured logs go through the same sink as regular SCO logs. To land in the `logs/app/` file they require `persist_app=1`; central relay follows `central.log`.
+
 #### [central]
 
 * enable:

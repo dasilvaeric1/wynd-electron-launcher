@@ -2,7 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.7.X]
+
+### [2.7.1]
+
+- feat(screen): le chemin de l'`appsettings.json` du service RetailScheduler est
+  désormais résolu selon l'OS (Windows `C:\Retail\…`, Linux
+  `/opt/retail-scheduler/appsettings.json`) au lieu d'être codé en dur Windows.
+  Débloque la prise en main à distance sur Debian sans
+  `EL_SCREEN_APPSETTINGS_PATH` explicite.
+
+### [2.7.0]
+
+- feat(log): capture des logs JS du SCO/POS vers `logs/app/` via les capacités
+  natives Electron (remplace le logserver HTTP NW.js). Sink unique
+  (`handle_sco_log.js`) : persistance fichier opt-in `log.persist_app` + relais
+  central inchangé. Trois sources opt-in (off par défaut) : `capture_errors`
+  (erreurs non catchées), `capture_console` (error/warn), `capture_network`
+  (échecs réseau via CDP). Fonctionne en `view=webview` ET `view=iframe`
+  (détection frame POS + injection `webFrameMain`). `net_capture` passé en
+  multi-abonnés pour coexister avec la visu BO. Fix signature `console-message`
+  Electron 42.
+
 ## [2.6.X]
+
+### [2.6.16]
+
+- fix(central): re-arm du retry d'enrôlement après `register.error` (typo
+  `central` → `centralState`) — la caisse restait orange jusqu'à un restart WPT.
 
 ### [2.6.15]
 
