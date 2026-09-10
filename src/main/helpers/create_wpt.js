@@ -36,6 +36,26 @@ module.exports = function launchWpt(wpt, callback) {
 		// cannot use fork same node version of nw used
 		const spawn = require('child_process').spawn
 
+		// wpt.path est modifiable a distance (node_ipc.js, evenement 'wpt.restart') et part
+		// dans spawn avec options.shell a true par defaut. Un chemin d'installation legitime
+		// — historiquement C:\Retail\... sous Windows, un dossier applicatif ailleurs — ne
+		// contient aucun de ces caracteres ; leur presence ne peut venir que d'une tentative
+		// d'injection. On refuse avant toute construction de commande plutot que de parier
+		// sur l'echappement du shell, qui differe entre cmd.exe et sh.
+		if (typeof wpt.path !== 'string' || /[;&|`$(){}<>\n\r"']/.test(wpt.path)) {
+			clearTimeout(timeout)
+			timeout = null
+			reject(
+				new CustomError(
+					400,
+					CustomError.CODE.INVALID_$$_PATH,
+					'wpt path contains shell metacharacters: ' + JSON.stringify(wpt.path),
+					['WPT']
+				)
+			)
+			return
+		}
+
 		const isShell =
 			path.extname(wpt.path) === '.sh' || path.extname(wpt.path) === '.bat'
 		let isJs = path.extname(wpt.path) === '.js'
@@ -51,6 +71,17 @@ module.exports = function launchWpt(wpt, callback) {
 			: [exePath]
 
 		if (!fs.existsSync(exePath)) {
+			// Le `return` manquait : rejeter la promesse n'interrompt pas la fonction, et le
+			// spawn plus bas s'executait malgre le controle. Comme `options.shell` vaut true
+			// par defaut (config_validator), un chemin porteur de metacaracteres partait au
+			// shell alors meme qu'il venait d'etre juge invalide. Le controle d'existence est
+			// desormais bloquant, ce qui ecarte du meme coup tout chemin qui n'est pas un
+			// fichier reel — wpt.path etant modifiable via l'IPC (node_ipc.js, 'wpt.restart').
+			// Le minuteur de creation doit etre desarme avant de sortir : son callback
+			// manipule `child`, declare en const plus bas. Sortir sans l'annuler le ferait
+			// lever un ReferenceError dans le processus principal a l'echeance.
+			clearTimeout(timeout)
+			timeout = null
 			reject(
 				new CustomError(
 					400,
@@ -59,6 +90,7 @@ module.exports = function launchWpt(wpt, callback) {
 					['WPT']
 				)
 			)
+			return
 		}
 
 		if (!isJs && path.extname(exePath) === '.bat') {
