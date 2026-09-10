@@ -146,7 +146,22 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
       webview.send("parent.action", message);
     } else if (conf?.view === "iframe") {
       if (urlApp) {
-        webview.contentWindow.postMessage(message, "*");
+        // Cibler l'origine reellement chargee dans l'iframe plutot que "*" : avec "*",
+        // n'importe quelle page ayant remplace le contenu de l'iframe (redirection,
+        // navigation interne) recevrait ce message. urlApp est la source de l'iframe,
+        // donc son origine est exactement le destinataire attendu. On ne retombe sur "*"
+        // que pour les schemas sans origine reelle (file://), ou l'URL ne donne pas de
+        // cible exploitable et ou le contenu est de toute facon local.
+        let targetOrigin = "*";
+        try {
+          const { origin } = new URL(urlApp);
+          if (origin && origin !== "null") {
+            targetOrigin = origin;
+          }
+        } catch (e) {
+          // urlApp non parsable : on conserve le comportement precedent
+        }
+        webview.contentWindow.postMessage(message, targetOrigin);
       }
     }
   };
