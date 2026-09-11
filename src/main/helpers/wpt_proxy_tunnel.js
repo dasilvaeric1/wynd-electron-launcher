@@ -35,8 +35,9 @@ function wptBase(store) {
       store.conf.wpt.url &&
       store.conf.wpt.url.href;
     if (href) return href.replace(/\/+$/, "");
-  } catch (_) {
-    /* fallback */
+  } catch (err) {
+    // Conf illisible → on retombe sur l'adresse WPT par défaut.
+    log.debug(`[WPT] URL WPT illisible dans la conf: ${err.message}`);
   }
   return "http://127.0.0.1:9963";
 }

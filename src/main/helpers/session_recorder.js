@@ -132,7 +132,11 @@ async function stop() {
       true,
     );
     if (Array.isArray(batch)) a.events.push(...batch);
-  } catch (_) {}
+  } catch (err) {
+    // Drain final perdu : l'enregistrement part sans ses derniers events
+    // plutôt que d'être abandonné.
+    log.warn(`[REC] drain final KO, derniers events perdus: ${err.message}`);
+  }
   const startedAt = new Date(a.startedAt).toISOString();
   const stoppedAt = new Date().toISOString();
   const meta = {

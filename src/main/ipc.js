@@ -209,7 +209,8 @@ module.exports = function generateIpc(store, initCallback) {
         try {
           await checkWptPlugin(store.wpt.socket, "FastPrinter");
         } catch (e) {
-          // ignore — on poursuit avec la requête
+          // On poursuit avec la requête : elle renverra sa propre erreur.
+          log.debug(`[WPT] check FastPrinter KO: ${e.message}`);
         }
       }
 

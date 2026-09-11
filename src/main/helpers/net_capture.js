@@ -198,8 +198,9 @@ function emit(ev) {
   for (const fn of subscribers) {
     try {
       fn(msg);
-    } catch (_) {
-      /* sink en erreur (socket fermée…) → on n'interrompt pas les autres */
+    } catch (err) {
+      // Sink en erreur (socket fermée…) → on n'interrompt pas les autres.
+      log.debug(`[NET] sink en erreur, event non diffusé: ${err.message}`);
     }
   }
 }
@@ -228,8 +229,8 @@ function attachDebugger(wc) {
   dbgContents.push(wc);
   try {
     if (wc.session) cdpSessions.add(wc.session);
-  } catch (_) {
-    /* wc sans session accessible */
+  } catch (err) {
+    log.debug(`[NET] wc sans session accessible: ${err.message}`);
   }
 
   // État par requestId entre requestWillBeSent → responseReceived → finished.
@@ -269,8 +270,9 @@ function attachDebugger(wc) {
           requestId,
         });
         p.reqBody = r?.postData;
-      } catch (_) {
-        /* indispo */
+      } catch (err) {
+        // Corps de requête indisponible (event déjà purgé du buffer CDP).
+        log.debug(`[NET] getRequestPostData KO: ${err.message}`);
       }
     }
     const reqClip = clip(p.reqBody);
@@ -290,8 +292,9 @@ function attachDebugger(wc) {
           if (r?.base64Encoded) {
             try {
               body = Buffer.from(body, "base64").toString("utf8");
-            } catch (_) {
-              /* garde le base64 brut */
+            } catch (err) {
+              // On garde le base64 brut plutôt que de perdre le corps.
+              log.debug(`[NET] corps base64 non décodable: ${err.message}`);
             }
           }
           const c = clip(body);
@@ -449,8 +452,8 @@ function attachDebugger(wc) {
   dbg.on("detach", cleanup);
   try {
     wc.once("destroyed", cleanup);
-  } catch (_) {
-    /* wc déjà parti */
+  } catch (err) {
+    log.debug(`[NET] wc déjà détruit, cleanup non armé: ${err.message}`);
   }
 
   return true;
@@ -511,16 +514,16 @@ function detachAll() {
   for (const wc of dbgContents) {
     try {
       if (wc && !wc.isDestroyed()) wc.debugger.detach();
-    } catch (_) {
-      /* déjà détaché */
+    } catch (err) {
+      log.debug(`[NET] debugger déjà détaché: ${err.message}`);
     }
   }
   for (const sess of wrSessions) {
     try {
       sess.webRequest.onCompleted(null);
       sess.webRequest.onErrorOccurred(null);
-    } catch (_) {
-      /* session détruite */
+    } catch (err) {
+      log.debug(`[NET] session détruite, webRequest non désarmé: ${err.message}`);
     }
   }
   dbgContents = [];

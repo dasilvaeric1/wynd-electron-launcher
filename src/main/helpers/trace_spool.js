@@ -65,9 +65,10 @@ function createSpool({ dir, maxBytes, fsImpl = nodeFs, logger } = {}) {
     for (const rec of records) {
       try {
         payload += JSON.stringify(rec) + "\n";
-      } catch (_) {
-        // event non sérialisable (référence circulaire) → on le saute plutôt
+      } catch (err) {
+        // Event non sérialisable (référence circulaire) → on le saute plutôt
         // que de perdre tout le batch.
+        log.debug(`[TRACE] event non sérialisable ignoré: ${err.message}`);
       }
     }
     if (!payload) return 0;
@@ -101,8 +102,9 @@ function createSpool({ dir, maxBytes, fsImpl = nodeFs, logger } = {}) {
           }
         })
         .filter((e) => e !== null);
-    } catch (_) {
-      // pas encore de ligne écrite → chunk vide, meta seule
+    } catch (err) {
+      // Pas encore de ligne écrite → chunk vide, meta seule.
+      log.debug(`[TRACE] lecture du chunk partiel impossible: ${err.message}`);
     }
     return { meta, events };
   }
@@ -111,8 +113,8 @@ function createSpool({ dir, maxBytes, fsImpl = nodeFs, logger } = {}) {
     for (const p of [eventsPath, metaPath]) {
       try {
         fsImpl.rmSync(p, { force: true });
-      } catch (_) {
-        /* déjà absent */
+      } catch (err) {
+        log.debug(`[TRACE] suppression de ${p} impossible: ${err.message}`);
       }
     }
   }

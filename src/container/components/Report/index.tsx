@@ -15,6 +15,9 @@ import MessagerContext from '../../context/message'
 import { AppDispatch } from '../../store'
 import { fetchGlobalCA, fetchReportPayments, fetchReportProducts, fetchReportUsers } from '../../store/actions/report'
 import { generateXML } from '../../helpers/generate'
+import { ICustomWindow } from '../../../helpers/interface'
+
+declare let window: ICustomWindow
 
 export interface IReportHeaderComponentProps {
 	onCallback: (action: TNextAction, ...data: any) => void
@@ -48,7 +51,9 @@ const ReportHeaderComponent: React.FunctionComponent<IReportHeaderComponentProps
 			props.onCallback(TNextAction.REQUEST_WPT, 'fastprinter.printxml', xml)
 		}
 		catch(err) {
-
+			// Un rapport qui echoue ne doit pas casser la vue, mais l'echec etait
+			// jusqu'ici totalement invisible (ni log, ni retour caisse).
+			window.log?.error(`[WINDOW CONTAINER] impression du rapport ${nReportType} (${nFiscalDate}) KO: ${(err as Error).message}`)
 		}
 	}
 

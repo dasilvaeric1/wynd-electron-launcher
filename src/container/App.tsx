@@ -7,6 +7,7 @@ import Menu from "./components/Menu";
 import Emergency from "./components/Emergency";
 import PluginState from "./components/PluginState";
 import { IConfig } from "./helpers/config";
+import { ICustomWindow } from "../helpers/interface";
 import {
   IAppInfo,
   IDisplay,
@@ -31,7 +32,7 @@ export interface IAppProps {
   sendChildAction: (action: string, ...data: any) => void;
 }
 
-interface IMyWindow extends Window {
+interface IMyWindow extends ICustomWindow {
   __STATIC__: string;
 }
 
@@ -159,7 +160,12 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
             targetOrigin = origin;
           }
         } catch (e) {
-          // urlApp non parsable : on conserve le comportement precedent
+          // urlApp non parsable : on conserve le comportement precedent ("*").
+          window.log?.debug(
+            `[WINDOW CONTAINER] origine cible non deduite de urlApp: ${
+              (e as Error).message
+            }`,
+          );
         }
         webview.contentWindow.postMessage(message, targetOrigin);
       }
@@ -209,7 +215,12 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
             try {
               data.payload = JSON.parse(data.payload);
             } catch (err) {
-              // silent
+              // Charge utile non-JSON : on la remonte telle quelle.
+              window.log?.debug(
+                `[WINDOW CONTAINER] log SCO non parsable: ${
+                  (err as Error).message
+                }`,
+              );
             }
           }
           props.sendChildAction("log", data.level || "INFO", data.payload);

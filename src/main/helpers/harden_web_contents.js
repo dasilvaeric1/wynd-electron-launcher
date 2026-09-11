@@ -34,8 +34,9 @@ function hardenWebContents(store) {
       if (confUrl && /^https?:/i.test(String(confUrl))) {
         origins.add(new URL(String(confUrl)).origin);
       }
-    } catch {
-      /* url non parsable → ignore */
+    } catch (err) {
+      // URL de conf non parsable → elle n'entre pas dans les origines permises.
+      log.debug(`[NAV] url de conf non parsable: ${err.message}`);
     }
     return origins;
   };

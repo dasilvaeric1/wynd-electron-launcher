@@ -391,8 +391,9 @@ async function pollOnce() {
     if (summary) {
       devicesParam = `&devices=${encodeURIComponent(JSON.stringify(summary))}`;
     }
-  } catch {
-    // non-bloquant
+  } catch (err) {
+    // Non bloquant : le poll doit partir même sans résumé périphériques.
+    log.debug(`[SCREEN] résumé périphériques indisponible: ${err.message}`);
   }
   const url =
     `${cfg.baseUrl}/api/screen-sessions/pending` +
@@ -685,8 +686,10 @@ async function startCaptureLoop(cfg, session) {
         }
         try {
           refreshWebviewBounds(w.webContents).catch(() => {});
-        } catch (_) {
-          /* window détruite entre le check et l'accès */
+        } catch (err) {
+          // Window détruite entre le check et l'accès → le garde en tête de
+          // callback coupera l'interval au tick suivant.
+          log.debug(`[SCREEN] overlay refresh sauté: ${err.message}`);
         }
       }, 1_500);
       activeSession.resizeHandler = { win: w, fn: onResize };
@@ -833,8 +836,10 @@ function attachWsHandlers(ws, sessionId, mode) {
           log.warn(`[SCREEN] input inject error: ${err.message}`);
         });
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      // Une commande distante mal formée ne doit pas tuer la session, mais on
+      // veut savoir laquelle a été perdue.
+      log.warn(`[SCREEN] commande WS ignorée: ${err.message}`);
     }
   });
 
@@ -1402,7 +1407,9 @@ function stopSession() {
   if (activeSession.ws && activeSession.ws.readyState <= 1) {
     try {
       activeSession.ws.close();
-    } catch {}
+    } catch (err) {
+      log.debug(`[SCREEN] WS déjà fermée: ${err.message}`);
+    }
   }
   if (activeSession.indicator && !activeSession.indicator.isDestroyed()) {
     activeSession.indicator.close();

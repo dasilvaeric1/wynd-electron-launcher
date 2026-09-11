@@ -16,8 +16,9 @@ try {
 	})
 		.toString()
 		.trim()
-} catch {
-	/* pas de git (zip détaché) → nogit */
+} catch (err) {
+	// Pas de git (zip détaché, build CI sans .git) → on tamponne 'nogit'.
+	console.warn(`[stamp] commit indisponible (${err.message}) → nogit`)
 }
 
 const builtAt = new Date().toISOString()

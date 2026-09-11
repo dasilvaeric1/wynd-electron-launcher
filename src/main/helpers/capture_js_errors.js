@@ -24,8 +24,16 @@ function buildHookSrc(flags) {
   var M_ERR = ${JSON.stringify(M_ERR)};
   var M_CON = ${JSON.stringify(M_CON)};
   var origError = console.error.bind(console);
+  // Le hook tourne dans la page POS : s'il n'arrive pas a rapporter, il n'a
+  // aucun autre canal. On compte les pertes sur window, lisibles depuis le
+  // main (executeJavaScript) et depuis les DevTools.
+  window.__elErrHookDrops = window.__elErrHookDrops || 0;
   function report(marker, payload) {
-    try { origError(marker + JSON.stringify(payload)); } catch (e) { /* noop */ }
+    try {
+      origError(marker + JSON.stringify(payload));
+    } catch (e) {
+      window.__elErrHookDrops++;
+    }
   }
   function serialize(a) {
     if (a instanceof Error) return a.stack || (a.name + ': ' + a.message);
@@ -66,7 +74,9 @@ function buildHookSrc(flags) {
       var args = Array.prototype.slice.call(arguments);
       try {
         report(M_CON + ':' + lvl, { level: lvl, message: args.map(serialize).join(' ') });
-      } catch (e) { /* noop */ }
+      } catch (e) {
+        window.__elErrHookDrops++;
+      }
       return orig.apply(console, args);
     };
   });`
@@ -216,7 +226,8 @@ module.exports = function captureJsErrors(store) {
         try {
           payload = JSON.parse(payload);
         } catch (e) {
-          /* garde la string brute */
+          // Payload non-JSON → on garde la string brute telle qu'émise.
+          log.debug(`[SCO] payload d'erreur non-JSON: ${e.message}`);
         }
         handleScoLog(store, "ERROR", {
           flat: `[SCO uncaught] ${flattenErr(payload)}`,
@@ -233,7 +244,8 @@ module.exports = function captureJsErrors(store) {
         try {
           payload = JSON.parse(payload);
         } catch (e) {
-          /* garde la string brute */
+          // Payload non-JSON → on garde la string brute telle qu'émise.
+          log.debug(`[SCO] payload console non-JSON: ${e.message}`);
         }
         const level = lvlTag === "warn" ? "WARN" : "ERROR";
         const text =

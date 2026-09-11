@@ -13,6 +13,15 @@ const REDUX_TAP_SRC = `
   var ACTION_CAP = 8000;
   window.__elReduxState = window.__elReduxState || {};
   window.__elRedux = window.__elRedux || [];
+
+  // Le tap tourne dans la page POS : pas de logger, et la console y est
+  // elle-meme capturee ailleurs. Les echecs sont donc comptes et exposes sur
+  // window, releves avec la trace.
+  window.__elReduxErrors = window.__elReduxErrors || { count: 0, last: null };
+  function tapError(where, e) {
+    window.__elReduxErrors.count++;
+    window.__elReduxErrors.last = where + ': ' + ((e && e.message) || e);
+  }
   function compose() {
     var funcs = Array.prototype.slice.call(arguments);
     if (funcs.length === 0) return function (x) { return x; };
@@ -42,7 +51,7 @@ const REDUX_TAP_SRC = `
     return function (createStore) {
       return function (reducer, preloadedState) {
         var store = createStore(reducer, preloadedState);
-        try { window.__elReduxState[name] = store.getState(); } catch (e) {}
+        try { window.__elReduxState[name] = store.getState(); } catch (e) { tapError('baseline ' + name, e); }
         var origDispatch = store.dispatch;
         store.dispatch = function (action) {
           var res = origDispatch(action);
@@ -53,7 +62,7 @@ const REDUX_TAP_SRC = `
             window.__elReduxState[name] = next;
             window.__elRedux.push({ ts: Date.now(), store: name, actionType: (action && action.type) || 'action', action: cap(action), diff: diff });
             if (window.__elRedux.length > MAX_EVENTS) window.__elRedux.splice(0, window.__elRedux.length - MAX_EVENTS);
-          } catch (e) {}
+          } catch (e) { tapError('dispatch ' + name, e); }
           return res;
         };
         return store;
@@ -88,10 +97,14 @@ try {
     webFrame
       .executeJavaScript(REDUX_TAP_SRC)
       .catch((e) => {
+        // Le statut a déjà été cloné vers le MAIN world à ce stade : le muter
+        // ne se voit plus côté page, la console du preload est le seul canal.
+        __elReduxStatus.err = "exec KO: " + (e && e.message);
         try {
           console.error("[el-redux-tap] exec KO", e && e.message);
-        } catch (_) {
-          /* noop */
+        } catch (consoleErr) {
+          __elReduxStatus.err +=
+            " (console indisponible: " + (consoleErr && consoleErr.message) + ")";
         }
       });
     __elReduxStatus.method = "webFrame.called";
@@ -104,7 +117,9 @@ try {
 try {
   contextBridge.exposeInMainWorld("__elReduxPreloadStatus", __elReduxStatus);
 } catch (e) {
-  /* contextBridge indispo */
+  // Sans contextBridge le statut d'injection n'est plus lisible depuis la
+  // page : la console du preload est le seul canal restant.
+  console.error("[el-redux-tap] exposeInMainWorld KO", e && e.message);
 }
 
 ipcRenderer.on("parent.action", (event, data) => {

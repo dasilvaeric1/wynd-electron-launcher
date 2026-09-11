@@ -4,10 +4,14 @@ const createRenderLog = require("../../helpers/create_renderer_log");
 // Version de build injectée SYNCHRONEMENT (pas d'IPC) — évite la race où
 // app_infos arrive avant que React ait monté ses listeners.
 let appVersion = "";
+// Raison de l'échec gardée pour être tracée dès que le logger existe (il est
+// initialisé plus bas, sur l'IPC user_path).
+let appVersionErr = null;
 try {
   appVersion = require("../../main/helpers/build_version")();
-} catch {
-  /* build_info absent (dev) → vide */
+} catch (err) {
+  // build_info absent (dev) → version vide.
+  appVersionErr = err.message;
 }
 
 // --- Channel whitelists ---
@@ -33,6 +37,9 @@ let logger = {
 
 ipcRenderer.once("user_path", (_event, userPath) => {
   logger = createRenderLog(userPath);
+  if (appVersionErr) {
+    logger.debug(`[PRELOAD] build_version indisponible: ${appVersionErr}`);
+  }
 });
 
 // --- Expose secure APIs to renderer via contextBridge ---
