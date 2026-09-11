@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 ## [2.8.X]
 
+### [2.8.7]
+
+- feat(trace): capture les WebSockets, actives par defaut avec `capture_net`.
+
+  Les WS n'utilisent PAS la famille d'events CDP des requetes HTTP : ni
+  `requestWillBeSent` ni `responseReceived` ne les voient. Tout le trafic temps
+  reel du POS (socket.io, relais central) etait donc absent de la trace, alors
+  que c'est souvent lui qui explique une caisse figee — on n'y voyait que du
+  XHR/fetch. Le repli `webRequest` ne sauvait rien : il est musele des que le
+  CDP est attache, et ne verrait de toute facon que la poignee de main.
+
+  Sont enregistres le CYCLE DE VIE (`created`, `open` avec statut, `closed`
+  avec code et duree, `error`) et des COMPTEURS — jamais les charges utiles.
+  Une socket bavarde emet des centaines de trames par minute : les conserver
+  ferait exploser le volume du chunk, et les trames transportent des donnees
+  metier.
+
+  Des trames socket.io on extrait le seul NOM de l'event (`42["nom",…]`), d'ou
+  un decompte par flux : savoir que `priceUpdate` a defile 340 fois pendant que
+  `cartSync` n'est jamais passe est exactement ce qui identifie un blocage, et
+  un nom d'event n'est pas une donnee personnelle.
+
+  Une socket de caisse restant ouverte des heures, ses compteurs sont releves
+  A CHAQUE FERMETURE DE CHUNK puis remis a zero : sans ca, son activite
+  n'apparaitrait qu'a la deconnexion, donc souvent jamais. Chaque chunk porte
+  ainsi SON trafic, et une chute devient visible sur la frise du dashboard.
+
 ### [2.8.6]
 
 - fix(trace): le dashboard affichait « 0 ms » sur toutes les traces. L'uploader

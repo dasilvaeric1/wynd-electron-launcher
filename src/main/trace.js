@@ -43,13 +43,42 @@ let state = null;
 const URL_MAX = 512;
 const NON_NETWORK_SCHEME = /^(data|blob|javascript|about|chrome-extension):/i;
 
+function clipUrl(value) {
+  const url = typeof value === "string" ? value : "";
+  return url.length > URL_MAX ? url.slice(0, URL_MAX) + "…" : url;
+}
+
+/**
+ * Event WebSocket : cycle de vie et compteurs, jamais de charge utile.
+ *
+ * `events` est un decompte PAR NOM d'event socket.io (`42["nom",…]`), qui dit
+ * quel flux circule sans rien reveler de son contenu. Les trames elles-memes ne
+ * sont ni conservees ni transmises.
+ */
+function slimWs(msg) {
+  return {
+    type: "ws",
+    ts: Date.now(),
+    event: msg.event,
+    url: clipUrl(msg.url),
+    status: msg.status,
+    error: msg.error,
+    durationMs: msg.durationMs,
+    sent: msg.sent,
+    recv: msg.recv,
+    bytesSent: msg.bytesSent,
+    bytesRecv: msg.bytesRecv,
+    events: msg.events,
+  };
+}
+
 /** Métadonnées réseau seulement : pas de corps dans une trace continue. */
 function slimNet(msg) {
   const url = typeof msg.url === "string" ? msg.url : "";
   return {
     ts: Date.now(),
     method: msg.method,
-    url: url.length > URL_MAX ? url.slice(0, URL_MAX) + "…" : url,
+    url: clipUrl(url),
     status: msg.status,
     statusText: msg.statusText,
     error: msg.error,
@@ -123,7 +152,12 @@ async function finalizeChunk(chunk) {
   }
 
   const redux = s.redux;
-  const net = s.net;
+  // Une socket de caisse reste ouverte des heures : sans ce releve, son
+  // activite n'apparaitrait qu'a sa fermeture, donc souvent jamais. Les
+  // compteurs repartent de zero pour que chaque chunk porte SON trafic.
+  const net = s.cfg.captureNet
+    ? [...s.net, ...netCapture.snapshotWebSockets().map(slimWs)]
+    : s.net;
   resetChunkBuffers();
 
   try {
@@ -227,8 +261,12 @@ function startCapture() {
 
   if (s.cfg.captureNet) {
     s.netUnsub = netCapture.subscribe((msg) => {
-      if (!isNetworkWorthKeeping(msg)) return;
       if (s.net.length >= MAX_NET_PER_CHUNK) return;
+      if (msg && msg.type === "ws") {
+        s.net.push(slimWs(msg));
+        return;
+      }
+      if (!isNetworkWorthKeeping(msg)) return;
       s.net.push(slimNet(msg));
     });
     // L'attache elle-même est faite par onTarget ci-dessous, piloté par le
@@ -372,5 +410,6 @@ module.exports = {
   teardownTrace,
   // exportés pour les tests
   slimNet,
+  slimWs,
   isNetworkWorthKeeping,
 };

@@ -457,7 +457,11 @@ before anyone knows it is needed.
   * required: false
   * value: 0/1, false/true
   * default: true
-  * description: include network metadata in the trace (never bodies)
+  * description: include network metadata in the trace (never bodies). Covers HTTP
+    requests AND WebSockets — for WS, the lifecycle (created / open / closed with
+    close code / error) plus per-chunk frame counters and a per-event-name tally
+    for socket.io (`42["name",…]`). Frame payloads are never captured: a chatty
+    socket would blow up the chunk, and frames carry customer data
 
 * capture_redux:
   * required: false
