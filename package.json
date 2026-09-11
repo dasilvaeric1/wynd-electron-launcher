@@ -1,7 +1,7 @@
 {
   "name": "wynd-electron-launcher",
   "productName": "electron-launcher",
-  "version": "2.8.4",
+  "version": "2.8.5",
   "main": "src/main/index.js",
   "packageManager": "pnpm@10.30.3",
   "engines": {
@@ -22,7 +22,8 @@
     "build:linux": "node scripts/stamp_build.js && rm -rf dist/__appImage-x64 && mkdir -p dist/__appImage-x64 && electron-builder --linux --publish never",
     "build:mac": "node scripts/stamp_build.js && electron-builder --mac --publish never",
     "lint": "eslint",
-    "test": "jest __tests__"
+    "test": "jest __tests__",
+    "smoke:packaged": "bash scripts/smoke_packaged.sh"
   },
   "author": "patrice petit",
   "license": "MIT",
@@ -181,7 +182,9 @@
     "electron-updater": "^6.8.9",
     "events": "3.3.0",
     "fastify": "^5.12.3",
+    "fs.realpath": "1.0.0",
     "human-signals": "2.1.0",
+    "inflight": "1.0.6",
     "ini": "1.3.8",
     "jszip": "^3.10.1",
     "luxon": "^2.5.2",

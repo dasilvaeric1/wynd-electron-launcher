@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ## [2.8.X]
 
+### [2.8.5]
+
+- fix(pkg): ajoute `fs.realpath` et `inflight`, deux dependances de `glob@7`
+  qu'electron-builder omettait du bundle — le launcher packagé mourait au
+  demarrage sur `Cannot find module 'fs.realpath'` (chaine ipc.js ->
+  initialize.js -> create_http.js -> glob). Meme mecanique que les 8
+  dependances transitives ajoutees a la main en juin (dont `path-is-absolute`,
+  deja une dep de glob@7) : le paquet est bien installe, mais l'arbre calcule
+  par electron-builder ne le retient pas.
+- test(pkg): `scripts/smoke_packaged.sh` (`pnpm smoke:packaged`) — construit
+  l'app packagée pour la plateforme hote, LA LANCE reellement, et echoue en
+  nommant le module manquant.
+
+  Ces omissions ne sont visibles NI par `pnpm test`, NI par `pnpm dist`, NI par
+  le build lui-meme : uniquement au lancement du binaire. Trois plantages en
+  production ont ete decouverts ainsi coup sur coup (string-width, strip-ansi,
+  fs.realpath), chacun coutant un aller-retour jusqu'a une caisse. Le bug
+  n'etant pas lie a Windows mais a l'arbre de dependances, un build macOS ou
+  Linux lance en local le reproduit a l'identique — d'ou ce script, a passer
+  avant chaque tag.
+
+  Un balayage statique complementaire du bundle confirme qu'aucun `require` sur
+  un chemin execute ne reste non resolu.
+
 ### [2.8.4]
 
 - fix(pkg): supprime `yargs`, et avec lui la cause des plantages au demarrage
