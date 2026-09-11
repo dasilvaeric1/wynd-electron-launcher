@@ -47,7 +47,7 @@ module.exports = function onSocket(store, socket, initCallback) {
 	if (config.display_plugin_state && config.display_plugin_state.enable) {
 
 		store.wpt.plugins_state = {}
-		for (const eventPrefix in config.display_plugin_state) {
+		for (const eventPrefix of Object.keys(config.display_plugin_state)) {
 
 			if (eventPrefix !== 'enable' && !eventPrefix.startsWith('_')) {
 
@@ -520,7 +520,7 @@ module.exports = function onSocket(store, socket, initCallback) {
 						...store.conf.wpt
 					}
 					if (request.data && typeof request.data === "object") {
-						for (const key in wptConf) {
+						for (const key of Object.keys(wptConf)) {
 							if (Object.hasOwn(request.data, key)) {
 								wptConf[key] = request.data[key]
 							}

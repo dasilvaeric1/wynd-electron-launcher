@@ -115,7 +115,7 @@ module.exports = function generateIpc(store, initCallback) {
         );
 
         if (store.conf && store.conf.extensions) {
-          for (const name in store.conf.extensions) {
+          for (const name of Object.keys(store.conf.extensions)) {
             const extPath = path.resolve(store.conf.extensions[name]);
             await session.defaultSession.loadExtension(extPath, {
               allowFileAccess: true,

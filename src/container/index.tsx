@@ -161,7 +161,7 @@ window.electronAPI.on("conf", (conf: any) => {
   store.dispatch(setConfigAction(conf));
 
   if (conf.theme) {
-    for (const themeKey in conf.theme) {
+    for (const themeKey of Object.keys(conf.theme)) {
       if (window.theme.has(themeKey as TThemeColorTypes)) {
         const colorTheme = conf.theme[themeKey];
         window.theme.set(themeKey as TThemeColorTypes, `#${colorTheme}`, true);

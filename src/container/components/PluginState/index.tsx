@@ -39,7 +39,7 @@ const PluginState: React.FunctionComponent<IEmergency> = () => {
 	const generatePluginState = useCallback(() => {
 		const tmp: React.ReactNode[] = []
 		if (pluginState) {
-			for (const event in pluginState) {
+			for (const event of Object.keys(pluginState)) {
 					const plugin = pluginState[event]
 					tmp.push(<PluginLine key={`plugin-state-line-${event}`} event={event} status={plugin.status} name={plugin.name}/>)
 			}

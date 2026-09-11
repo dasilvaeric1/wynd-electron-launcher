@@ -106,7 +106,7 @@ const appReducer: Reducer<
       return newState;
     case TAppActionTypeKeys.WPT_CONNECT:
       if (newState.pluginState && data === false) {
-        for (const event in newState.pluginState) {
+        for (const event of Object.keys(newState.pluginState)) {
           newState.pluginState[event].status = "offline";
         }
       }

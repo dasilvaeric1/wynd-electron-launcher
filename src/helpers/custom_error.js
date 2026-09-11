@@ -104,7 +104,8 @@ class CustomError extends Error {
 	}
 
 	convert(err) {
-		for (const key in err.data) {
+		// `|| {}` : for-in tolerait un err.data absent, pas Object.keys.
+		for (const key of Object.keys(err.data || {})) {
 			const error = err.data[key][0]
 			if (error.keyword === 'required' && error.params.missingProperty) {
 				this.api_code = 'MISSING_KEYS'
