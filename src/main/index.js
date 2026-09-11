@@ -20,6 +20,10 @@ const createAppLog = require("./helpers/create_app_log");
 const configureProtocol = require("./helpers/register_file_protocol");
 const hardenWebContents = require("./helpers/harden_web_contents");
 const captureJsErrors = require("./helpers/capture_js_errors");
+const {
+  applyConfiguredSwitches,
+  removeUnsafeSwitches,
+} = require("./helpers/commandline_switches");
 const nodeIpcConnect = require("./helpers/node_ipc");
 const generateLoaderWindow = require("./loader_window");
 const generateContainerWindow = require("./container_window");
@@ -37,6 +41,7 @@ const { initTrace, teardownTrace } = require("./trace");
 
 require("./lock");
 require("./helpers/stream_logger")(log);
+removeUnsafeSwitches(app.commandLine, log);
 // require('@electron/remote/main').initialize()
 
 // contextMenu({});
@@ -252,13 +257,7 @@ if (process.env.EL_DISABLE_HDA && process.env.EL_DISABLE_HDA !== "0") {
 getConfig(store.path.conf, undefined, argv.url)
   .then((conf) => {
     store.conf = conf;
-    if (conf.commandline) {
-      for (const commandName in conf.commandline) {
-        const value = conf.commandline[commandName];
-        app.commandLine.appendSwitch(commandName, value);
-        log.info("[COMMANDLINE] > " + commandName + ", " + value);
-      }
-    }
+    applyConfiguredSwitches(app.commandLine, conf.commandline, log);
   })
   .catch((err) => {
     store.pre_error_init = err;
