@@ -4,6 +4,40 @@ All notable changes to this project will be documented in this file.
 
 ## [2.8.X]
 
+### [2.8.3]
+
+- fix(pkg): le build Windows plantait au demarrage sur
+  `Cannot find module 'string-width'`, des la ligne 8 de index.js (require de
+  yargs). Cinq modules etaient absents de l'app.asar : `string-width`,
+  `wrap-ansi`, et leurs sous-deps `emoji-regex`, `is-fullwidth-code-point`,
+  `ansi-styles`.
+
+  Cause : `@isaacs/cliui` (tire par glob) declare des ALIAS npm
+  (`string-width-cjs: npm:string-width@^4.2.0`). `string-width@4.2.3` existe
+  donc a deux chemins — `node_modules/string-width` et
+  `node_modules/string-width-cjs`, dont le package.json porte le meme nom et la
+  meme version. electron-builder indexe par nom@version, trouve deux chemins
+  pour une meme cle, et l'annonce avant d'omettre le paquet :
+
+      unresolved duplicate dependency references  ["string-width@4.2.3", …]
+      cannot find path for dependency             ["string-width@4.2.3", …]
+
+  Ce n'est ni pnpm ni les `overrides` : verifie en les retirant (aucun effet),
+  et en passant `shamefully-hoist=false` (aucun effet non plus). Declarer les
+  paquets en `dependencies` ne change rien, et les globs `node_modules/**` dans
+  `build.files` sont ignores — electron-builder gere node_modules par son arbre
+  calcule, les patterns ne peuvent qu'exclure.
+
+  Correctif : les cinq modules sont copies via `extraResources` dans
+  `resources/node_modules/`. Node, en resolvant depuis l'interieur de l'asar,
+  remonte l'arborescence et les y trouve. Verifie sur un build reel :
+  `require.resolve('string-width', {paths: ['<app.asar>/src/main']})` renvoie
+  desormais `resources/node_modules/string-width/index.js`.
+
+  ATTENTION : `extraResources` contenait deja `./assets/**` (dont le bundle
+  rrweb de la trace). Les entrees sont AJOUTEES, jamais substituees — ecraser
+  cette liste casserait le recorder en production.
+
 ### [2.8.2]
 
 - fix(security): le scaffold de production livrait
