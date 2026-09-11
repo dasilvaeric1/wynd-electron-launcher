@@ -462,7 +462,6 @@ module.exports = function onSocket(store, socket, initCallback) {
 					break;
 
 				case 'config/wpt':
-					// request.data = require('../../../draft/wpt.json')
 					messageRunning = false
 					requestWPT(store.wpt.socket, { emit: 'configuration.getfile' })
 						.then((data) => {
@@ -493,7 +492,6 @@ module.exports = function onSocket(store, socket, initCallback) {
 					break;
 
 				case 'config/wpt/change':
-					// request.data = require('../../../draft/wpt.json')
 					messageRunning = true
 					requestWPT(store.wpt.socket, { emit: 'configuration.changeall', datas: request.data })
 						.then((data) => {

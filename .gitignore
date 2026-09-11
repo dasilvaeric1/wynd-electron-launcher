@@ -36,7 +36,6 @@ src/local/*
 # le zip electron-builder via "files: [src/local/]"
 !src/local/screen_consent.html
 !src/local/screen_consent.js
-draft/*.AppImage
 config.ini
 app-update.yml
 test/*
