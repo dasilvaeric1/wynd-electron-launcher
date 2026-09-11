@@ -1,7 +1,7 @@
 {
   "name": "wynd-electron-launcher",
   "productName": "electron-launcher",
-  "version": "2.8.3",
+  "version": "2.8.4",
   "main": "src/main/index.js",
   "packageManager": "pnpm@10.30.3",
   "engines": {
@@ -31,42 +31,7 @@
     "appId": "eu.wynd.electron-launcher",
     "productName": "electron-launcher",
     "extraResources": [
-      "./assets/**",
-      {
-        "from": "node_modules/string-width",
-        "to": "node_modules/string-width",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "node_modules/wrap-ansi",
-        "to": "node_modules/wrap-ansi",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "node_modules/emoji-regex",
-        "to": "node_modules/emoji-regex",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "node_modules/is-fullwidth-code-point",
-        "to": "node_modules/is-fullwidth-code-point",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "node_modules/ansi-styles",
-        "to": "node_modules/ansi-styles",
-        "filter": [
-          "**/*"
-        ]
-      }
+      "./assets/**"
     ],
     "linux": {
       "icon": "assets/icons/png/256x256.png",
@@ -241,8 +206,7 @@
     "undici-types": "6.21.0",
     "winston": "3.7.2",
     "winston-daily-rotate-file": "4.7.1",
-    "ws": "^8.18.0",
-    "yargs": "17.0.0-candidate.13"
+    "ws": "^8.18.0"
   },
   "pnpm": {
     "overrides": {

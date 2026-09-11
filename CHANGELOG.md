@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 ## [2.8.X]
 
+### [2.8.4]
+
+- fix(pkg): supprime `yargs`, et avec lui la cause des plantages au demarrage
+  du build Windows. Le correctif 2.8.3 (copie des modules via
+  `extraResources`) etait une rustine structurellement incomplete : un module
+  pose HORS de l'asar ne voit pas le `node_modules` qui est DEDANS, donc
+  `string-width` chargeait bien depuis `resources/node_modules/` mais ne
+  trouvait plus `strip-ansi`, reste dans l'asar. Il aurait fallu y recopier
+  toute la cloture transitive (`strip-ansi`, `ansi-regex`, `color-convert`,
+  `color-name`…), avec un maillon oublie a chaque tentative.
+
+  `yargs` ne servait qu'a lire trois options (`--config_path`, `--screen`,
+  `--url`). `helpers/parse_argv.js` les lit desormais, et tout le sous-arbre
+  (`cliui`, `string-width`, `wrap-ansi`, `strip-ansi`, `emoji-regex`,
+  `is-fullwidth-code-point`, `ansi-styles`) sort du bundle — verifie sur un
+  build reel : aucun de ces paquets n'est plus dans l'app.asar. Le
+  contournement `extraResources` est retire (`./assets/**`, qui porte le
+  bundle rrweb de la trace, est conserve).
+
+  Au passage, le launcher ne depend plus d'une *release candidate* de 2021
+  (`yargs@17.0.0-candidate.13`).
+
+  Le parseur accepte les memes formes que yargs ici (`--opt=val`, `--opt val`,
+  alias courts) et laisse passer les switches Chromium sans les consommer —
+  16 tests couvrent les chemins Windows `C:\`, les URL contenant des `=`, et
+  les pieges `--urls` / `--screenshot` qui ne doivent pas etre confondus avec
+  `--url` / `--screen`.
+
 ### [2.8.3]
 
 - fix(pkg): le build Windows plantait au demarrage sur

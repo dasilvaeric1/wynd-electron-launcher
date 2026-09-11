@@ -5,8 +5,6 @@ const os = require("os");
 
 let pm2 = app.isPackaged ? null : require("pm2");
 
-const yargs = require("yargs/yargs");
-const { hideBin } = require("yargs/helpers");
 
 const package = require("../../package.json");
 
@@ -14,6 +12,7 @@ const getScreens = require("./helpers/get_screens");
 const killWPT = require("./helpers/kill_wpt");
 const chooseScreen = require("./helpers/choose_screen");
 const getConfig = require("./helpers/config/get_config");
+const { parseLauncherArgs } = require("./helpers/parse_argv");
 const log = require("./helpers/electron_log");
 const showDialogError = require("./dialog_err");
 const createAppLog = require("./helpers/create_app_log");
@@ -149,32 +148,7 @@ if (process.env.EL_CONFIG_PATH) {
   log.info(`[CONFIG] EL_CONFIG_PATH env is set ${process.env.EL_CONFIG_PATH}`);
 }
 
-const argv =
-  // .option('hooks', {
-  //   alias: 'h',
-  //   type: 'string',
-  //   description: 'set hooks file',
-  // 	default: null
-  // })
-  yargs(hideBin(process.argv))
-    .option("config_path", {
-      alias: "c",
-      type: "string",
-      description: "set config path",
-      default: default_path,
-    })
-    .option("screen", {
-      alias: "s",
-      type: "number",
-      description: "set screen",
-      default: 0,
-    })
-    .option("url", {
-      alias: "u",
-      type: "string",
-      description: "set app URL (used as fallback when no config.ini exists)",
-      default: null,
-    }).argv;
+const argv = parseLauncherArgs(default_path);
 
 if (argv.config_path !== default_path) {
   log.info(`[CONFIG] --config_path set ${argv.config_path}`);
