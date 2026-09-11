@@ -87,8 +87,10 @@ window.electronAPI.on("app_infos", (appInfos: IAppInfo) => {
 window.electronAPI.on("container.request", (action: string) => {
   if (action === "get.state") {
     const state = store.getState();
-    // eslint-disable-next-line no-console
-    console.log(action, state);
+    // L'etat complet partait sur la console de la page. Il est de toute facon
+    // transmis juste apres sur le canal IPC : la trace n'a besoin que de
+    // l'action.
+    window.log.debug(`[WINDOW CONTAINER] ${action}`);
     window.electronAPI.send("container.response", action, state);
   }
 });

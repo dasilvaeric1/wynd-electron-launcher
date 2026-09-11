@@ -157,8 +157,7 @@ module.exports = function launchWpt(wpt, callback) {
 		) {
 			child.stdout.on('data', function (data) {
 				if (process.env.EL_DEBUG && process.env.EL_DEBUG === 'wpt') {
-					// eslint-disable-next-line no-console
-					console.log('WPT ->', data.toString())
+					log.debug('[WPT] > ' + data.toString())
 				}
 				if (messages.length > 0) {
 					messages.length = ""
