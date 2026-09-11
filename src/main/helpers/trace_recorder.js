@@ -153,8 +153,15 @@ const PAUSE_SRC = `(function () {
  * @param {function} args.getWebContents  () => webContents POS ou null
  * @param {function} args.onChunk      ({events, redux, dropped, startedAtMs, stoppedAtMs, reason}) => void
  * @param {function} args.onPartial    ({events, redux}) => void
+ * @param {function} [args.onTarget]   (webContents) => void — appelé à chaque
+ *   install réussie. C'est le SEUL endroit qui connaît la cible effective de la
+ *   capture : en `view=webview`, la webview POS est montée après la container,
+ *   donc la cible change en cours de route (et re-change à chaque reload du
+ *   POS). Tout ce qui doit s'accrocher au même webContents — la capture réseau
+ *   notamment — doit passer par ici, sinon il s'accroche à la container et ne
+ *   voit jamais le trafic du POS.
  */
-function createRecorder({ cfg, getWebContents, onChunk, onPartial }) {
+function createRecorder({ cfg, getWebContents, onChunk, onPartial, onTarget }) {
   let rrwebSrc = null;
   let drainTimer = null;
   let running = false;
@@ -222,8 +229,15 @@ function createRecorder({ cfg, getWebContents, onChunk, onPartial }) {
     chunkStartedAt = Date.now();
     paused = false;
     log.info(
-      `[TRACE] capture démarrée (chunk=${cfg.chunkSeconds}s, mousemove=${cfg.mousemoveMs}ms, idle=${cfg.idlePauseSeconds}s)`,
+      `[TRACE] capture démarrée sur webContents #${c.id} (chunk=${cfg.chunkSeconds}s, mousemove=${cfg.mousemoveMs}ms, idle=${cfg.idlePauseSeconds}s)`,
     );
+    if (onTarget) {
+      try {
+        onTarget(c);
+      } catch (err) {
+        log.debug(`[TRACE] onTarget: ${err.message}`);
+      }
+    }
     return true;
   }
 

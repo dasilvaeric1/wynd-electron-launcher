@@ -32,25 +32,39 @@ const UPLOAD_TICK_MS = 30_000;
 // volume, sont écrits au fil de l'eau sur disque.
 const MAX_NET_PER_CHUNK = 5_000;
 const MAX_REDUX_PER_CHUNK = 20_000;
-// Le webview POS est monté après la container window : on retente l'attache
-// réseau le temps qu'il apparaisse (~1 min au total).
-const NET_ATTACH_RETRY_MS = 5_000;
-const NET_ATTACH_MAX_TRIES = 12;
 
 let state = null;
 
+// Longueur max d'une URL retenue. Mesuré sur le POS : une seule URL
+// `data:image/svg+xml` inline pesait 12,6 Ko, soit plus de la moitié d'un chunk
+// compressé. On borne donc, et on écarte complètement les schémas qui ne sont
+// pas des requêtes réseau (leur « URL » EST la donnée).
+const URL_MAX = 512;
+const NON_NETWORK_SCHEME = /^(data|blob|javascript|about|chrome-extension):/i;
+
 /** Métadonnées réseau seulement : pas de corps dans une trace continue. */
 function slimNet(msg) {
+  const url = typeof msg.url === "string" ? msg.url : "";
   return {
     ts: Date.now(),
     method: msg.method,
-    url: msg.url,
+    url: url.length > URL_MAX ? url.slice(0, URL_MAX) + "…" : url,
     status: msg.status,
     statusText: msg.statusText,
     error: msg.error,
     durationMs: msg.durationMs,
     resourceType: msg.resourceType,
   };
+}
+
+/**
+ * L'event mérite-t-il une place dans la trace ?
+ * Les `data:`/`blob:` ne traversent pas le réseau et portent leur charge utile
+ * dans l'URL elle-même — les garder fait grossir le chunk sans rien apprendre.
+ */
+function isNetworkWorthKeeping(msg) {
+  if (!msg || msg.type !== "net") return false;
+  return !NON_NETWORK_SCHEME.test(String(msg.url || ""));
 }
 
 function spoolDir() {
@@ -194,47 +208,29 @@ function startCapture() {
         log.error(`[TRACE] onChunk: ${err.message}`),
       ),
     onPartial,
+    // L'attache réseau suit la cible du recorder : c'est la seule façon de
+    // viser la webview POS (montée tardivement) et de se ré-accrocher après un
+    // reload. `attachWebContents` est idempotent côté net_capture.
+    onTarget: (wc) => {
+      if (s.cfg.captureNet) netCapture.attachWebContents(wc);
+    },
   });
   s.recorder.start().catch((err) => log.error(`[TRACE] start: ${err.message}`));
 
   if (s.cfg.captureNet) {
     s.netUnsub = netCapture.subscribe((msg) => {
-      if (!msg || msg.type !== "net") return;
+      if (!isNetworkWorthKeeping(msg)) return;
       if (s.net.length >= MAX_NET_PER_CHUNK) return;
       s.net.push(slimNet(msg));
     });
-    // Le webview POS peut être monté tardivement : on retente l'attache
-    // jusqu'à l'obtenir. `attachDebugger` est idempotent (garde sur la liste
-    // des webContents déjà attachés), donc une relance ne double rien.
-    let tries = 0;
-    const tryAttach = () => {
-      const wc = getPosWebContents(s.store);
-      if (wc) {
-        netCapture.attachWebContents(wc);
-        clearInterval(s.netAttachTimer);
-        s.netAttachTimer = null;
-        return;
-      }
-      if (++tries >= NET_ATTACH_MAX_TRIES) {
-        clearInterval(s.netAttachTimer);
-        s.netAttachTimer = null;
-        log.warn("[TRACE] webContents POS introuvable → capture réseau inactive");
-      }
-    };
-    tryAttach();
-    if (!s.netAttachTimer && tries > 0) {
-      s.netAttachTimer = setInterval(tryAttach, NET_ATTACH_RETRY_MS);
-    }
+    // L'attache elle-même est faite par onTarget ci-dessous, piloté par le
+    // recorder : lui seul sait quel webContents porte réellement le POS.
   }
 }
 
 async function stopCapture() {
   const s = state;
   if (!s) return;
-  if (s.netAttachTimer) {
-    clearInterval(s.netAttachTimer);
-    s.netAttachTimer = null;
-  }
   if (s.netUnsub) {
     s.netUnsub();
     s.netUnsub = null;
@@ -322,7 +318,6 @@ function initTrace(store, { getCentralConfig }) {
     centralCfg: null,
     recorder: null,
     netUnsub: null,
-    netAttachTimer: null,
     net: [],
     redux: [],
     partialOpen: false,
@@ -361,4 +356,11 @@ async function teardownTrace() {
   state = null;
 }
 
-module.exports = { initTrace, applyTraceConfig, teardownTrace };
+module.exports = {
+  initTrace,
+  applyTraceConfig,
+  teardownTrace,
+  // exportés pour les tests
+  slimNet,
+  isNetworkWorthKeeping,
+};

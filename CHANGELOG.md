@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 ## [2.8.X]
 
+### [2.8.1]
+
+Trois defauts trouves en faisant tourner la trace sur un vrai POS (staging
+OctiPOS), invisibles en test unitaire.
+
+- fix(trace): la capture reseau n'attrapait RIEN. `startCapture` attachait le
+  CDP au webContents disponible a cet instant — la container — alors qu'en
+  `view=webview` la webview POS est montee ~2 s plus tard et porte tout le
+  trafic. Le recorder, lui, se re-installait bien sur la bonne cible. Et comme
+  container et webview partagent la session, le repli `webRequest` etait
+  musele par la garde anti-doublon de `net_capture` : ni CDP ni fallback.
+  L'attache suit desormais la cible du recorder (callback `onTarget`), qui est
+  le seul point connaissant le webContents effectif — y compris apres un reload
+  du POS. Mesure avant/apres sur le meme POS : 0 puis 67 requetes captees.
+- fix(trace): une seule URL `data:image/svg+xml` emise par react-dom pesait
+  12,6 Ko dans `network.json`, soit plus de la moitie du chunk compresse. Les
+  schemas qui ne traversent pas le reseau (`data:`, `blob:`, `javascript:`,
+  `about:`) sont ecartes, et les URL sont bornees a 512 o. `network.json` passe
+  de 12,6 Ko pour 1 entree a 14,7 Ko pour 67.
+- fix(trace): `redux.json` etait un tableau nu alors que `session_recorder`
+  ecrit `{initial, events, diag}` — le lecteur du dashboard aurait casse sur
+  les traces continues, malgre le commentaire affirmant le contraire. Meme
+  enveloppe des deux cotes desormais (`initial` reste vide sur une trace
+  continue).
+- Le log `capture démarrée` porte l'id du webContents cible, pour distinguer
+  d'un coup d'oeil l'install container de l'install webview.
+
+Debit mesure sur ce POS, pause d'inactivite desactivee : ~95 Ko/min
+(1017 events rrweb + 46 actions Redux -> 64 Ko zippes sur 40 s).
+
 ### [2.8.0]
 
 - feat(trace): trace continue de la caisse — rrweb (rejouer l'ecran, taps

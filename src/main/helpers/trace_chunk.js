@@ -29,7 +29,14 @@ async function buildChunkZip({ events = [], net = [], redux = [], meta = {} }) {
   const zip = new JSZip();
   zip.file("events.json", JSON.stringify(events));
   zip.file("network.json", JSON.stringify(net));
-  zip.file("redux.json", JSON.stringify(redux));
+  // Même enveloppe que session_recorder ({initial, events, diag}) pour que le
+  // lecteur du dashboard n'ait qu'une seule forme à connaître. `initial` reste
+  // vide sur une trace continue : le state au début du chunk n'est pas capturé
+  // (ce serait un aller-retour supplémentaire à chaque rotation).
+  zip.file(
+    "redux.json",
+    JSON.stringify({ initial: {}, events: redux, diag: null }),
+  );
   zip.file("meta.json", JSON.stringify(meta));
   return zip.generateAsync({
     type: "nodebuffer",
