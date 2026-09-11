@@ -51,7 +51,13 @@ class CustomError extends Error {
 	}
 
 	toString() {
-		return JSON.stringify(this.format())
+		try {
+			return JSON.stringify(this.format())
+		} catch (err) {
+			// `data` est fourni par l'appelant : il peut etre circulaire. Un
+			// toString() qui throw masquerait l'erreur d'origine.
+			return `[CustomError ${this.api_code} non serialisable: ${err.message}] ${this.message}`
+		}
 	}
 
 	addSubError(field, code, message, data) {

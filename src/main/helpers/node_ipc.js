@@ -4,6 +4,7 @@ const { app } = require('electron')
 const killWpt = require('../helpers/kill_wpt')
 
 const restartWpt = require('./reload_wpt')
+const { jsonOrMarker } = require('./safe_json')
 
 module.exports = function nodeIpcConnect(store, callback, logger) {
 
@@ -29,7 +30,7 @@ module.exports = function nodeIpcConnect(store, callback, logger) {
 		socket.on(
 			'register',
 			(data) => {
-				logger.info("[IPC] > register to " + JSON.stringify(data))
+				logger.info("[IPC] > register to " + jsonOrMarker(data, "register"))
 				socket.emit('register', {
 					name: name,
 					version: version
@@ -41,7 +42,7 @@ module.exports = function nodeIpcConnect(store, callback, logger) {
 			'request',
 			function (request) {
 				if (typeof request === 'object' && request.event && request.id) {
-					logger.info(`[IPC] > request id=${request.id}" ${JSON.stringify(request)}`)
+					logger.info(`[IPC] > request id=${request.id}" ${jsonOrMarker(request, "request")}`)
 					switch (request.event) {
 						case 'self.close':
 							const response2 = {
@@ -68,7 +69,7 @@ module.exports = function nodeIpcConnect(store, callback, logger) {
 							break;
 						case 'wpt.kill':
 							killWpt(store.wpt, callback).then((data) => {
-								logger.info(`[IPC] > response id=${request.id}" ${JSON.stringify(data)}`)
+								logger.info(`[IPC] > response id=${request.id}" ${jsonOrMarker(data, "response")}`)
 								const response = {
 									id: request.id,
 									code: 200,
@@ -81,7 +82,7 @@ module.exports = function nodeIpcConnect(store, callback, logger) {
 								socket.emit('response', response)
 
 							}).catch((err) => {
-								logger.info(`[IPC] > response error id=${request.id}" ${JSON.stringify(err)}`)
+								logger.info(`[IPC] > response error id=${request.id}" ${jsonOrMarker(err, "response error")}`)
 								const response = {
 									id: request.id,
 									code: err.code || 400,
@@ -96,7 +97,7 @@ module.exports = function nodeIpcConnect(store, callback, logger) {
 								store.conf.wpt.path = request.datas.path
 							}
 							restartWpt(store.wpt, store.conf.wpt, callback).then((data) => {
-								logger.info(`[IPC] > response id=${request.id}" ${JSON.stringify(data)}`)
+								logger.info(`[IPC] > response id=${request.id}" ${jsonOrMarker(data, "response")}`)
 								const response = {
 									id: request.id,
 									code: 200,
@@ -106,7 +107,7 @@ module.exports = function nodeIpcConnect(store, callback, logger) {
 								socket.emit('response', response)
 
 							}).catch((err) => {
-								logger.info(`[IPC] > response error id=${request.id}" ${JSON.stringify(err)}`)
+								logger.info(`[IPC] > response error id=${request.id}" ${jsonOrMarker(err, "response error")}`)
 								const response = {
 									id: request.id,
 									code: err.code || 400,

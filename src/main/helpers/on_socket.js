@@ -7,6 +7,7 @@ const reinitialize = require("./reinitialize")
 const getConfig = require('./config/get_config')
 const setConfig = require('./config/set_config')
 const log = require("./electron_log")
+const { jsonOrMarker } = require("./safe_json")
 const requestWPT = require("./request_wpt")
 const restartWPT = require("./reload_wpt")
 const getCentralRegister = require('./get_central_register')
@@ -28,8 +29,9 @@ module.exports = function onSocket(store, socket, initCallback) {
 			store.wpt.socket.emit("central.register", register)
 
 			log.info(
-				`[CENTRAL] > try to register name=${register.name} version=${register.version} versions=${JSON.stringify(
+				`[CENTRAL] > try to register name=${register.name} version=${register.version} versions=${jsonOrMarker(
 					register.app_versions,
+					"app_versions",
 				)}`,
 			)
 
@@ -141,7 +143,7 @@ module.exports = function onSocket(store, socket, initCallback) {
 				const messageToSend = centralState.pending_messages.shift()
 				setTimeout(() => {
 					socket.emit('central.message', messageToSend)
-					log.info(`[CENTRAL] > message pended to send ${JSON.stringify(messageToSend)}`)
+					log.info(`[CENTRAL] > message pended to send ${jsonOrMarker(messageToSend, "message")}`)
 				})
 			}
 		}
@@ -180,7 +182,8 @@ module.exports = function onSocket(store, socket, initCallback) {
 			err.datas = {}
 		}
 		err.datas.internal_state = centralState
-		log.error(`[CENTRAL] > error ${JSON.stringify(err)}`)
+		// `internal_state` porte l'etat central complet : circularite plausible.
+		log.error(`[CENTRAL] > error ${jsonOrMarker(err, "erreur central")}`)
 
 	})
 

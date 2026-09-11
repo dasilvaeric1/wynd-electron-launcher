@@ -16,6 +16,8 @@
  */
 
 const JSZip = require("jszip");
+const { jsonOrMarker } = require("./safe_json");
+
 
 /**
  * @param {object} args
@@ -27,17 +29,17 @@ const JSZip = require("jszip");
  */
 async function buildChunkZip({ events = [], net = [], redux = [], meta = {} }) {
   const zip = new JSZip();
-  zip.file("events.json", JSON.stringify(events));
-  zip.file("network.json", JSON.stringify(net));
+  zip.file("events.json", jsonOrMarker(events, "events"));
+  zip.file("network.json", jsonOrMarker(net, "network"));
   // Même enveloppe que session_recorder ({initial, events, diag}) pour que le
   // lecteur du dashboard n'ait qu'une seule forme à connaître. `initial` reste
   // vide sur une trace continue : le state au début du chunk n'est pas capturé
   // (ce serait un aller-retour supplémentaire à chaque rotation).
   zip.file(
     "redux.json",
-    JSON.stringify({ initial: {}, events: redux, diag: null }),
+    jsonOrMarker({ initial: {}, events: redux, diag: null }, "redux"),
   );
-  zip.file("meta.json", JSON.stringify(meta));
+  zip.file("meta.json", jsonOrMarker(meta, "meta"));
   return zip.generateAsync({
     type: "nodebuffer",
     compression: "DEFLATE",

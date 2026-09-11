@@ -1,6 +1,7 @@
 const url = require('url')
 const path = require('path')
 const log = require("./helpers/electron_log")
+const { jsonOrMarker } = require("./helpers/safe_json")
 
 const CustomError = require("../helpers/custom_error")
 const chooseScreen = require('./helpers/choose_screen')
@@ -286,7 +287,7 @@ module.exports = function generataInitCallback(store) {
 		} else if (action === 'create_http_done') {
 			log.debug(`[INIT] > ${action}`)
 		} else if (['get_conf', 'get_conf_done', 'check_conf', 'wpt_connect'].indexOf(action) < 0) {
-			log.debug(`[INIT] > ${action} ${data && typeof data === "object" ? JSON.stringify(data) : data}`)
+			log.debug(`[INIT] > ${action} ${data && typeof data === "object" ? jsonOrMarker(data, action) : data}`)
 		}
 
 	}

@@ -1,5 +1,6 @@
 const path = require('path')
 const log = require('../helpers/electron_log')
+const { jsonOrMarker } = require('./safe_json')
 const fs = require('fs')
 const CustomError = require('../../helpers/custom_error')
 
@@ -117,7 +118,7 @@ module.exports = function launchWpt(wpt, callback) {
 		log.info("[WPT] child pid: " + child.pid)
 		if (wpt.wait_on_ipc) {
 			child.on('message', message => {
-				log.info("[WPT] child message: " + (typeof message === "object" ? JSON.stringify(message) : message))
+				log.info("[WPT] child message: " + (typeof message === "object" ? jsonOrMarker(message, "message WPT") : message))
 				if (typeof message === 'object' && message.pid) {
 					wptPid = message.pid
 					if (callback) {

@@ -757,7 +757,12 @@ function attachWsHandlers(ws, sessionId, mode) {
         if (msg && msg.type === "net") sessionRecorder.addNet(msg);
         const cw = activeSession?.ws;
         if (cw && cw.readyState === WebSocketImpl.OPEN) {
-          cw.send(JSON.stringify(msg));
+          // L'event vient de la capture CDP : forme non maîtrisée.
+          try {
+            cw.send(JSON.stringify(msg));
+          } catch (err) {
+            log.debug(`[NET] event non sérialisable, non envoyé: ${err.message}`);
+          }
         }
       };
       netCapture.start(contents, sendNet);

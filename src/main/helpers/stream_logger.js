@@ -16,7 +16,16 @@ class StreamLogger extends Stream.Duplex {
   emitMessages(level, messages) {
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
-      const buf = Buffer.from(JSON.stringify({level, message}), "utf-8");
+      let payload
+      try {
+        payload = JSON.stringify({level, message})
+      } catch (err) {
+        // Message non serialisable : on emet quand meme la ligne, degradee,
+        // plutot que de casser le flux. Ce repli ne porte que des chaines,
+        // il ne peut pas echouer a son tour.
+        payload = JSON.stringify({level, message: `[non serialisable: ${err.message}]`})
+      }
+      const buf = Buffer.from(payload, "utf-8");
 			this.push(buf)
     }
   }

@@ -3,6 +3,7 @@ const JSZip = require("jszip");
 const axios = require("axios");
 const log = require("./electron_log");
 const getAssetPath = require("./get_asset");
+const { jsonOrMarker } = require("./safe_json");
 
 const DRAIN_MS = 2000;
 const MAX_DURATION_MS = 10 * 60 * 1000;
@@ -148,16 +149,19 @@ async function stop() {
     posUrl: a.posUrl,
   };
   const zip = new JSZip();
-  zip.file("events.json", JSON.stringify(a.events));
-  zip.file("network.json", JSON.stringify(a.net));
-  zip.file("meta.json", JSON.stringify(meta));
+  zip.file("events.json", jsonOrMarker(a.events, "events"));
+  zip.file("network.json", jsonOrMarker(a.net, "network"));
+  zip.file("meta.json", jsonOrMarker(meta, "meta"));
   zip.file(
     "redux.json",
-    JSON.stringify({
-      initial: a.reduxInitial || {},
-      events: a.redux || [],
-      diag: a.reduxDiag || null,
-    }),
+    jsonOrMarker(
+      {
+        initial: a.reduxInitial || {},
+        events: a.redux || [],
+        diag: a.reduxDiag || null,
+      },
+      "redux",
+    ),
   );
   const buf = await zip.generateAsync({
     type: "nodebuffer",

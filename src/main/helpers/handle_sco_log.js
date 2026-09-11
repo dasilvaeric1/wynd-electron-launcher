@@ -34,7 +34,17 @@ module.exports = function handleScoLog(store, level, payload) {
     store.conf.log.persist_app === true &&
     store.appLog
   ) {
-    const line = typeof flat === "object" ? JSON.stringify(flat) : String(flat);
+    let line;
+    if (typeof flat === "object") {
+      try {
+        line = JSON.stringify(flat);
+      } catch (err) {
+        // Charge utile venant de la page POS : forme non maitrisee.
+        line = `[log SCO non serialisable: ${err.message}]`;
+      }
+    } else {
+      line = String(flat);
+    }
     if (lvl === "ERROR") {
       store.appLog.error(line);
     } else if (lvl === "WARN") {
