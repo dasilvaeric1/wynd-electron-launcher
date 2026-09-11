@@ -75,24 +75,11 @@ const App: React.FunctionComponent<IAppProps> = () => {
           process.env.NODE_ENV === "development" ||
           window.electronAPI.env?.DEV === "LOADER"
         ) {
+          const trace = `[WINDOW LOADER] status=${status} -> ${newState.status} (${EStatus[status]}) ${newState.current}/${newState.total}`;
           if (!EStatus[status]) {
-            // eslint-disable-next-line no-console
-            console.warn(
-              status,
-              newState.status,
-              EStatus[status],
-              newState.current,
-              newState.total
-            );
+            window.log?.warn(trace);
           } else {
-            // eslint-disable-next-line no-console
-            console.info(
-              status,
-              newState.status,
-              EStatus[status],
-              newState.current,
-              newState.total
-            );
+            window.log?.info(trace);
           }
         }
 

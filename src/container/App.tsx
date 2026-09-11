@@ -184,8 +184,11 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
       try {
         data = JSON.parse(event.data);
       } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error(e);
+        // Message poste par le POS : tout ce qui commence par "{" n'est pas
+        // forcement du JSON. Trace dans le journal, pas sur la console.
+        window.log?.debug(
+          `[WINDOW CONTAINER] message POS non parsable: ${(e as Error).message}`,
+        );
       }
     } else if (
       event.type === "ipc-message" &&
@@ -197,8 +200,9 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
         try {
           data = JSON.parse(event.args[0]);
         } catch (e) {
-          // eslint-disable-next-line no-console
-          console.error(e);
+          window.log?.debug(
+            `[WINDOW CONTAINER] app.action non parsable: ${(e as Error).message}`,
+          );
         }
       } else if (typeof event.args[0] === "object") {
         data = event.args[0];
