@@ -116,6 +116,8 @@ env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron-builder --linux deb --x
 | `EL_SCREEN_REQUIRE_CONSENT=1` | Affiche le popup de consentement caissier. **Par défaut : auto-accept** (télémaintenance non surveillée). |
 | `EL_SCREEN_SHOW_INDICATOR=1` | Affiche l'indicateur "Support en observation" côté caisse. **Par défaut : masqué** (session discrète). |
 | `EL_USE_WEBRTC=0\|1` | Force/désactive WebRTC sans toucher la DB (sinon suit `session.useWebrtc`). |
+| `EL_TRACE=1\|0` | Force/désactive la trace continue (gagne sur l'ordre BO et sur `config.ini`). |
+| `EL_TRACE_CHUNK_SECONDS` / `EL_TRACE_SPOOL_MB` / `EL_TRACE_IDLE_PAUSE` / `EL_TRACE_MOUSEMOVE_MS` | Override des paramètres de trace (bornés, cf `helpers/trace_config.js`). |
 | `EL_STRICT_NAV=1` | Bloque les navigations hors origines autorisées (POS + localhost + file). Par défaut : log-only (cf `helpers/harden_web_contents.js`). |
 
 ## Screen-session (`src/main/screen_session.js`)
@@ -190,6 +192,67 @@ le toggle BO (`session.useWebrtc`) ou `EL_USE_WEBRTC=1`.
   cas). Le hit-testing route au mieux ; pour piloter le POS au-delà, mode
   `screen` + nut.js.
 - Raccourcis OS (Alt+Tab, Win+L) inaccessibles en mode `window`.
+
+## Trace continue (`src/main/trace.js`)
+
+Rejouer ce qui s'est passé sur la caisse **sans avoir eu à le demander à
+l'avance** — c'est la différence avec `session_recorder.js`, qui doit être
+déclenché depuis le BO *pendant* l'incident.
+
+### Flux
+
+```
+rrweb (continu)  ─┐
+actions Redux    ─┼─→ chunk de X min ─→ ZIP ─→ spool disque ─→ upload FIFO
+réseau (méta)    ─┘   (snapshot en tête)      (plafond FIFO)   /api/traces
+```
+
+- **Découpage piloté depuis le main**, pas par `checkoutEveryNms`. ⚠️ Le shim
+  du bundle rrweb vendoré (`assets/rrweb/recorder.iife.js`) fait
+  `record.bind(...)`, ce qui **perd `takeFullSnapshot`**. La rotation est donc
+  `stop → take → start` en **un seul `executeJavaScript`** (atomique) : le
+  `start` réémet mécaniquement un snapshot complet, donc chaque chunk se rejoue
+  seul, sans dépendre de la sémantique du flag `isCheckout`.
+- **Pause sur inactivité** (`idle_pause_seconds`, défaut 60 s) — premier levier
+  de volume, surtout si le POS anime en permanence (horloge, carrousel). La
+  reprise réémet un snapshot complet : **pas de perte de fidélité**. Ne jamais
+  remplacer ça par un filtrage d'events, qui laisserait le DOM du replay
+  divergent.
+- **Écrans tactiles** : `sampling.mousemove` (= `mousemove_ms`, défaut 150)
+  gouverne aussi les `touchmove`. `mouseInteraction` reste à `true` — les taps
+  sont le signal le plus utile pour comprendre ce que le caissier a fait.
+- **Compression au niveau du chunk** (ZIP DEFLATE). ⚠️ Ne **pas** activer
+  `packFn` de rrweb : il deflate event par event puis base64, ce qui donne un
+  moins bon ratio et empêche le ZIP de recompresser.
+- **Spool** = `<userData>/logs/trace/`. `current.ndjson` est le chunk en cours,
+  écrit au fil de l'eau (drain 2 s) → un crash ne coûte que le dernier drain,
+  et le partiel est finalisé puis uploadé au démarrage suivant
+  (`recoverPartial`). Plafond FIFO : les plus anciens sautent d'abord, mais
+  **jamais le plus récent** (un plafond trop petit ne doit pas laisser la caisse
+  sans rien à diagnostiquer).
+- **Upload** : `presign → PUT → complete`, même chaîne que les traces pilotées.
+  Le ZIP part **en direct vers le stockage objet**, donc aucun egress central.
+  `kind: "continuous"` est porté par `meta` → aucun changement d'API côté
+  dashboard.
+
+### Activation
+
+Trois niveaux, précédence **`EL_TRACE*` > ordre BO > `config.ini [trace]`**.
+L'ordre distant arrive dans la réponse du poll screen-session (bloc `trace`),
+traité **avant** le garde-fou de session pour rester pilotable pendant une visu.
+
+Garde-fous non contournables à distance :
+- `allow_remote=0` dans `config.ini` **verrouille** la caisse ;
+- les réglages de masquage ne viennent **jamais** du distant ;
+- un ordre BO **doit** porter un `until` (ISO), sinon il est refusé → une
+  activation oubliée s'éteint d'elle-même.
+
+### Conformité
+
+Un replay d'écran de caisse capture des données client **et** l'activité d'un
+salarié. Masquage actif par défaut et non affaiblissable à distance, `until`
+obligatoire, rétention côté dashboard. L'information des salariés / la
+consultation du CSE relèvent de l'opérateur du parc.
 
 ## Logs & capture SCO (`helpers/handle_sco_log.js`, `helpers/capture_js_errors.js`)
 

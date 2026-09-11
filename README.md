@@ -392,6 +392,88 @@ Display a line of icons
 
 > Note: captured logs go through the same sink as regular SCO logs. To land in the `logs/app/` file they require `persist_app=1`; central relay follows `central.log`.
 
+#### [trace]
+
+Continuous till trace: rrweb screen replay (taps included), network metadata and
+Redux actions, split into independently replayable chunks and uploaded as they
+close. Unlike the BO-triggered `session_recorder`, the trace already exists
+before anyone knows it is needed.
+
+* enable:
+  * required: false
+  * value: 0/1, false/true
+  * default: false (disabled if absent)
+  * description: continuous capture master switch
+
+* allow_remote:
+  * required: false
+  * value: 0/1, false/true
+  * default: true (absent = the till stays remotely controllable)
+  * description: allow the dashboard to enable the trace remotely. Set to 0 to hard-lock the till — no remote order can then activate it
+
+* chunk_seconds:
+  * required: false
+  * value: integer, clamped to [30, 1800]
+  * default: 300
+  * description: chunk duration. Each chunk opens with a full snapshot, so a shorter chunk means proportionally more snapshot volume
+
+* spool_max_mb:
+  * required: false
+  * value: integer, clamped to [10, 5000]
+  * default: 500
+  * description: disk budget of the upload spool (`<userData>/logs/trace/`). Oldest chunks are dropped first; the newest finalized chunk is never dropped
+
+* idle_pause_seconds:
+  * required: false
+  * value: integer, 0 disables
+  * default: 60
+  * description: pause capture after N seconds without interaction. First volume lever. Resuming re-emits a full snapshot, so there is no fidelity loss
+
+* mousemove_ms:
+  * required: false
+  * value: integer, clamped to [0, 1000]
+  * default: 150
+  * description: pointer move sampling. On touch screens this also governs `touchmove`. Taps are never sampled out
+
+* mask_all_inputs:
+  * required: false
+  * value: 0/1, false/true
+  * default: true
+  * description: mask the value of every input field in the replay. **Never weakenable from the dashboard**
+
+* mask_text_class:
+  * required: false
+  * value: string
+  * default: el-mask
+  * description: elements carrying this class have their text masked. **Never weakenable from the dashboard**
+
+* block_class:
+  * required: false
+  * value: string
+  * default: el-norec
+  * description: elements carrying this class are excluded from the replay entirely. **Never weakenable from the dashboard**
+
+* capture_net:
+  * required: false
+  * value: 0/1, false/true
+  * default: true
+  * description: include network metadata in the trace (never bodies)
+
+* capture_redux:
+  * required: false
+  * value: 0/1, false/true
+  * default: true
+  * description: include Redux actions in the trace — they chapter the replay for non-technical readers
+
+> Activation precedence: `EL_TRACE*` env vars > remote order from the dashboard
+> > `config.ini [trace]`. A remote order MUST carry an `until` (ISO date) or it
+> is refused, so a forgotten activation switches itself off.
+
+> Compliance: a continuous screen replay of a till captures customer data and
+> employee activity. Masking defaults are on, are not remotely weakenable, and
+> retention is enforced dashboard-side. Employee information / works council
+> consultation is the fleet operator's responsibility.
+
 #### [central]
 
 * enable:

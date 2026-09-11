@@ -2,6 +2,54 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.8.X]
+
+### [2.8.0]
+
+- feat(trace): trace continue de la caisse — rrweb (rejouer l'ecran, taps
+  compris), metadonnees reseau et actions Redux, decoupee en chunks
+  independamment rejouables et uploadee au fil de l'eau vers le dashboard.
+  Repond au besoin « la caisse a eu un souci et on ne sait pas ce qui a ete
+  fait » : la trace existe AVANT qu'on sache qu'on en a besoin, contrairement
+  au `session_recorder` qui doit etre declenche depuis le BO pendant
+  l'incident.
+
+  - Decoupage pilote depuis le main (`stop → take → start`) et non par
+    `checkoutEveryNms` : le shim du bundle rrweb vendore fait `record.bind()`,
+    ce qui perd `takeFullSnapshot`. Chaque chunk commence donc par un snapshot
+    complet par construction et se rejoue seul.
+  - Pause sur inactivite (`idle_pause_seconds`, defaut 60 s) : premier levier
+    de volume. La reprise reemet un snapshot complet, donc aucune perte de
+    fidelite (contrairement a un filtrage d'events, qui laisserait le DOM du
+    replay divergent).
+  - Reglages ecrans tactiles : `mousemove_ms` (defaut 150) gouverne aussi les
+    `touchmove` ; `mouseInteraction` jamais echantillonne (les taps sont le
+    signal le plus utile). `slimDOMOptions: all`, `inlineImages: false`,
+    `collectFonts: false`, `recordCanvas: false`.
+  - Compression au niveau du chunk (ZIP DEFLATE) et non `packFn` event par
+    event : meilleur ratio, et le ZIP ne peut pas recompresser du base64 deja
+    deflate.
+  - Spool disque (`<userData>/logs/trace/`) avec plafond FIFO
+    (`spool_max_mb`, defaut 500) : c'est le tampon de panne reseau. Les chunks
+    les plus anciens sont jetes en premier, mais JAMAIS le plus recent — un
+    plafond mal regle ne doit pas laisser la caisse sans rien a diagnostiquer.
+  - Chunk en cours ecrit en NDJSON au fil de l'eau (drain 2 s) : un crash ne
+    coute que le dernier drain, et le partiel est finalise puis uploade au
+    demarrage suivant.
+  - Upload FIFO avec backoff (1→60 s) reutilisant la chaine existante
+    `presign → PUT → complete`. Le ZIP part en direct vers le stockage objet,
+    donc aucun egress central. Aucun changement d'API requis cote dashboard
+    (le `kind: "continuous"` est porte par `meta`).
+  - Activation a trois niveaux, precedence `EL_TRACE*` > ordre BO >
+    `config.ini [trace]`. Garde-fous non contournables a distance :
+    `allow_remote=0` verrouille la caisse, les reglages de masquage ne viennent
+    jamais du distant, et un ordre BO DOIT porter un `until` (une activation
+    oubliee s'eteint d'elle-meme).
+- fix(screen): le poll `/pending` n'est plus coupe court pendant une session
+  ecran active. Le heartbeat et les ordres pousses par le BO (tunnel WPT,
+  trace) restaient geles toute la duree d'une visu ; le garde-fou de session
+  est desormais applique juste avant le traitement de la session elle-meme.
+
 ## [2.7.X]
 
 ### [2.7.1]

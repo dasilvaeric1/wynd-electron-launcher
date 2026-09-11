@@ -966,6 +966,74 @@ const schema = {
         },
       },
     },
+    // Trace continue de la caisse (rrweb + reseau + Redux) — voir
+    // helpers/trace_config.js pour la precedence env > BO distant > config.ini.
+    trace: {
+      type: "object",
+      properties: {
+        // Capture continue. Off par defaut si absent.
+        enable: {
+          allOf: [
+            {
+              coerce_boolean: true,
+            },
+          ],
+        },
+        // Autorise l'activation a distance depuis le dashboard. Absent = true
+        // (la caisse reste pilotable) ; poser 0 la verrouille en dur.
+        allow_remote: {
+          allOf: [
+            {
+              coerce_boolean: true,
+            },
+          ],
+        },
+        // Duree d'un chunk. Borne a [30, 1800] par trace_config.
+        chunk_seconds: {
+          type: "integer",
+        },
+        // Plafond disque du spool. Borne a [10, 5000].
+        spool_max_mb: {
+          type: "integer",
+        },
+        // Pause apres N secondes sans interaction (0 = jamais).
+        idle_pause_seconds: {
+          type: "integer",
+        },
+        // Echantillonnage des mouvements pointeur/touch, en ms.
+        mousemove_ms: {
+          type: "integer",
+        },
+        // --- Masquage : jamais modifiable a distance ---------------------
+        mask_all_inputs: {
+          allOf: [
+            {
+              coerce_boolean: true,
+            },
+          ],
+        },
+        mask_text_class: {
+          type: "string",
+        },
+        block_class: {
+          type: "string",
+        },
+        capture_net: {
+          allOf: [
+            {
+              coerce_boolean: true,
+            },
+          ],
+        },
+        capture_redux: {
+          allOf: [
+            {
+              coerce_boolean: true,
+            },
+          ],
+        },
+      },
+    },
     theme: {
       type: "object",
       properties: {},

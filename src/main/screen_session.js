@@ -40,6 +40,7 @@ const log = require("./helpers/electron_log");
 const getDeviceSummary = require("./helpers/device_summary");
 const wptProxyTunnel = require("./helpers/wpt_proxy_tunnel");
 const netCapture = require("./helpers/net_capture");
+const { applyTraceConfig } = require("./trace");
 const sessionRecorder = require("./helpers/session_recorder");
 const {
   createCaptureWindow,
@@ -393,8 +394,6 @@ const launcherStartedAt = Date.now();
 async function pollOnce() {
   const cfg = await readCentralConfig();
   if (!cfg) return;
-  // Skip poll si une session est déjà active ou un consent est ouvert
-  if (activeSession || activeConsentWindow) return;
   const uptimeSeconds = Math.floor((Date.now() - launcherStartedAt) / 1000);
   // Résumé périphériques (imprimante/TPE/Central) pour la vue flotte BO.
   // Collecte throttlée (voir device_summary.js) — l'échec n'empêche pas le poll.
@@ -429,6 +428,22 @@ async function pollOnce() {
     }
     // Tunnel WPT demandé par le BO → ouverture d'une WS sortante dédiée
     // (canal indépendant des sessions écran). open() est idempotent.
+    // Trace continue : ordre d'activation/desactivation pousse par le BO.
+    // Traite AVANT le garde-fou de session ci-dessous pour rester pilotable
+    // pendant une visu. `undefined` = le BO ne dit rien -> on ne touche a rien.
+    if (r.body && Object.prototype.hasOwnProperty.call(r.body, "trace")) {
+      try {
+        await applyTraceConfig(r.body.trace || null);
+      } catch (err) {
+        log.debug(`[SCREEN] applyTraceConfig: ${err.message}`);
+      }
+    }
+
+    // Une session deja active (ou un consent ouvert) -> on s'arrete ici : le
+    // heartbeat et les ordres ci-dessus sont faits, le reste ne doit pas
+    // re-declencher une session en cours.
+    if (activeSession || activeConsentWindow) return;
+
     if (r.body && r.body.wptTunnel && r.body.wptTunnel.open) {
       wptProxyTunnel
         .open(cfg, sharedStore, httpRequest)
@@ -1479,4 +1494,10 @@ function teardownScreenSessions() {
   }
 }
 
-module.exports = { initScreenSessions, teardownScreenSessions };
+module.exports = {
+  initScreenSessions,
+  teardownScreenSessions,
+  // Expose la config central (baseUrl/apiKey/serial) a l'uploader de
+  // traces continues : meme source d'auth, meme cache.
+  getCentralConfig: readCentralConfig,
+};

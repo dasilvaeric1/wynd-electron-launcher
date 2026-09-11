@@ -31,7 +31,9 @@ const CustomError = require("../helpers/custom_error");
 const {
   initScreenSessions,
   teardownScreenSessions,
+  getCentralConfig,
 } = require("./screen_session");
+const { initTrace, teardownTrace } = require("./trace");
 
 require("./lock");
 require("./helpers/stream_logger")(log);
@@ -209,6 +211,13 @@ app.commandLine.appendSwitch("disable-http-cache");
 app.on("will-quit", async (e) => {
   globalShortcut.unregisterAll();
   teardownScreenSessions();
+  // Ferme le chunk de trace en cours : il finira d'être uploadé au prochain
+  // démarrage (récupération du partiel) si le quit coupe l'envoi.
+  try {
+    await teardownTrace();
+  } catch (err) {
+    log.error(`[TRACE] teardown: ${err.message}`);
+  }
   if (wpt.process && !wpt.process.killed) {
     try {
       await killWPT(wpt);
@@ -321,6 +330,19 @@ getConfig(store.path.conf, undefined, argv.url)
           initScreenSessions(store);
         } catch (err) {
           log.error(`[SCREEN] init failed: ${err.message}`);
+        }
+        return null;
+      })
+      .then(() => {
+        // Trace continue de la caisse (rrweb + réseau + Redux). Désactivée
+        // par défaut : s'active via config.ini [trace], EL_TRACE=1, ou à la
+        // demande depuis le dashboard (bloc `trace` du poll screen-session).
+        // L'uploader démarre même trace désactivée pour finir d'écouler un
+        // spool résiduel.
+        try {
+          initTrace(store, { getCentralConfig });
+        } catch (err) {
+          log.error(`[TRACE] init failed: ${err.message}`);
         }
         return null;
       })
