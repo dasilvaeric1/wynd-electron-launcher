@@ -16,7 +16,7 @@ Application Electron qui affiche le POS Wynd en plein écran sur les caisses
 ## Stack
 
 - Electron **42.4.0** (Node ~22 embarqué → `fetch` global dispo, mais le code
-  historique du main utilise `axios`, cf `helpers/request.js`, `screen_session.js`).
+  historique du main utilise `axios`, cf `screen_session.js`).
 - Renderer : React + **Vite** (`npm run dist` → `RENDERER=container` puis
   `RENDERER=loader`). ⚠️ plus de webpack (l'ancienne mention
   `configs/webpack.config.renderer.*.js` n'existe plus).
