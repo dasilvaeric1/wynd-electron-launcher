@@ -191,8 +191,9 @@ function createSpool({ dir, maxBytes, fsImpl = nodeFs, logger } = {}) {
     //     plus petit qu'un seul chunk effacerait la trace au fil de l'eau et
     //     ne laisserait jamais rien à diagnostiquer. Le plafond est une garde
     //     disque, pas une raison de ne plus rien avoir.
-    for (const c of chunks.slice(0, -1)) {
-      if (bytes <= maxBytes) break;
+    const evictable = chunks.slice(0, -1);
+    for (let i = 0; i < evictable.length && bytes > maxBytes; i++) {
+      const c = evictable[i];
       if (removeChunk(c.name)) {
         bytes -= c.size;
         dropped += 1;

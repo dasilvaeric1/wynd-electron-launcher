@@ -165,11 +165,14 @@ module.exports = function launchWpt(wpt, callback) {
 
 				if (!wpt.wait_on_ipc && data.indexOf('[pid] ') >= 0 || data.indexOf('pid') >= 0) {
 					let pid = typeof data === "object" ? data.toString().split("\n") : data.split("\n")
-					for (let i = 0; i < pid.length; i++) {
-						if (pid[i].indexOf('[pid]' >= 0) || pid[i].indexOf('pid' >= 0)) {
-							pid = pid[i]
-							break
-						}
+					// NB : la condition ci-dessous est conservee telle quelle — elle est
+					// fautive (le `>= 0` est a l'interieur de indexOf) et retourne donc
+					// toujours vrai, cf. le commit qui accompagne cette correction.
+					const pidLine = pid.find(
+						(line) => line.indexOf('[pid]' >= 0) || line.indexOf('pid' >= 0)
+					)
+					if (pidLine !== undefined) {
+						pid = pidLine
 					}
 					const pids = pid.split(" ")
 					if (pid.length > 0) {
