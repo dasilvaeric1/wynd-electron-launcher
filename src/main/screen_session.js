@@ -43,6 +43,9 @@ const netCapture = require("./helpers/net_capture");
 const { applyTraceConfig } = require("./trace");
 const sessionRecorder = require("./helpers/session_recorder");
 const {
+  resolveAppsettingsPath,
+} = require("./helpers/screen_config_path");
+const {
   createCaptureWindow,
   destroyCaptureWindow,
   forwardSignalIn,
@@ -59,22 +62,7 @@ const WEBRTC_SIGNAL_TYPES = new Set([
   "set-quality",
 ]);
 
-// Chemin par défaut de l'appsettings.json du service RetailScheduler, selon
-// l'OS de la caisse (là où EnrollmentService écrit l'ApiKey/serial enrôlés) :
-//  - Windows : install service C# historique
-//  - Linux   : install dir Debian du service porté (/opt/retail-scheduler)
-// Surchargeable via EL_SCREEN_APPSETTINGS_PATH, ou court-circuité par les
-// EL_SCREEN_* directes (cf getScreenConfig).
-function defaultAppsettingsPath() {
-  if (process.platform === "win32") {
-    return "C:\\Retail\\ANYCOMMERCE\\RetailScheduler\\appsettings.json";
-  }
-  // Linux (Debian caisse) et fallback dev macOS : l'install service porté.
-  return "/opt/retail-scheduler/appsettings.json";
-}
-
-const APPSETTINGS_PATH =
-  process.env.EL_SCREEN_APPSETTINGS_PATH || defaultAppsettingsPath();
+const APPSETTINGS_PATH = resolveAppsettingsPath();
 const POLL_INTERVAL_MS = 5_000;
 // 100ms = 10 fps. Compromise raisonnable :
 //  - assez fluide pour observer/contrôler une caisse à distance
