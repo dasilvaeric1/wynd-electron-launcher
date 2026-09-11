@@ -71,10 +71,11 @@ const addKeyWord = function (confPath) {
           "..",
           "..",
           "..",
+          "..",
           "src",
           "local",
         );
-        if (fs.existsSync(localPath, "index.html")) {
+        if (fs.existsSync(path.join(localPath, "index.html"))) {
           it.rootData.url = {
             href: localPath,
             host: "",

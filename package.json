@@ -113,6 +113,8 @@
   },
   "jest": {
     "testEnvironment": "node",
+    "globalSetup": "<rootDir>/build/jest_global_setup.js",
+    "globalTeardown": "<rootDir>/build/jest_global_teardown.js",
     "verbose": true,
     "collectCoverageFrom": [
       "<rootDir>/src/***/**/*.js"

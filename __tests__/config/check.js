@@ -1,4 +1,9 @@
-const checkConfig = require('../../src/main/helpers/check_config')
+const path = require('path')
+const checkConfig = require('../../src/main/helpers/config/check_config')
+
+// Racine du depot, deduite de l'emplacement du test : les chemins attendus
+// etaient codes en dur sur la machine d'origine.
+const ROOT = path.join(__dirname, '..', '..')
 
 let config = null
 beforeAll(() => {
@@ -32,6 +37,8 @@ describe("Validation config", () => {
       menu: { enable: true, phone_number: null, email: null, password: null, button_position: 0, button_size: 30},
       view: 'iframe',
       emergency: { enable: false },
+      clear_cache_on_start: false,
+      display_plugin_state: { enable: false },
       wpt: {
         enable: false,
         path: null,
@@ -100,7 +107,7 @@ describe("Validation config", () => {
 		}
 		const expectedConfig = {
       url: {
-        href: '/home/ppetit/electron/wynd-electron-launcher/src/local',
+        href: path.join(ROOT, 'src', 'local'),
         host: '',
         hostname: '',
         port: '',
@@ -142,7 +149,7 @@ describe("Validation config", () => {
         enable: true,
         port: 3000,
         static: {
-          href: '/home/ppetit/electron/wynd-electron-launcher/src/local',
+          href: path.join(ROOT, 'src', 'local'),
           host: '',
           hostname: '',
           port: '',
@@ -152,6 +159,8 @@ describe("Validation config", () => {
       theme: {},
       view: 'iframe',
       emergency: { enable: false },
+      clear_cache_on_start: false,
+      display_plugin_state: { enable: false },
       central: { enable: false, mode: 'AUTO' },
       report: { enable: false },
       proxy: { enable: false, url: null, undefined: null },
