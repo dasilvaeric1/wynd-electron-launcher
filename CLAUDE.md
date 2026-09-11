@@ -117,6 +117,7 @@ env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron-builder --linux deb --x
 | `EL_SCREEN_SHOW_INDICATOR=1` | Affiche l'indicateur "Support en observation" côté caisse. **Par défaut : masqué** (session discrète). |
 | `EL_USE_WEBRTC=0\|1` | Force/désactive WebRTC sans toucher la DB (sinon suit `session.useWebrtc`). |
 | `EL_TRACE=1\|0` | Force/désactive la trace continue (gagne sur l'ordre BO et sur `config.ini`). |
+| `EL_TRACE_WS_FRAMES=1` | Mode crise : enregistre les **corps** des trames WebSocket (tronqués 2 Ko). Off par défaut. |
 | `EL_TRACE_CHUNK_SECONDS` / `EL_TRACE_SPOOL_MB` / `EL_TRACE_IDLE_PAUSE` / `EL_TRACE_MOUSEMOVE_MS` | Override des paramètres de trace (bornés, cf `helpers/trace_config.js`). |
 | `EL_STRICT_NAV=1` | Bloque les navigations hors origines autorisées (POS + localhost + file). Par défaut : log-only (cf `helpers/harden_web_contents.js`). |
 

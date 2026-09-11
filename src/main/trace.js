@@ -32,6 +32,10 @@ const UPLOAD_TICK_MS = 30_000;
 // texte, quelques dizaines de Ko) ; seuls les events rrweb, qui portent le
 // volume, sont écrits au fil de l'eau sur disque.
 const MAX_NET_PER_CHUNK = 5_000;
+// Plafond SEPARE pour les corps de trames : un POS bavard en emet des milliers
+// par chunk, et sans budget distinct ils chasseraient du buffer le cycle de vie
+// et les compteurs, qui sont ce qu'on regarde en premier.
+const MAX_WS_FRAMES_PER_CHUNK = 2_000;
 const MAX_REDUX_PER_CHUNK = 20_000;
 
 let state = null;
@@ -61,6 +65,13 @@ function slimWs(msg) {
     ts: Date.now(),
     event: msg.event,
     url: clipUrl(msg.url),
+    // Uniquement peuplés quand la capture des corps est active (mode crise) :
+    // c'est le contenu d'une trame qui peut faire planter la caisse, et un
+    // compteur ne le montre pas.
+    dir: msg.dir,
+    name: msg.name,
+    payload: msg.payload,
+    truncated: msg.truncated,
     status: msg.status,
     error: msg.error,
     durationMs: msg.durationMs,
@@ -191,6 +202,7 @@ function resetChunkBuffers() {
   const s = state;
   if (!s) return;
   s.net = [];
+  s.wsFrames = 0;
   s.redux = [];
   s.partialOpen = false;
 }
@@ -260,12 +272,19 @@ function startCapture() {
   s.recorder.start().catch((err) => log.error(`[TRACE] start: ${err.message}`));
 
   if (s.cfg.captureNet) {
+    netCapture.setWsFrameCapture(s.cfg.captureWsFrames);
     s.netUnsub = netCapture.subscribe((msg) => {
-      if (s.net.length >= MAX_NET_PER_CHUNK) return;
       if (msg && msg.type === "ws") {
+        if (msg.event === "frame") {
+          if (s.wsFrames >= MAX_WS_FRAMES_PER_CHUNK) return;
+          s.wsFrames += 1;
+        } else if (s.net.length >= MAX_NET_PER_CHUNK) {
+          return;
+        }
         s.net.push(slimWs(msg));
         return;
       }
+      if (s.net.length >= MAX_NET_PER_CHUNK) return;
       if (!isNetworkWorthKeeping(msg)) return;
       s.net.push(slimNet(msg));
     });
@@ -278,6 +297,7 @@ async function stopCapture() {
   const s = state;
   if (!s) return;
   if (s.netUnsub) {
+    netCapture.setWsFrameCapture(false);
     s.netUnsub();
     s.netUnsub = null;
   }
@@ -308,6 +328,10 @@ async function applyTraceConfig(remote) {
   if (next.enable === was.enable) {
     // Changement de paramètres à chaud (durée de chunk, idle…) → on redémarre
     // la capture pour que le recorder reparte avec la nouvelle config.
+    // Le mode crise doit prendre effet sans attendre un redemarrage de caisse.
+    if (next.enable && next.captureWsFrames !== was.captureWsFrames) {
+      netCapture.setWsFrameCapture(next.captureWsFrames);
+    }
     const changed =
       next.chunkSeconds !== was.chunkSeconds ||
       next.idlePauseSeconds !== was.idlePauseSeconds ||
@@ -367,6 +391,7 @@ function initTrace(store, { getCentralConfig }) {
     recorder: null,
     netUnsub: null,
     net: [],
+    wsFrames: 0,
     redux: [],
     partialOpen: false,
     uploadTimer: null,

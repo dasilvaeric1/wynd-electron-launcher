@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 ## [2.8.X]
 
+### [2.8.8]
+
+- feat(trace): mode crise — capture des CORPS de trames WebSocket, opt-in.
+
+  La 2.8.7 ne retenait que le cycle de vie et des compteurs, en partant du
+  principe que les charges utiles etaient du bruit. C'est faux dans le cas qui
+  compte : quand c'est le CONTENU d'un message qui fait planter la caisse
+  (champ vide, valeur nulle, format inattendu), un compteur ne montre rien.
+
+  `capture_ws_frames=1` enregistre donc les trames elles-memes, tronquees a
+  2 Ko, avec leur sens (`in`/`out`) et leur nom d'event socket.io.
+
+  Trois garde-fous, parce que c'est le poste de volume le plus lourd de la
+  trace et qu'il porte des donnees metier :
+  - OFF par defaut ;
+  - plafond SEPARE de 2000 trames par chunk, pour que le flot de trames ne
+    chasse pas du buffer le cycle de vie et les compteurs, qu'on regarde en
+    premier ;
+  - activable a distance, mais un ordre BO porte une echeance obligatoire :
+    une activation de crise s'eteint d'elle-meme, et `allow_remote=0` la
+    verrouille comme le reste.
+
+  L'activation est journalisee en warn cote launcher, pour qu'une caisse en
+  capture de contenu ne passe pas inapercue dans les logs.
+
 ### [2.8.7]
 
 - feat(trace): capture les WebSockets, actives par defaut avec `capture_net`.

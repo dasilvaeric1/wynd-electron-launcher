@@ -6,8 +6,10 @@
  * central) etait invisible dans la trace — alors que c'est lui qui explique une
  * caisse figee.
  *
- * On verifie ici le contrat qui rend ca tenable en volume ET en confidentialite :
- * cycle de vie + compteurs, jamais de charge utile.
+ * Contrat par defaut : cycle de vie + compteurs, sans charge utile — tenable en
+ * volume et en confidentialite. Les corps de trames s'ajoutent en « mode
+ * crise » (opt-in), quand c'est le CONTENU d'un message qui fait planter la
+ * caisse et qu'un compteur ne suffit plus.
  */
 
 jest.mock("../src/main/helpers/electron_log", () => ({
@@ -82,9 +84,12 @@ describe("event ws retenu dans le chunk", () => {
     expect(out.events).toEqual({ priceUpdate: 340, cartSync: 12 });
   });
 
-  test("ne transporte aucune charge utile", () => {
+  test("un event de cycle de vie ne transporte aucune charge utile", () => {
+    // Hors mode crise, seuls cycle de vie et compteurs remontent : le champ
+    // brut payloadData du CDP n'est jamais recopie.
     const out = slimWs({ ...raw, payloadData: '{"pan":"497011112222"}' });
     expect(out).not.toHaveProperty("payloadData");
+    expect(out.payload).toBeUndefined();
     expect(JSON.stringify(out)).not.toMatch(/4970/);
   });
 
@@ -99,5 +104,78 @@ describe("event ws retenu dans le chunk", () => {
     const out = slimWs({ type: "ws", event: "created", url: "wss://x/" });
     expect(out.event).toBe("created");
     expect(out.url).toBe("wss://x/");
+  });
+});
+
+describe("mode crise : corps des trames", () => {
+  const { resolveTraceConfig } = require("../src/main/helpers/trace_config");
+  const FUTURE = "2099-01-01T00:00:00Z";
+
+  test("desactive par defaut", () => {
+    expect(resolveTraceConfig({ conf: {}, env: {} }).captureWsFrames).toBe(
+      false,
+    );
+  });
+
+  test("activable par config.ini", () => {
+    expect(
+      resolveTraceConfig({
+        conf: { trace: { capture_ws_frames: true } },
+        env: {},
+      }).captureWsFrames,
+    ).toBe(true);
+  });
+
+  test("activable a distance, mais l'ordre doit porter une echeance", () => {
+    const ok = resolveTraceConfig({
+      conf: {},
+      env: {},
+      remote: { enable: true, wsFrames: true, until: FUTURE },
+    });
+    expect(ok.captureWsFrames).toBe(true);
+
+    // Sans `until`, l'ordre entier est refuse : une capture de contenu ne doit
+    // pas pouvoir rester active indefiniment par oubli.
+    const sansEcheance = resolveTraceConfig({
+      conf: {},
+      env: {},
+      remote: { enable: true, wsFrames: true },
+    });
+    expect(sansEcheance.captureWsFrames).toBe(false);
+  });
+
+  test("allow_remote=0 verrouille aussi le mode crise", () => {
+    const cfg = resolveTraceConfig({
+      conf: { trace: { allow_remote: false } },
+      env: {},
+      remote: { enable: true, wsFrames: true, until: FUTURE },
+    });
+    expect(cfg.captureWsFrames).toBe(false);
+  });
+
+  test("l'env prime sur l'ordre distant", () => {
+    const cfg = resolveTraceConfig({
+      conf: {},
+      env: { EL_TRACE_WS_FRAMES: "0" },
+      remote: { enable: true, wsFrames: true, until: FUTURE },
+    });
+    expect(cfg.captureWsFrames).toBe(false);
+  });
+
+  test("une trame capturee porte son contenu et son sens", () => {
+    const out = slimWs({
+      type: "ws",
+      event: "frame",
+      dir: "in",
+      name: "priceUpdate",
+      payload: '42["priceUpdate",{"sku":"","price":null}]',
+      truncated: false,
+      url: "wss://pos/socket.io/",
+    });
+    expect(out.dir).toBe("in");
+    expect(out.name).toBe("priceUpdate");
+    // Le champ vide qui fait planter la caisse doit etre lisible tel quel.
+    expect(out.payload).toContain('"sku":""');
+    expect(out.truncated).toBe(false);
   });
 });

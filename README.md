@@ -463,6 +463,12 @@ before anyone knows it is needed.
     for socket.io (`42["name",…]`). Frame payloads are never captured: a chatty
     socket would blow up the chunk, and frames carry customer data
 
+* capture_ws_frames:
+  * required: false
+  * value: 0/1, false/true
+  * default: false (disabled if absent)
+  * description: **crisis mode** — also record WebSocket frame *payloads* (truncated to 2 KB, capped at 2000 frames per chunk). Off by default: with a chatty POS this is the heaviest part of the trace, and frames carry business data. Turn it on when the message content itself is what breaks the till (empty field, null value) and a counter tells you nothing. Also settable remotely from the dashboard — a remote order carries a mandatory expiry, so a crisis activation switches itself off
+
 * capture_redux:
   * required: false
   * value: 0/1, false/true

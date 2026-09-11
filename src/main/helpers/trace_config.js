@@ -30,6 +30,11 @@ const DEFAULTS = Object.freeze({
   blockClass: "el-norec",
   captureNet: true,
   captureRedux: true,
+  // Corps des trames WebSocket. OFF par defaut : avec un POS bavard, c'est le
+  // poste de volume le plus lourd de la trace, et les trames transportent des
+  // donnees metier. S'active en « gestion de crise », quand c'est le CONTENU
+  // d'un message qui fait planter la caisse et qu'un compteur ne suffit plus.
+  captureWsFrames: false,
 });
 
 // Bornes dures : un ordre distant (ou un config.ini fautif) ne peut pas
@@ -162,6 +167,16 @@ function resolveTraceConfig({ conf, env = {}, remote, now = Date.now() } = {}) {
 
     captureNet: pick(toBool(base.capture_net), DEFAULTS.captureNet),
     captureRedux: pick(toBool(base.capture_redux), DEFAULTS.captureRedux),
+
+    // Pilotable a distance comme les autres parametres de capture : un ordre BO
+    // porte obligatoirement un `until`, donc une activation de crise s'eteint
+    // d'elle-meme. Reste bloque si `allow_remote=0`.
+    captureWsFrames: pick(
+      toBool(env.EL_TRACE_WS_FRAMES),
+      r ? toBool(r.wsFrames) : undefined,
+      toBool(base.capture_ws_frames),
+      DEFAULTS.captureWsFrames,
+    ),
   });
 }
 

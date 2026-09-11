@@ -76,7 +76,22 @@ let cdpSessions = new Set();
 // Au-dela, on cesse de distinguer les noms d'events : un POS qui en emet des
 // centaines de distincts ferait grossir le resume sans rien apprendre.
 const WS_MAX_EVENT_NAMES = 40;
-const WS_MAX_NAME_LEN = 64;
+// Corps de trame tronque : une seule trame de plusieurs centaines de Ko
+// suffirait a faire basculer le budget du chunk.
+const WS_FRAME_MAX = 2048;
+
+// Capture des corps de trame — OFF par defaut, pilote par la config de trace.
+let wsFrameCapture = false;
+function setWsFrameCapture(enabled) {
+  const next = !!enabled;
+  if (next === wsFrameCapture) return;
+  wsFrameCapture = next;
+  log.warn(
+    next
+      ? "[NET] capture des CORPS de trames WebSocket ACTIVEE (mode crise) — donnees metier enregistrees"
+      : "[NET] capture des corps de trames WebSocket desactivee",
+  );
+}
 
 const wsSockets = new Map(); // requestId -> etat de la socket
 
@@ -111,6 +126,13 @@ function wsState(requestId, url) {
   }
   if (url && !st.url) st.url = url;
   return st;
+}
+
+function clipFrame(payload) {
+  const s = typeof payload === "string" ? payload : "";
+  return s.length > WS_FRAME_MAX
+    ? { body: s.slice(0, WS_FRAME_MAX), truncated: true }
+    : { body: s, truncated: false };
 }
 
 function wsCountFrame(st, payload, outgoing) {
@@ -352,18 +374,27 @@ function attachDebugger(wc) {
           url: st.url,
           status: params.response && params.response.status,
         });
-      } else if (method === "Network.webSocketFrameSent") {
-        wsCountFrame(
-          wsState(params.requestId),
-          params.response && params.response.payloadData,
-          true,
-        );
-      } else if (method === "Network.webSocketFrameReceived") {
-        wsCountFrame(
-          wsState(params.requestId),
-          params.response && params.response.payloadData,
-          false,
-        );
+      } else if (
+        method === "Network.webSocketFrameSent" ||
+        method === "Network.webSocketFrameReceived"
+      ) {
+        const outgoing = method === "Network.webSocketFrameSent";
+        const st = wsState(params.requestId);
+        const payload = params.response && params.response.payloadData;
+        wsCountFrame(st, payload, outgoing);
+        if (wsFrameCapture) {
+          const { body, truncated } = clipFrame(payload);
+          emit({
+            type: "ws",
+            event: "frame",
+            requestId: params.requestId,
+            url: st.url,
+            dir: outgoing ? "out" : "in",
+            name: socketIoEventName(payload) || undefined,
+            payload: body,
+            truncated,
+          });
+        }
       } else if (method === "Network.webSocketFrameError") {
         const st = wsState(params.requestId);
         emit({
@@ -567,6 +598,7 @@ module.exports = {
   stop,
   subscribe,
   snapshotWebSockets,
+  setWsFrameCapture,
   // exportes pour les tests
   socketIoEventName,
 };
