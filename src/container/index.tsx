@@ -395,7 +395,19 @@ const onCallback = (action: TNextAction, ...data: any) => {
       if (api_key) {
         let token = sessionStorage.getItem(api_key);
         if (typeof token === "string") {
-          token = JSON.parse(token);
+          try {
+            token = JSON.parse(token);
+          } catch (e) {
+            // L'entree StorageCache_ est ecrite par le POS : si elle n'est pas
+            // du JSON, ce n'est pas un jeton exploitable. On n'en pousse pas un
+            // faux dans le store — jusqu'ici l'exception cassait l'action.
+            window.log.warn(
+              `[WINDOW CONTAINER] cache d'API illisible (${api_key}): ${
+                (e as Error).message
+              }`,
+            );
+            token = null;
+          }
         }
         if (Array.isArray(token)) {
           token = token[0];
