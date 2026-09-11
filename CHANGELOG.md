@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [2.8.X]
 
+### [2.8.2]
+
+- fix(security): le scaffold de production livrait
+  `[commandline] ignore-certificate-errors=true`, qui desactive la validation
+  des certificats TLS pour tout le process Electron — POS compris. N'importe
+  quel proxy ou reseau magasin hostile pouvait intercepter le trafic de la
+  caisse sans que rien ne le signale. La section est retiree du scaffold, et un
+  nouveau helper `commandline_switches.js` ferme les deux chemins de retour :
+  `removeUnsafeSwitches` retire `ignore-certificate-errors` /
+  `ignore-ssl-errors` s'ils arrivent par la ligne de commande (variantes de
+  prefixe et de casse tolerees), `applyConfiguredSwitches` les refuse s'ils
+  reviennent par un `config.ini` d'un ancien deploiement.
+- refactor(screen): la resolution du chemin de l'`appsettings.json` passe dans
+  `helpers/screen_config_path.js`, testable sans demarrer Electron. Corrige au
+  passage un cas concret : un `EL_SCREEN_APPSETTINGS_PATH` en chemin Windows
+  herite d'une config de caisse Windows etait pris au mot sur Linux, ou il ne
+  peut pas exister — screen-session restait desactive sans raison lisible.
+  L'override n'est retenu que s'il est plausible sur la plateforme courante.
+
 ### [2.8.1]
 
 Trois defauts trouves en faisant tourner la trace sur un vrai POS (staging
