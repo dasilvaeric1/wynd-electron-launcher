@@ -1,7 +1,6 @@
 import numeral from 'numeral'
 import { DateTime } from 'luxon'
 import { IReport, IReportCA, IReportCARaw, IReportProduct, IReportProductByDivision, IReportRate, IReportStat, IReportZ, TReportType } from '../interface'
-import { DATE_HUGE } from 'luxon/src/impl/formats'
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const formatNumber = (value: number | null) => {
@@ -23,7 +22,7 @@ export const formatDate = (value : string | null) : string => {
 }
 
 export const formatDate2 = (value: string | null) : string => {
-	return value ? DateTime.fromISO(value).setLocale('fr').toLocaleString(DATE_HUGE) : 'unknown'
+	return value ? DateTime.fromISO(value).setLocale('fr').toLocaleString(DateTime.DATE_HUGE) : 'unknown'
 }
 
 export const formatDate3 = (value : string | null) : string => {
@@ -157,7 +156,11 @@ export const convertReportCA = (value: IReportCARaw): IReportCA[] => {
 
 export const convertProduct = (products: IReportProduct[]): IReportProductByDivision[]  => {
 
-	const divisionIndex: {[key:string]: IReportProductByDivision} = {}
+	// Object sans prototype : division_label vient de la reponse de l'API de rapport.
+	// Avec un objet litteral, un label valant "__proto__" faisait renvoyer Object.prototype
+	// par la lecture, le test `if (!divisionIndex[...])` le voyait truthy, sautait
+	// l'initialisation, et les `+=` suivants ecrivaient sur le prototype global.
+	const divisionIndex: {[key:string]: IReportProductByDivision} = Object.create(null)
 	const result = []
 	for (let i = 0; i < products.length; i++) {
 		const product = products[i]

@@ -492,7 +492,8 @@ function showConsentDialog(cfg, session) {
       preload: path.join(__dirname, "helpers", "screen_consent_preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      // screen_consent_preload.js ne requiert que `electron` : compatible bac a sable.
+      sandbox: true,
     },
   });
   activeConsentWindow = win;
@@ -1446,7 +1447,8 @@ function showSessionIndicator(mode) {
     skipTaskbar: true,
     focusable: false,
     transparent: false,
-    webPreferences: { contextIsolation: true, sandbox: false },
+    // Aucun preload sur cette fenetre : rien ne s'oppose au bac a sable.
+    webPreferences: { contextIsolation: true, sandbox: true },
   });
   win.setAlwaysOnTop(true, "screen-saver");
   const scopeLabel = mode === "screen" ? "écran" : "fenêtre POS";

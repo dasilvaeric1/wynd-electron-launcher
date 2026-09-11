@@ -1,0 +1,25 @@
+# pnpm 10 ne lit plus les champs `pnpm.overrides` et `pnpm.onlyBuiltDependencies`
+# de package.json — il l'annonce a chaque install : "The following keys were
+# ignored". Les reglages qui y restaient etaient donc sans effet. Ils sont repris
+# ici, a leur nouvelle place.
+
+onlyBuiltDependencies:
+  - esbuild
+  - electron
+  - '@nut-tree-fork/nut-js'
+
+overrides:
+  # --- epinglages de compatibilite, repris de package.json ---
+  string-width: 4.2.3
+  wrap-ansi: 7.0.0
+  process-warning: 5.0.0
+
+  # --- correctifs de securite, tous dans la majeure deja presente ---
+  fast-uri: ^3.1.7            # 7 constats, via fastify
+  undici: ^7.29.1             # 7 constats, via @fastify/http-proxy
+  'brace-expansion@5': ^5.0.9  # 3 constats, via @fastify/static
+  js-yaml: ^4.3.2             # 3 constats, via electron-updater
+  luxon: ^2.5.2               # dependance directe
+  socket.io-parser: ^3.3.6    # via socket.io-client
+  'brace-expansion@2': ^2.1.4  # 3 constats, via electron-extension-installer
+  browserslist: ^4.28.3       # 2 constats, via styled-components

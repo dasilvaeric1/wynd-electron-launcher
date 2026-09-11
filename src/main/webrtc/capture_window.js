@@ -51,7 +51,9 @@ function createCaptureWindow(ctx) {
       preload: path.join(__dirname, "capture_preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      // capture_preload.js ne requiert que `electron` (contextBridge,
+      // ipcRenderer), tous deux disponibles dans un preload en bac a sable.
+      sandbox: true,
       // Capture API : autoriser getUserMedia + desktopCapturer
       // (Electron 21 demande pas de flag spécial, mais on whitelist
       // la permission "media" plus bas).
