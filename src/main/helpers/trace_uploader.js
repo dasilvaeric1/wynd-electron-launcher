@@ -19,7 +19,29 @@
  */
 
 const axios = require("axios");
+const JSZip = require("jszip");
 const log = require("./electron_log");
+
+/**
+ * Relit le meta.json depuis le ZIP du chunk.
+ *
+ * Les bornes temporelles reelles (debut, fin, duree) sont ecrites dans le
+ * bundle au moment de la fermeture du chunk ; l'uploader, lui, tourne plus
+ * tard. Les renvoyer telles quelles au `/complete` est indispensable : sinon
+ * le dashboard affiche une duree de 0 ms et une heure de fin egale a l'heure
+ * d'upload, ce qui rend les traces illisibles (constate en production).
+ */
+async function readChunkMeta(buf) {
+  try {
+    const zip = await JSZip.loadAsync(buf);
+    const f = zip.file("meta.json");
+    if (!f) return null;
+    return JSON.parse(await f.async("string"));
+  } catch (err) {
+    log.debug(`[TRACE] meta.json illisible: ${err.message}`);
+    return null;
+  }
+}
 
 const BACKOFF_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000, 60_000];
 
@@ -51,16 +73,27 @@ function createUploader({ spool, getConfig, launcherInfo }) {
       maxContentLength: Infinity,
     });
 
+    // Bornes reelles du chunk, pas celles de l'upload.
+    const chunkMeta = await readChunkMeta(buf);
+    const stoppedAt = chunkMeta?.stoppedAt || new Date().toISOString();
+    const durationMs =
+      typeof chunkMeta?.durationMs === "number"
+        ? chunkMeta.durationMs
+        : Math.max(0, Date.parse(stoppedAt) - chunk.startedAtMs);
+
     await axios.post(
       `${cfg.baseUrl}/api/traces/${traceId}/complete`,
       {
         sizeBytes: buf.length,
-        stoppedAt: new Date().toISOString(),
-        durationMs: 0,
+        stoppedAt,
+        durationMs,
         meta: {
+          ...(chunkMeta || {}),
           kind: "continuous",
           caisseSerial: cfg.serial,
           startedAt,
+          stoppedAt,
+          durationMs,
           launcherVersion: launcherInfo.version,
           platform: launcherInfo.platform,
         },
@@ -106,4 +139,4 @@ function createUploader({ spool, getConfig, launcherInfo }) {
   return { tick, pending: () => spool.listChunks().length };
 }
 
-module.exports = { createUploader, BACKOFF_MS };
+module.exports = { createUploader, BACKOFF_MS, readChunkMeta };

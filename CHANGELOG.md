@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 ## [2.8.X]
 
+### [2.8.6]
+
+- fix(trace): le dashboard affichait « 0 ms » sur toutes les traces. L'uploader
+  envoyait un `durationMs` code en dur a 0 et un `stoppedAt` egal a l'heure
+  d'UPLOAD, alors que les bornes reelles du chunk etaient deja ecrites dans son
+  `meta.json` a la fermeture. L'uploader relit ce meta et transmet `startedAt`,
+  `stoppedAt` et `durationMs` reels au `/complete`.
+- feat(trace): ajoute `sessionId` et `seq` aux metadonnees de chunk.
+
+  Un chunk est une unite de TRANSPORT, dimensionnee pour resister aux coupures
+  reseau — pas une unite de lecture. Sur une vacation de 8 h en chunks de 5 min,
+  le dashboard affichait une centaine de lignes pour une seule journee de
+  caisse, sans moyen de savoir lesquelles appartenaient a la meme session.
+
+  `sessionId` identifie le RUN de launcher : tous les chunks d'un meme
+  demarrage le partagent, ce qui permet de les regrouper et d'afficher une
+  plage « de … a … ». `seq` donne l'ordre, et rend surtout les TROUS visibles
+  (chunk perdu, plafond de spool atteint) : sans lui, un replay ampute
+  passerait inapercu.
+
+  Chaque chunk commençant deja par `Meta` + `FullSnapshot`, le dashboard peut
+  les concatener dans l'ordre `seq` pour rejouer une session entiere en continu.
+
 ### [2.8.5]
 
 - fix(pkg): ajoute `fs.realpath` et `inflight`, deux dependances de `glob@7`

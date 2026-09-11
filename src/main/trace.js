@@ -15,6 +15,7 @@
  */
 
 const { join } = require("path");
+const { randomUUID } = require("crypto");
 const { app } = require("electron");
 
 const log = require("./helpers/electron_log");
@@ -75,6 +76,12 @@ function buildMeta(s, chunk) {
   return {
     kind: "continuous",
     caisseSerial: s.centralCfg?.serial,
+    // Identifiant du RUN de launcher (pas du chunk) : permet au dashboard de
+    // regrouper les chunks d'une meme session et d'afficher une plage « de …
+    // a … » au lieu d'une ligne par chunk. `seq` donne l'ordre et rend les
+    // trous visibles (chunk perdu, plafond de spool atteint).
+    sessionId: s.sessionId,
+    seq: chunk.seq,
     startedAt: new Date(chunk.startedAtMs).toISOString(),
     stoppedAt: new Date(chunk.stoppedAtMs).toISOString(),
     durationMs: chunk.stoppedAtMs - chunk.startedAtMs,
@@ -97,6 +104,7 @@ function buildMeta(s, chunk) {
 async function finalizeChunk(chunk) {
   const s = state;
   if (!s) return;
+  chunk.seq = s.chunkSeq++;
 
   // Le reliquat d'events du dernier take() rejoint le fichier partiel.
   if (chunk.events.length > 0) {
@@ -316,6 +324,8 @@ function initTrace(store, { getCentralConfig }) {
     spool,
     launcherInfo,
     centralCfg: null,
+    sessionId: randomUUID(),
+    chunkSeq: 0,
     recorder: null,
     netUnsub: null,
     net: [],
