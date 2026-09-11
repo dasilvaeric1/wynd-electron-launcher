@@ -30,7 +30,15 @@ const INJECT = (src) => `(() => {
 
 async function inject(posWc) {
   if (!posWc || posWc.isDestroyed()) return false;
-  const src = fs.readFileSync(getAssetPath("rrweb/recorder.iife.js"), "utf8");
+  let src;
+  try {
+    src = fs.readFileSync(getAssetPath("rrweb/recorder.iife.js"), "utf8");
+  } catch (err) {
+    // Asset absent du build : les appelants ne posent pas de .catch(), une
+    // exception ici partirait en unhandled rejection.
+    log.error(`[REC] asset rrweb illisible: ${err.message}`);
+    return false;
+  }
   try {
     await posWc.executeJavaScript(INJECT(src), true);
     return true;
