@@ -84,6 +84,25 @@ const REDUX_TAP_SRC = `
 })(window);
 `;
 
+// Remontee des echecs d'injection vers le launcher. Le preload du webview n'a
+// pas de logger : on passe par le canal app.action deja traite par App.tsx
+// (case "LOG" -> sendChildAction('log', …)), qui aboutit dans les journaux du
+// launcher. La console de la page POS n'est pas un canal acceptable : elle est
+// elle-meme capturee et renvoyee (helpers/capture_js_errors.js).
+function reportTapError(message) {
+  try {
+    ipcRenderer.sendToHost("app.action", {
+      type: "LOG",
+      level: "ERROR",
+      payload: `[el-redux-tap] ${message}`,
+    });
+  } catch (err) {
+    // Hote injoignable (webview detache) : le statut expose plus bas reste la
+    // seule trace, c'est exactement son role.
+    __elReduxStatus.err = (__elReduxStatus.err || "") + ` | remontee KO: ${err.message}`;
+  }
+}
+
 // Statut d'injection exposé au MAIN world via contextBridge (lisible par le
 // recorder même si webFrame échoue) → diagnostic sans console DevTools.
 const __elReduxStatus = {
@@ -100,12 +119,7 @@ try {
         // Le statut a déjà été cloné vers le MAIN world à ce stade : le muter
         // ne se voit plus côté page, la console du preload est le seul canal.
         __elReduxStatus.err = "exec KO: " + (e && e.message);
-        try {
-          console.error("[el-redux-tap] exec KO", e && e.message);
-        } catch (consoleErr) {
-          __elReduxStatus.err +=
-            " (console indisponible: " + (consoleErr && consoleErr.message) + ")";
-        }
+        reportTapError("exec KO: " + (e && e.message));
       });
     __elReduxStatus.method = "webFrame.called";
   } else {
@@ -117,9 +131,9 @@ try {
 try {
   contextBridge.exposeInMainWorld("__elReduxPreloadStatus", __elReduxStatus);
 } catch (e) {
-  // Sans contextBridge le statut d'injection n'est plus lisible depuis la
-  // page : la console du preload est le seul canal restant.
-  console.error("[el-redux-tap] exposeInMainWorld KO", e && e.message);
+  // Sans contextBridge, le statut d'injection n'est plus lisible depuis la
+  // page : la remontee IPC est le seul canal restant.
+  reportTapError("exposeInMainWorld KO: " + (e && e.message));
 }
 
 ipcRenderer.on("parent.action", (event, data) => {

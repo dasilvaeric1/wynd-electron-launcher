@@ -43,7 +43,6 @@ import {
   IAppInfo,
   IEnvInfo,
   IRootState,
-  IWPTPluginState,
   TPluginStatus,
   TWPTPluginState,
 } from "./interface";
