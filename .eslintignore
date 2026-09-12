@@ -1,5 +1,13 @@
+# Bundles Vite et sorties de build
 src/*/dist
-local
 dist
 dll
+# Front embarque depose par l'exploitant (hors depot)
+local
+# Bundle rrweb vendore tel quel — on ne le modifie pas
+assets/rrweb
+# Documentation generee
+docs
+# Repertoire de travail du scanner Sonar
+.scannerwork
 *.d.ts
