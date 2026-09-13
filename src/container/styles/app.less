@@ -1038,3 +1038,139 @@
 		}
 	}
 }
+
+// ---- Modales du launcher : thème sombre ----
+// Les fenetres du launcher (support, ecrans, pinpad, signalement, urgence)
+// s'ouvrent par-dessus le panneau lateral sombre. Les laisser en blanc antd
+// cassait la continuite visuelle et eblouissait sur un ecran de caisse en
+// magasin peu eclaire. Les modales du POS lui-meme ne sont pas concernees :
+// elles vivent dans l'iframe/webview.
+.modal-support,
+.emergency-modal,
+.pinpad,
+.incident-report {
+	--m-bg: #1c2234;
+	--m-bg-2: #11141e;
+	--m-text: #f2f4f9;
+	--m-dim: #a7b0c8;
+	--m-faint: #6f7893;
+	--m-line: #ffffff1a;
+
+	.ant-modal-content,
+	.ant-modal-confirm-body-wrapper {
+		color: var(--m-text);
+		background: linear-gradient(158deg, var(--m-bg) 0%, var(--m-bg-2) 100%);
+	}
+
+	.ant-modal-content {
+		border: 1px solid var(--m-line);
+		box-shadow: 0 18px 44px -16px #0b0e16b3;
+	}
+
+	.ant-modal-header {
+		background: transparent;
+		border-bottom: 1px solid var(--m-line);
+	}
+
+	.ant-modal-footer {
+		border-top: 1px solid var(--m-line);
+	}
+
+	.ant-modal-title,
+	.ant-modal-confirm-title {
+		color: var(--m-text);
+	}
+
+	.ant-modal-body,
+	.ant-modal-confirm-content {
+		color: var(--m-dim);
+	}
+
+	.ant-modal-close-x {
+		color: var(--m-faint);
+
+		&:hover {
+			color: var(--m-text);
+		}
+	}
+
+	// Bouton secondaire : le defaut antd est blanc sur blanc ici.
+	.ant-btn-default {
+		color: var(--m-dim);
+		background: #ffffff0f;
+		border-color: var(--m-line);
+
+		&:hover,
+		&:focus {
+			color: var(--m-text);
+			background: #ffffff1a;
+			border-color: var(--m-faint);
+		}
+	}
+
+	.ant-btn-link {
+		color: var(--m-dim);
+
+		&:hover {
+			color: var(--m-text);
+		}
+	}
+
+	// Champ de saisie du signalement.
+	textarea.ant-input,
+	.ant-input {
+		color: var(--m-text);
+		background: #ffffff0d;
+		border-color: var(--m-line);
+
+		&::placeholder {
+			color: var(--m-faint);
+		}
+
+		&:focus,
+		&:hover {
+			border-color: @antd-primary-color-hover;
+		}
+	}
+}
+
+// Le pinpad hérite du bloc ci-dessus : ses touches doivent suivre.
+.pinpad {
+	.pinpad-slots i {
+		border-color: #ffffff33;
+	}
+
+	.pinpad-message {
+		color: var(--m-faint);
+	}
+
+	.pinpad-key {
+		color: var(--m-text);
+		background: #ffffff0f;
+		border-color: var(--m-line);
+
+		&.util {
+			color: var(--m-dim);
+		}
+
+		&:hover:not(:disabled) {
+			border-color: @antd-primary-color-hover;
+		}
+	}
+
+	.pinpad-hint {
+		color: var(--m-faint);
+	}
+}
+
+.incident-report {
+	label,
+	.incident-attach .cap,
+	.incident-attach ul {
+		color: var(--m-dim);
+	}
+
+	.incident-attach {
+		border-color: var(--m-line);
+	}
+}

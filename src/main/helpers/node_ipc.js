@@ -21,6 +21,16 @@ module.exports = function nodeIpcConnect(store, callback, logger) {
 	const socket = io(url, {
 		autoConnect: false,
 		rejectUnauthorized: false,
+		// forceNode : indispensable depuis Electron 42 (Node 24).
+		// Node >= 22 expose un `WebSocket` GLOBAL (celui d'undici), et
+		// engine.io-client 3 le prefere au module `ws` des qu'il existe
+		// (transports/websocket.js : `usingBrowserWebSocket = BrowserWebSocket
+		// && !opts.forceNode`). Or l'implementation d'undici n'accepte AUCUNE
+		// option TLS — ni rejectUnauthorized, ni ca — et les options ne sont
+		// transmises que dans le chemin Node. Resultat sur un WPT en HTTPS a
+		// certificat auto-signe : « websocket error » avec une pile dans
+		// node:internal/deps/undici, et un timeout de connexion.
+		forceNode: true,
 		reconnection: true,
 		transports: ["websocket"]
 	});
