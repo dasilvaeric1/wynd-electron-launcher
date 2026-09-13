@@ -23,6 +23,8 @@ const getCentralRegister = require("./helpers/get_central_register");
 const clearCache = require("./helpers/clear_cache");
 const buildVersion = require("./helpers/build_version");
 const { buildBootPlan } = require("../helpers/boot_plan");
+const { getCentralPresence, getCentralConfig } = require("./screen_session");
+const { sendIncident } = require("./helpers/incident_report");
 const { reportBootFailure } = require("./helpers/boot_failure");
 
 module.exports = function generateIpc(store, initCallback) {
@@ -72,6 +74,17 @@ module.exports = function generateIpc(store, initCallback) {
 
       if (store.finish) {
         store.windows.container.current.webContents.send("ready", true);
+      }
+
+      // Etat de liaison central des l'ouverture, sans attendre le prochain
+      // tick du poller (5 s).
+      try {
+        store.windows.container.current.webContents.send(
+          "central.presence",
+          getCentralPresence(),
+        );
+      } catch (err) {
+        log.debug(`[CENTRAL] presence initiale: ${err.message}`);
       }
     } else if (
       who === "loader" &&
@@ -433,6 +446,31 @@ module.exports = function generateIpc(store, initCallback) {
           store.windows.container.current.close();
         }
         break;
+
+      case "report_incident": {
+        // Signalement declenche par le caissier. Le ZIP part en direct vers le
+        // stockage objet via la meme chaine que les traces : aucun egress
+        // central, aucune nouvelle route cote dashboard.
+        let result;
+        try {
+          result = await sendIncident(store, other, {
+            getConfig: getCentralConfig,
+          });
+        } catch (err) {
+          log.error(`[INCIDENT] envoi KO: ${err.message}`);
+          result = { ok: false, reason: "UPLOAD_FAILED", message: err.message };
+        }
+        if (
+          store.windows.container.current &&
+          !store.windows.container.current.isDestroyed()
+        ) {
+          store.windows.container.current.webContents.send(
+            "incident.result",
+            result,
+          );
+        }
+        break;
+      }
 
       case "emergency":
         if (store.wpt.socket && store.wpt.plugins) {

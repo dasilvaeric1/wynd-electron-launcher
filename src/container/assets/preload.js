@@ -40,6 +40,8 @@ const RECEIVE_CHANNELS = [
   "ask_reload",
   "container.request",
   "user_path",
+  "central.presence",
+  "incident.result",
 ];
 
 // --- Logger (initialise a l'arrivee de l'IPC user_path) ---

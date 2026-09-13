@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 
-import { Col, Row, Modal } from 'antd'
-import { Button } from 'react-antd-cssvars'
+import { Modal } from 'antd'
 import { useDispatch, useSelector } from 'react-redux'
 import classNames from 'classnames'
 
@@ -13,249 +12,158 @@ export interface IPinpadProps {
 	onSuccess?: () => void
 }
 
-const messages = {
-	default: 'Enter your PIN Code',
-	success: 'Valid PIN Code',
-	error: 'Incorrect PIN Code',
-}
-export interface IPinpadState {
-	code: string
-	message: string
-	disable: boolean
-	shake: boolean
+type TPinpadStatus = 'typing' | 'error' | 'success'
+
+const MESSAGES: Record<TPinpadStatus, string> = {
+	typing: 'Saisissez le code superviseur',
+	error: 'Code incorrect — réessayez',
+	success: 'Code accepté',
 }
 
-const Pinpad: React.FunctionComponent<IPinpadProps> = (props) => {
+/** Delai avant remise a zero apres un code refuse, pour laisser lire le message. */
+const RESET_AFTER_ERROR_MS = 700
 
+/** Touches, dans l'ordre de la grille 4x3. `null` = pas de touche. */
+const KEYS: Array<string> = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back']
+
+const Pinpad = (props: IPinpadProps) => {
 	const dispatch = useDispatch()
-
-	const [state, setState] = useState<IPinpadState>({
-		message: messages.default,
-		code: '',
-		disable: false,
-		shake: false,
-	})
-
-	const reset = () => {
-		setState({
-			message: messages.default,
-			code: '',
-			disable: false,
-			shake: false,
-		})
-	}
-
 	const conf = useSelector<IRootState, IPinpad>((state) => state.pinpad)
 
-	const onClick = (value: number) => (e: React.MouseEvent<HTMLElement>) => {
-		e.preventDefault()
-		const currentTarget = e.currentTarget
-		setTimeout(() => {
-			currentTarget.blur()
-		}, 150)
+	const [code, setCode] = useState('')
+	const [status, setStatus] = useState<TPinpadStatus>('typing')
+	const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-		let newCode = state.code + value
+	const expected = props.code || ''
 
-		if (state.code.length < props.code.length) {
-			newCode = state.code + value
-			const message =
-				newCode.length < props.code.length
-					? messages.default
-					: newCode !== props.code
-					? messages.error
-					: messages.success
-			setState({
-				code: newCode,
-				message: message,
-				disable: newCode.length === props.code.length,
-				shake: newCode.length === props.code.length && newCode !== props.code,
-			})
-		}
-
-		if (newCode === props.code) {
-			props.onSuccess && props.onSuccess()
-			dispatch(closePinpadAction())
-			reset()
+	const clearTimer = () => {
+		if (resetTimer.current) {
+			clearTimeout(resetTimer.current)
+			resetTimer.current = null
 		}
 	}
 
-	const onClear = (e: React.MouseEvent<HTMLElement>) => {
-		e.preventDefault()
-		const currentTarget = e.currentTarget
-		setTimeout(() => {
-			currentTarget.blur()
-		}, 150)
-		setState({
-			code: '',
-			message: messages.default,
-			disable: false,
-			shake: false,
-		})
-	}
+	const reset = useCallback(() => {
+		clearTimer()
+		setCode('')
+		setStatus('typing')
+	}, [])
 
-	const messageCls = classNames({
-		btn: true,
-		'message-launcher': true,
-		error: state.code.length >= props.code.length && state.code !== props.code,
-	})
-
-	const inputCls = classNames({
-		'input-container': true,
-		shake: state.shake,
-	})
-
-	const onClose = () => {
+	const onClose = useCallback(() => {
 		dispatch(closePinpadAction())
 		reset()
+	}, [dispatch, reset])
+
+	const onDigit = useCallback(
+		(digit: string) => {
+			// Apres un refus, la premiere touche repart d'un code vide plutot que
+			// d'obliger a passer par « C » : l'ancien pinpad verrouillait toutes
+			// les touches des que la longueur etait atteinte.
+			const base = status === 'error' ? '' : code
+			if (base.length >= expected.length) {
+				return
+			}
+			clearTimer()
+			const next = base + digit
+			setCode(next)
+
+			if (next.length < expected.length) {
+				setStatus('typing')
+				return
+			}
+			if (next === expected) {
+				setStatus('success')
+				props.onSuccess && props.onSuccess()
+				dispatch(closePinpadAction())
+				reset()
+				return
+			}
+			setStatus('error')
+			resetTimer.current = setTimeout(() => setCode(''), RESET_AFTER_ERROR_MS)
+		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[code, status, expected, dispatch, reset]
+	)
+
+	const onBack = useCallback(() => {
+		clearTimer()
+		setCode((current) => current.slice(0, -1))
+		setStatus('typing')
+	}, [])
+
+	// Les caisses ont un clavier physique (souvent un pave numerique) : le
+	// pinpad n'en tenait aucun compte, il fallait viser les boutons au doigt.
+	useEffect(() => {
+		if (!conf.open) {
+			return undefined
+		}
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key >= '0' && event.key <= '9') {
+				event.preventDefault()
+				onDigit(event.key)
+			} else if (event.key === 'Backspace') {
+				event.preventDefault()
+				onBack()
+			} else if (event.key === 'Escape') {
+				event.preventDefault()
+				onClose()
+			}
+		}
+		window.addEventListener('keydown', onKeyDown)
+		return () => window.removeEventListener('keydown', onKeyDown)
+	}, [conf.open, onDigit, onBack, onClose])
+
+	useEffect(() => clearTimer, [])
+
+	const onKeyPress = (key: string) => () => {
+		if (key === 'clear') {
+			reset()
+		} else if (key === 'back') {
+			onBack()
+		} else {
+			onDigit(key)
+		}
 	}
+
+	const filled = status === 'error' ? expected.length : code.length
 
 	return (
 		<Modal
-			className="pinpad"
-			visible={conf.open}
+			className={classNames('pinpad', status)}
+			open={conf.open}
 			closable={true}
 			onCancel={onClose}
 			footer={null}
 			centered={true}
 			width="auto"
+			title="Code superviseur"
 		>
-			<div className={messageCls}>{state.message}</div>
-
-			<div className={inputCls}>
-				<input type="password" disabled value={state.code}></input>
+			<div className="pinpad-slots" aria-label={`${code.length} chiffre(s) sur ${expected.length}`}>
+				{Array.from({ length: expected.length }).map((_unused, index) => (
+					<i key={`slot-${index}`} className={index < filled ? 'on' : undefined} />
+				))}
 			</div>
 
-			<div className="numbers">
-				<Row className="pinpad-row">
-					<Col>
-						<Button
-							disabled={state.disable}
-							className="pinpad-button"
-							size="large"
-							shape="circle"
-							onClick={onClick(1)}
-						>
-							1
-						</Button>
-					</Col>
-					<Col>
-						<Button
-							disabled={state.disable}
-							className="pinpad-button"
-							size="large"
-							shape="circle"
-							onClick={onClick(2)}
-						>
-							2
-						</Button>
-					</Col>
-					<Col>
-						<Button
-							disabled={state.disable}
-							className="pinpad-button"
-							size="large"
-							shape="circle"
-							onClick={onClick(3)}
-						>
-							3
-						</Button>
-					</Col>
-				</Row>
-				<Row className="pinpad-row">
-					<Col>
-						<Button
-							disabled={state.disable}
-							className="pinpad-button"
-							size="large"
-							shape="circle"
-							onClick={onClick(4)}
-						>
-							4
-						</Button>
-					</Col>
-					<Col>
-						<Button
-							disabled={state.disable}
-							className="pinpad-button"
-							size="large"
-							shape="circle"
-							onClick={onClick(5)}
-						>
-							5
-						</Button>
-					</Col>
-					<Col>
-						<Button
-							disabled={state.disable}
-							className="pinpad-button"
-							size="large"
-							shape="circle"
-							onClick={onClick(6)}
-						>
-							6
-						</Button>
-					</Col>
-				</Row>
-				<Row className="pinpad-row">
-					<Col>
-						<Button
-							disabled={state.disable}
-							className="pinpad-button"
-							size="large"
-							shape="circle"
-							onClick={onClick(7)}
-						>
-							7
-						</Button>
-					</Col>
-					<Col>
-						<Button
-							disabled={state.disable}
-							className="pinpad-button"
-							size="large"
-							shape="circle"
-							onClick={onClick(8)}
-						>
-							8
-						</Button>
-					</Col>
-					<Col>
-						<Button
-							disabled={state.disable}
-							className="pinpad-button"
-							size="large"
-							shape="circle"
-							onClick={onClick(9)}
-						>
-							9
-						</Button>
-					</Col>
-				</Row>
-				<Row className="pinpad-row">
-					<Col>
-						<Button
-							disabled={state.disable}
-							className="pinpad-button"
-							size="large"
-							shape="circle"
-							onClick={onClick(0)}
-						>
-							0
-						</Button>
-					</Col>
-					<Col>
-						<Button
-							disabled={state.code.length === 0}
-							className="pinpad-button"
-							size="large"
-							shape="circle"
-							onClick={onClear}
-						>
-							C
-						</Button>
-					</Col>
-				</Row>
+			<div className="pinpad-message" role="status">
+				{MESSAGES[status]}
 			</div>
+
+			<div className="pinpad-grid">
+				{KEYS.map((key) => (
+					<button
+						type="button"
+						key={key}
+						className={classNames('pinpad-key', { util: key === 'clear' || key === 'back' })}
+						onClick={onKeyPress(key)}
+						disabled={key === 'back' && code.length === 0}
+						aria-label={key === 'clear' ? 'Tout effacer' : key === 'back' ? 'Effacer le dernier chiffre' : key}
+					>
+						{key === 'clear' ? 'C' : key === 'back' ? '⌫' : key}
+					</button>
+				))}
+			</div>
+
+			<div className="pinpad-hint">clavier physique accepté · Échap pour annuler</div>
 		</Modal>
 	)
 }

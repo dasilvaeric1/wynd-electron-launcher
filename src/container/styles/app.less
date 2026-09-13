@@ -409,81 +409,121 @@
 
 .pinpad {
     .ant-modal-content {
+        border-radius: 10px;
+    }
+
+    .ant-modal-body {
         display: flex;
-        border-radius: 5px;
-
-        & .ant-modal-body {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
+        flex-direction: column;
+        align-items: center;
+        padding-top: 8px;
     }
 
-    .pinpad-row {
-        margin-top: 8px;
-        margin-bottom: 8px;
-    }
-
-    .pinpad-row:last-child {
+    // Pastilles de saisie : on voit combien de chiffres restent, sans champ
+    // mot de passe (l'ancien <input type="password" disabled> n'indiquait rien
+    // et n'etait pas annonce aux lecteurs d'ecran).
+    .pinpad-slots {
         display: flex;
-        justify-content: flex-end;
-    }
+        gap: 13px;
+        margin-bottom: 10px;
 
-    .message-launcher {
-        margin-bottom: 16px;
-        padding: 16px;
-        color: @antd-menu-background;
+        i {
+            display: block;
+            width: 13px;
+            height: 13px;
+            border: 1.5px solid @antd-border-color;
+            border-radius: 999px;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
 
-        &.error {
-            color: @antd-danger-color;
-        }
-
-        &.success {
-            color: @antd-success-color;
-        }
-    }
-
-    .input-container {
-        display: flex;
-        justify-content: center;
-
-        input {
-            margin-bottom: 16px;
-            padding: 16px;
-            color: @antd-submenu-background;
-            border-color: @antd-submenu-background;
-            border-width: 2px;
-            border-radius: 4px;
-            text-align: center;
-            font-size: 1.2rem;
+            &.on {
+                background: @antd-primary-color;
+                border-color: transparent;
+            }
         }
     }
 
-    .ant-btn.pinpad-button {
-        height: 64px;
-        width: 64px;
-        border-radius: 4px;
-        margin-left: 8px;
-        margin-right: 8px;
-        cursor: pointer;
-        font-size: 1.3rem;
-        width: 64px;
-        height: 64px;
+    &.error .pinpad-slots {
+        animation: shakeanimation 0.34s ease;
+
+        i.on {
+            background: @antd-danger-color;
+        }
+    }
+
+    &.success .pinpad-slots i.on {
+        background: @antd-success-color;
+    }
+
+    .pinpad-message {
+        min-height: 20px;
+        margin-bottom: 18px;
+        color: @antd-description-color;
+        font-size: 13px;
+    }
+
+    &.error .pinpad-message {
+        color: @antd-danger-color;
+    }
+
+    &.success .pinpad-message {
+        color: @antd-success-color;
+    }
+
+    // Grille 4x3 symetrique : le backspace comble la case laissee vide par
+    // l'ancienne derniere rangee (0 et C seulement), et rend la correction
+    // possible sans tout reprendre a zero.
+    .pinpad-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 11px;
+    }
+
+    .pinpad-key {
+        width: 72px;
+        height: 72px;
         color: @antd-primary-color;
-        border-color: transparent;
-        box-shadow: 0 1px 1px 0 rgb(0 0 0 / 14%), 0 2px 1px -1px rgb(0 0 0 / 12%), 0 1px 3px 0 rgb(0 0 0 / 20%);
-        &:hover {
+        font-family: inherit;
+        // 72 px : une cible tactile de caisse, la ou les cercles antd
+        // « size=large » faisaient ~40 px.
+        font-size: 1.35rem;
+        font-weight: 600;
+        background: transparent;
+        border: 1px solid @antd-border-color;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.12s ease, border-color 0.12s ease;
+
+        &.util {
+            color: @antd-description-color;
+            font-size: 1.05rem;
+        }
+
+        &:hover:not(:disabled) {
             border-color: @antd-primary-color-hover;
         }
 
-        &:focus,
-        &.active,
-        &:active {
-            background: @antd-menu-background;
+        &:active:not(:disabled) {
             color: @antd-menu-text-color;
-						box-shadow: none;
+            background: @antd-menu-background;
+            border-color: transparent;
         }
+
+        &:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+
+        &:focus-visible {
+            outline: 2px solid @antd-primary-color;
+            outline-offset: 2px;
+        }
+    }
+
+    .pinpad-hint {
+        margin-top: 15px;
+        color: @antd-description-color;
+        font-size: 11px;
+        opacity: 0.75;
     }
 }
 
@@ -884,4 +924,113 @@
 @keyframes diag-shimmer {
 	0% { background-position: 100% 50%; }
 	100% { background-position: 0 50%; }
+}
+// ---- Indicateur de liaison (panneau lateral) ----
+// Le heartbeat central existait deja (poll /api/screen-sessions/pending toutes
+// les 5 s) mais n'etait jamais affiche : un magasin ne pouvait pas savoir que
+// sa caisse avait cesse de remonter au siege.
+.e-launcher-presence {
+	display: grid;
+	gap: 9px;
+	padding: 14px 18px;
+	border-bottom: 1px solid @antd-border-color;
+
+	.presence-row {
+		display: flex;
+		gap: 9px;
+		align-items: center;
+		font-size: 13px;
+
+		.led {
+			flex: none;
+			width: 8px;
+			height: 8px;
+			background: @antd-success-color;
+			border-radius: 999px;
+		}
+
+		.lbl {
+			color: @antd-description-color;
+		}
+
+		.val {
+			margin-left: auto;
+			font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+			font-size: 11px;
+			color: @antd-description-color;
+		}
+
+		&.warn {
+			.led {
+				background: @antd-warning-color;
+			}
+
+			.val {
+				color: @antd-warning-color;
+			}
+		}
+
+		&.down {
+			.led {
+				background: @antd-danger-color;
+			}
+
+			.val {
+				color: @antd-danger-color;
+			}
+		}
+	}
+}
+
+// ---- Signalement d'anomalie ----
+.incident-report {
+	label {
+		display: block;
+		margin-bottom: 7px;
+		color: @antd-description-color;
+		font-size: 13px;
+	}
+
+	.incident-attach {
+		margin-top: 16px;
+		padding: 12px 13px;
+		border: 1px solid @antd-border-color;
+		border-radius: 7px;
+
+		.cap {
+			margin-bottom: 8px;
+			color: @antd-description-color;
+			font-size: 10px;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+		}
+
+		ul {
+			display: grid;
+			gap: 5px;
+			margin: 0;
+			padding-left: 18px;
+			color: @antd-description-color;
+			font-size: 12.5px;
+		}
+	}
+
+	.incident-error {
+		margin: 14px 0 0;
+		color: @antd-danger-color;
+		font-size: 13px;
+	}
+
+	.incident-sent {
+		text-align: center;
+
+		code {
+			display: inline-block;
+			margin-top: 8px;
+			padding: 5px 10px;
+			color: @antd-primary-color;
+			background: @antd-primary-color-background;
+			border-radius: 5px;
+		}
+	}
 }
