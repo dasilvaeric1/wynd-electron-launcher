@@ -1,6 +1,7 @@
 # CI launcher Wynd.
 #
 # Pipeline :
+#   quality       → eslint + jest (bloquant sur develop/tag, signale ailleurs)
 #   dist          → bundle renderer (Vite) sur node:22 / pnpm
 #   build:linux   → AppImage + .deb + .rpm (auto sur tag, MANUEL sur branche)
 #   build:win     → .exe portable Windows x64 (cross-compile via wine) + zip Nexus
@@ -17,6 +18,7 @@
 # de packaging. pnpm + lockfile committé = builds reproductibles.
 
 stages:
+  - quality
   - dist
   - build
   - deploy
@@ -37,11 +39,45 @@ workflow:
     - if: $CI_COMMIT_BRANCH
 
 # ---------------------------------------------------------------------------
+# Lint + tests unitaires.
+#
+# Bloquant sur `develop` et sur les tags : rien ne se construit si la qualite
+# regresse. Sur une branche de travail, le job signale sans bloquer — on doit
+# pouvoir produire un .exe ou un .deb a tester meme avec un lint en cours de
+# correction.
+#
+# Le setup jest (build/jest_global_setup.js) provisionne lui-meme le front
+# embarque factice de src/local/, gitignore : rien a preparer ici.
+# ---------------------------------------------------------------------------
+quality:
+  stage: quality
+  image: node:24
+  interruptible: true
+  tags:
+    - docker
+  cache:
+    key: pnpm-store
+    paths:
+      - .pnpm-store
+  before_script:
+    - corepack enable
+    - pnpm config set store-dir .pnpm-store
+  script:
+    - pnpm install --frozen-lockfile
+    - pnpm lint
+    - pnpm test
+  rules:
+    - if: $CI_COMMIT_TAG # release : gate dur
+    - if: $CI_COMMIT_BRANCH == "develop" # branche de travail : gate dur
+    - if: $CI_COMMIT_BRANCH # autre branche : signale, ne bloque pas
+      allow_failure: true
+
+# ---------------------------------------------------------------------------
 # Bundle renderer (container + loader) — Vite (remplace webpack).
 # ---------------------------------------------------------------------------
 dist:
   stage: dist
-  image: node:22
+  image: node:24
   # Un nouveau push sur la meme branche annule le pipeline precedent.
   interruptible: true
   tags:
@@ -76,7 +112,7 @@ dist:
 # ---------------------------------------------------------------------------
 build:linux:
   stage: build
-  image: node:22
+  image: node:24
   interruptible: true
   tags:
     - docker
