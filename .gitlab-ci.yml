@@ -6,6 +6,7 @@
 #   build:linux   → AppImage + .deb + .rpm (auto sur tag, MANUEL sur branche)
 #   build:win     → .exe portable Windows x64 (cross-compile via wine) + zip Nexus
 #                   (auto sur tag, MANUEL sur branche)
+#   smoke:linux   → installe le .deb produit et LANCE le binaire sous xvfb
 #   deploy:nexus  → upload du zip sur Nexus (sur tag uniquement)
 #
 # Builds a la demande sur une branche : pousser la branche cree un pipeline qui
@@ -179,6 +180,43 @@ build:win:
     - if: $CI_COMMIT_BRANCH # manuel sur n'importe quelle branche
       when: manual
       allow_failure: true
+
+# ---------------------------------------------------------------------------
+# Fumigation du paquet : installe le .deb produit par build:linux et LANCE
+# vraiment le binaire.
+#
+# Raison d'etre (cf l'en-tete de scripts/smoke_packaged.sh) : electron-builder
+# omet silencieusement des dependances transitives de cet arbre pnpm. Le
+# symptome n'apparait QU'AU LANCEMENT du binaire packagé — ni `pnpm test`, ni
+# `pnpm dist`, ni le build lui-meme ne le voient. Trois plantages en production
+# ont ete decouverts ainsi (string-width, strip-ansi, fs.realpath).
+#
+# Passer par `apt-get install ./dist/*.deb` teste EN PLUS la liste de
+# dependances du paquet : apt refuse d'installer si elle est incomplete, et
+# tire les bibliotheques Electron a la place d'une liste ecrite a la main ici.
+# ---------------------------------------------------------------------------
+smoke:linux:
+  stage: build
+  image: node:24
+  interruptible: true
+  tags:
+    - docker
+  needs:
+    - job: build:linux
+      artifacts: true
+  rules:
+    - if: $CI_COMMIT_TAG # avant toute release
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_COMMIT_BRANCH
+      when: manual
+      allow_failure: true
+  before_script:
+    - apt-get update -qq
+    - apt-get install -y -qq --no-install-recommends xvfb
+  script:
+    - apt-get install -y -qq ./dist/*.deb
+    - export SMOKE_BIN=/opt/electron-launcher/wynd-electron-launcher
+    - xvfb-run -a bash scripts/smoke_packaged.sh
 
 # ---------------------------------------------------------------------------
 # Upload de l'archive sur Nexus — UNIQUEMENT sur tag (release).

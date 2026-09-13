@@ -49,6 +49,33 @@
       "synopsis": "Launcher Octipas POS",
       "description": "Affiche le point de vente Octipas en plein ecran sur les caisses."
     },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0",
+        "libasound2 | libasound2t64",
+        "libgbm1"
+      ]
+    },
+    "rpm": {
+      "depends": [
+        "gtk3",
+        "libnotify",
+        "nss",
+        "(libXtst or libXtst6)",
+        "xdg-utils",
+        "at-spi2-core",
+        "(libuuid or libuuid1)",
+        "alsa-lib",
+        "mesa-libgbm"
+      ]
+    },
     "mac": {
       "icon": "assets/icons/mac/icon.icns",
       "target": [
@@ -210,9 +237,19 @@
     "electron-extension-installer": "1.2.0",
     "electron-updater": "^6.8.9",
     "fastify": "^5.12.3",
+    "fs.realpath": "1.0.0",
+    "human-signals": "2.1.0",
+    "inflight": "1.0.6",
     "ini": "1.3.8",
     "jszip": "^3.10.1",
+    "merge-stream": "2.0.0",
+    "mimic-fn": "2.1.0",
+    "onetime": "5.1.2",
+    "path-is-absolute": "1.0.1",
     "socket.io-client": "2.5.0",
+    "sprintf-js": "1.1.3",
+    "strip-final-newline": "2.0.0",
+    "undici-types": "6.21.0",
     "winston": "3.7.2",
     "winston-daily-rotate-file": "4.7.1",
     "ws": "^8.18.0"
