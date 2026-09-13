@@ -47,7 +47,18 @@
       "maintainer": "Eric Da Silva <Edasilva@chapsvision.fr>",
       "vendor": "ChapsVision",
       "synopsis": "Launcher Octipas POS",
-      "description": "Affiche le point de vente Octipas en plein ecran sur les caisses."
+      "description": "Affiche le point de vente Octipas en plein ecran sur les caisses.",
+      "desktop": {
+        "entry": {
+          "Name": "Caisse Octipas",
+          "GenericName": "Point de vente",
+          "Comment": "Ouvre la caisse Octipas",
+          "Categories": "Office;Finance;",
+          "Keywords": "caisse;pos;octipas;vente;encaissement;",
+          "StartupNotify": "true",
+          "SingleMainWindow": "true"
+        }
+      }
     },
     "deb": {
       "depends": [
