@@ -84,7 +84,12 @@ function destroyCaptureWindow() {
   if (!captureWindow) return;
   try {
     captureWindow.webContents.send("webrtc:teardown");
-  } catch {}
+  } catch (err) {
+    // Renderer déjà parti : la window est fermée juste après de toute façon.
+    if (activeContext && activeContext.log) {
+      activeContext.log.debug(`[WEBRTC] teardown non transmis: ${err.message}`);
+    }
+  }
   setTimeout(() => {
     if (captureWindow && !captureWindow.isDestroyed()) {
       captureWindow.close();

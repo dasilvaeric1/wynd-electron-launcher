@@ -169,7 +169,9 @@ async function createPeerFor(browserPeerId) {
       peers.delete(browserPeerId);
       try {
         pc.close();
-      } catch {}
+      } catch (err) {
+        logDebug(`pc ${browserPeerId} close KO: ${err.message}`);
+      }
     }
   };
   return pc;
@@ -225,7 +227,9 @@ function tearDownPeer(browserPeerId) {
   if (!pc) return;
   try {
     pc.close();
-  } catch {}
+  } catch (err) {
+    logDebug(`pc ${browserPeerId} close KO: ${err.message}`);
+  }
   peers.delete(browserPeerId);
 }
 

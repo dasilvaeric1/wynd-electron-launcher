@@ -1,5 +1,6 @@
 const path = require('path')
 const log = require('../helpers/electron_log')
+const { jsonOrMarker } = require('./safe_json')
 const fs = require('fs')
 const CustomError = require('../../helpers/custom_error')
 
@@ -117,7 +118,7 @@ module.exports = function launchWpt(wpt, callback) {
 		log.info("[WPT] child pid: " + child.pid)
 		if (wpt.wait_on_ipc) {
 			child.on('message', message => {
-				log.info("[WPT] child message: " + (typeof message === "object" ? JSON.stringify(message) : message))
+				log.info("[WPT] child message: " + (typeof message === "object" ? jsonOrMarker(message, "message WPT") : message))
 				if (typeof message === 'object' && message.pid) {
 					wptPid = message.pid
 					if (callback) {
@@ -156,8 +157,7 @@ module.exports = function launchWpt(wpt, callback) {
 		) {
 			child.stdout.on('data', function (data) {
 				if (process.env.EL_DEBUG && process.env.EL_DEBUG === 'wpt') {
-					// eslint-disable-next-line no-console
-					console.log('WPT ->', data.toString())
+					log.debug('[WPT] > ' + data.toString())
 				}
 				if (messages.length > 0) {
 					messages.length = ""
@@ -165,11 +165,14 @@ module.exports = function launchWpt(wpt, callback) {
 
 				if (!wpt.wait_on_ipc && data.indexOf('[pid] ') >= 0 || data.indexOf('pid') >= 0) {
 					let pid = typeof data === "object" ? data.toString().split("\n") : data.split("\n")
-					for (let i = 0; i < pid.length; i++) {
-						if (pid[i].indexOf('[pid]' >= 0) || pid[i].indexOf('pid' >= 0)) {
-							pid = pid[i]
-							break
-						}
+					// NB : la condition ci-dessous est conservee telle quelle — elle est
+					// fautive (le `>= 0` est a l'interieur de indexOf) et retourne donc
+					// toujours vrai, cf. le commit qui accompagne cette correction.
+					const pidLine = pid.find(
+						(line) => line.indexOf('[pid]' >= 0) || line.indexOf('pid' >= 0)
+					)
+					if (pidLine !== undefined) {
+						pid = pidLine
 					}
 					const pids = pid.split(" ")
 					if (pid.length > 0) {

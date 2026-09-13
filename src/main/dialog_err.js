@@ -54,7 +54,15 @@ module.exports = function dialogErr(store, err) {
 		if (store.appLog) {
 			store.appLog = '...'
 		}
-		log.error("[STATE] > " + JSON.stringify(store, null, 2))
+		let state
+		try {
+			state = JSON.stringify(store, null, 2)
+		} catch (errState) {
+			// Le store porte des handles (sockets, windows) : une reference
+			// circulaire ne doit pas empecher de journaliser l'erreur d'origine.
+			state = `[store non serialisable: ${errState.message}]`
+		}
+		log.error("[STATE] > " + state)
 		if (err instanceof CustomError) {
 			log.error(`[${err.api_code}] > ${err.message}`)
 		} else {

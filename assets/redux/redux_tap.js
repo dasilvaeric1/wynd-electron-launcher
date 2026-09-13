@@ -10,6 +10,15 @@
   window.__elReduxState = window.__elReduxState || {};
   window.__elRedux = window.__elRedux || [];
 
+  // Le tap tourne dans la page POS : pas de logger, et la console y est
+  // elle-meme capturee ailleurs. Les echecs sont donc comptes et exposes sur
+  // window, releves avec la trace.
+  window.__elReduxErrors = window.__elReduxErrors || { count: 0, last: null };
+  function tapError(where, e) {
+    window.__elReduxErrors.count++;
+    window.__elReduxErrors.last = where + ': ' + ((e && e.message) || e);
+  }
+
   function compose() {
     var funcs = Array.prototype.slice.call(arguments);
     if (funcs.length === 0) return function (x) { return x; };
@@ -43,7 +52,7 @@
     return function (createStore) {
       return function (reducer, preloadedState) {
         var store = createStore(reducer, preloadedState);
-        try { window.__elReduxState[name] = store.getState(); } catch (e) {}
+        try { window.__elReduxState[name] = store.getState(); } catch (e) { tapError('baseline ' + name, e); }
         var origDispatch = store.dispatch;
         store.dispatch = function (action) {
           var res = origDispatch(action);
@@ -61,7 +70,9 @@
             });
             if (window.__elRedux.length > MAX_EVENTS)
               window.__elRedux.splice(0, window.__elRedux.length - MAX_EVENTS);
-          } catch (e) {}
+          } catch (e) {
+            tapError('dispatch ' + name, e);
+          }
           return res;
         };
         return store;

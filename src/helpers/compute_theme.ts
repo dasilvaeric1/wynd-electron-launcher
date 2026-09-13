@@ -3,7 +3,7 @@ import { Store } from 'redux'
 
 import { IRootState } from '../container/interface'
 
-export default function computeThemeContainer(store?: Store<IRootState>) {
+export default function computeThemeContainer(_store?: Store<IRootState>) {
 	// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 	return function computeTheme(this: Theme<TThemeColorTypes>, key: TThemeColorTypes, value: string, luminance: number) {
 		if (key === 'primary-color') {

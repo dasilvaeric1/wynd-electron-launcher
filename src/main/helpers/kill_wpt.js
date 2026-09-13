@@ -35,7 +35,7 @@ module.exports =  function killWPT(wpt, callback) {
 						process.kill(pid, 'SIGKILL')
 					}
 					catch(e) {
-						// silent error
+						log.debug("[WPT] > kill : SIGKILL KO (pid=" + pid + ") : " + e.message)
 					}
 				}
 				child.removeAllListeners()

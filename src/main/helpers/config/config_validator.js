@@ -4,6 +4,32 @@ const path = require("path");
 
 const CustomError = require("../../../helpers/custom_error");
 
+/**
+ * Acces disque tolerants pour les mots-cles AJV.
+ *
+ * `config.url` et `config.wpt.cwd` viennent de config.ini : rien ne garantit
+ * que ce soit une chaine (une section `[wpt.cwd]` donne un objet). `path.join`
+ * et `fs.existsSync` levent alors un TypeError QUI REMONTE HORS de la
+ * validation : au lieu d'une erreur de config lisible, l'application tombe au
+ * demarrage. On considere ces cas comme "chemin inexistant", ce qui rend la
+ * vraie erreur de validation.
+ */
+function pathExists(target) {
+  try {
+    return fs.existsSync(target);
+  } catch (err) {
+    return false;
+  }
+}
+
+function indexExists(dir) {
+  try {
+    return fs.existsSync(path.join(dir, "index.html"));
+  } catch (err) {
+    return false;
+  }
+}
+
 const convertUrl = function checkUrl(url) {
   const aUrl = new URL(url);
   return {
@@ -71,10 +97,11 @@ const addKeyWord = function (confPath) {
           "..",
           "..",
           "..",
+          "..",
           "src",
           "local",
         );
-        if (fs.existsSync(localPath, "index.html")) {
+        if (indexExists(localPath)) {
           it.rootData.url = {
             href: localPath,
             host: "",
@@ -139,7 +166,7 @@ const addKeyWord = function (confPath) {
           ];
           return false;
         }
-        if (fs.existsSync(path.join(remotePath, "index.html"))) {
+        if (indexExists(remotePath)) {
           it.rootData.url = {
             href: remotePath,
             host: "",
@@ -268,7 +295,7 @@ const addKeyWord = function (confPath) {
         return true;
       }
 
-      if (fs.existsSync(data)) {
+      if (pathExists(data)) {
         return true;
       }
       const params = {

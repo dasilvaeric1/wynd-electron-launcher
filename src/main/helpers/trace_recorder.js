@@ -101,7 +101,7 @@ function buildInstallSrc(rrwebSrc) {
   };
 
   T.stop = function () {
-    try { if (T.rec) T.rec(); } catch (e) { /* noop */ }
+    try { if (T.rec) T.rec(); } catch (e) { T.lastErr = 'stop: ' + (e && e.message); }
     T.rec = null;
     return 'ok';
   };
@@ -116,8 +116,9 @@ function buildInstallSrc(rrwebSrc) {
       if (Array.isArray(window.__elRedux)) {
         redux = window.__elRedux; window.__elRedux = [];
       }
-    } catch (e) { /* noop */ }
-    return { events: events, redux: redux, dropped: dropped, lastAct: T.lastAct, running: !!T.rec };
+    } catch (e) { T.lastErr = 'take redux: ' + (e && e.message); }
+    var lastErr = T.lastErr; T.lastErr = null;
+    return { events: events, redux: redux, dropped: dropped, lastAct: T.lastAct, running: !!T.rec, lastErr: lastErr };
   };
 
   T.peek = function () {
@@ -193,7 +194,11 @@ function createRecorder({ cfg, getWebContents, onChunk, onPartial, onTarget }) {
     const c = wc();
     if (!c) return null;
     try {
-      return await c.executeJavaScript(src, true);
+      const out = await c.executeJavaScript(src, true);
+      // Le hook tourne dans la page POS et n'a aucun canal de log : il remonte
+      // sa derniere erreur dans la charge utile, on la trace ici.
+      if (out && out.lastErr) log.debug(`[TRACE] hook page: ${out.lastErr}`);
+      return out;
     } catch (err) {
       log.debug(`[TRACE] executeJavaScript KO: ${err.message}`);
       return null;

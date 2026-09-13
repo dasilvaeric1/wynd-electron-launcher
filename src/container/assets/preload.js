@@ -4,10 +4,14 @@ const createRenderLog = require("../../helpers/create_renderer_log");
 
 // Version de build injectée synchroniquement (cf preload loader).
 let appVersion = "";
+// Raison de l'échec gardée pour être tracée dès que le logger existe (il est
+// initialisé plus bas, sur l'IPC user_path).
+let appVersionErr = null;
 try {
   appVersion = require("../../main/helpers/build_version")();
-} catch {
-  /* build_info absent (dev) → vide */
+} catch (err) {
+  // build_info absent (dev) → version vide.
+  appVersionErr = err.message;
 }
 
 // --- Channel whitelists ---
@@ -38,17 +42,32 @@ const RECEIVE_CHANNELS = [
   "user_path",
 ];
 
-// --- Logger (initialized async on user_path) ---
+// --- Logger (initialise a l'arrivee de l'IPC user_path) ---
+// Avant cet IPC il n'y a pas encore de logger fichier. Plutot que de deverser
+// ces premieres lignes sur la console de la page, on les met de cote et on les
+// rejoue des que le vrai logger existe. Le tampon est borne : si user_path
+// n'arrive jamais, il ne grossit pas indefiniment.
+const PENDING_MAX = 200;
+const pending = [];
+const buffer = (level) => (...args) => {
+  if (pending.length < PENDING_MAX) pending.push([level, args]);
+};
+let wantedLevel = null;
 let logger = {
-  info: (...args) => console.info("[LOG]", ...args),
-  debug: (...args) => console.debug("[LOG]", ...args),
-  warn: (...args) => console.warn("[LOG]", ...args),
-  error: (...args) => console.error("[LOG]", ...args),
+  info: buffer("info"),
+  debug: buffer("debug"),
+  warn: buffer("warn"),
+  error: buffer("error"),
   level: "info",
 };
 
 ipcRenderer.once("user_path", (_event, userPath) => {
   logger = createRenderLog(userPath);
+  if (wantedLevel) logger.level = wantedLevel;
+  for (const [level, args] of pending.splice(0)) logger[level](...args);
+  if (appVersionErr) {
+    logger.debug(`[PRELOAD] build_version indisponible: ${appVersionErr}`);
+  }
 });
 
 // --- Expose secure APIs to renderer via contextBridge ---
@@ -85,6 +104,9 @@ contextBridge.exposeInMainWorld("log", {
   warn: (...args) => logger.warn(...args),
   error: (...args) => logger.error(...args),
   setLevel: (level) => {
+    // Memorise : si l'IPC conf arrive avant user_path, le niveau etait pose
+    // sur le stub puis perdu au remplacement par le vrai logger.
+    wantedLevel = level;
     logger.level = level;
   },
 });

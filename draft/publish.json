@@ -1,9 +1,0 @@
-{
-	"provider": "generic",
-	"url": "http://localhost:5001/download/1.6.6/linux_64/"
-}
-
-{
-	"provider": "generic",
-	"url": "http://localhost:5001/download/latest/linux_64/"
-}

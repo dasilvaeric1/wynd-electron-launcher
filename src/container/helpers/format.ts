@@ -182,7 +182,7 @@ export const convertProduct = (products: IReportProduct[]): IReportProductByDivi
 		divisionIndex[product.division_label].products.push(product)
 	}
 
-	for (const divisionKey in divisionIndex) {
+	for (const divisionKey of Object.keys(divisionIndex)) {
 		result.push(divisionIndex[divisionKey])
 	}
 

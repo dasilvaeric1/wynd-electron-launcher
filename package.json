@@ -21,7 +21,7 @@
     "build:win": "node scripts/stamp_build.js && electron-builder --win --publish never",
     "build:linux": "node scripts/stamp_build.js && rm -rf dist/__appImage-x64 && mkdir -p dist/__appImage-x64 && electron-builder --linux --publish never",
     "build:mac": "node scripts/stamp_build.js && electron-builder --mac --publish never",
-    "lint": "eslint",
+    "lint": "eslint .",
     "test": "jest __tests__",
     "smoke:packaged": "bash scripts/smoke_packaged.sh"
   },
@@ -113,6 +113,8 @@
   },
   "jest": {
     "testEnvironment": "node",
+    "globalSetup": "<rootDir>/build/jest_global_setup.js",
+    "globalTeardown": "<rootDir>/build/jest_global_teardown.js",
     "verbose": true,
     "collectCoverageFrom": [
       "<rootDir>/src/***/**/*.js"
@@ -124,7 +126,6 @@
       "/configs/",
       "/dist/",
       "/dll/",
-      "/draft/",
       "/scripts/",
       "/test/"
     ],
@@ -161,6 +162,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.0",
     "eslint-plugin-react": "^7.34.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "husky": "6.0.0",
     "jest": "27.0.4",
     "less": "^4.9.1",

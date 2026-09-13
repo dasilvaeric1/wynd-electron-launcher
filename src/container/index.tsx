@@ -43,7 +43,6 @@ import {
   IAppInfo,
   IEnvInfo,
   IRootState,
-  IWPTPluginState,
   TPluginStatus,
   TWPTPluginState,
 } from "./interface";
@@ -87,8 +86,10 @@ window.electronAPI.on("app_infos", (appInfos: IAppInfo) => {
 window.electronAPI.on("container.request", (action: string) => {
   if (action === "get.state") {
     const state = store.getState();
-    // eslint-disable-next-line no-console
-    console.log(action, state);
+    // L'etat complet partait sur la console de la page. Il est de toute facon
+    // transmis juste apres sur le canal IPC : la trace n'a besoin que de
+    // l'action.
+    window.log.debug(`[WINDOW CONTAINER] ${action}`);
     window.electronAPI.send("container.response", action, state);
   }
 });
@@ -159,7 +160,7 @@ window.electronAPI.on("conf", (conf: any) => {
   store.dispatch(setConfigAction(conf));
 
   if (conf.theme) {
-    for (const themeKey in conf.theme) {
+    for (const themeKey of Object.keys(conf.theme)) {
       if (window.theme.has(themeKey as TThemeColorTypes)) {
         const colorTheme = conf.theme[themeKey];
         window.theme.set(themeKey as TThemeColorTypes, `#${colorTheme}`, true);
@@ -393,7 +394,19 @@ const onCallback = (action: TNextAction, ...data: any) => {
       if (api_key) {
         let token = sessionStorage.getItem(api_key);
         if (typeof token === "string") {
-          token = JSON.parse(token);
+          try {
+            token = JSON.parse(token);
+          } catch (e) {
+            // L'entree StorageCache_ est ecrite par le POS : si elle n'est pas
+            // du JSON, ce n'est pas un jeton exploitable. On n'en pousse pas un
+            // faux dans le store — jusqu'ici l'exception cassait l'action.
+            window.log.warn(
+              `[WINDOW CONTAINER] cache d'API illisible (${api_key}): ${
+                (e as Error).message
+              }`,
+            );
+            token = null;
+          }
         }
         if (Array.isArray(token)) {
           token = token[0];

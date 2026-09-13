@@ -7,6 +7,7 @@ import Menu from "./components/Menu";
 import Emergency from "./components/Emergency";
 import PluginState from "./components/PluginState";
 import { IConfig } from "./helpers/config";
+import { ICustomWindow } from "../helpers/interface";
 import {
   IAppInfo,
   IDisplay,
@@ -31,7 +32,7 @@ export interface IAppProps {
   sendChildAction: (action: string, ...data: any) => void;
 }
 
-interface IMyWindow extends Window {
+interface IMyWindow extends ICustomWindow {
   __STATIC__: string;
 }
 
@@ -159,7 +160,12 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
             targetOrigin = origin;
           }
         } catch (e) {
-          // urlApp non parsable : on conserve le comportement precedent
+          // urlApp non parsable : on conserve le comportement precedent ("*").
+          window.log?.debug(
+            `[WINDOW CONTAINER] origine cible non deduite de urlApp: ${
+              (e as Error).message
+            }`,
+          );
         }
         webview.contentWindow.postMessage(message, targetOrigin);
       }
@@ -178,8 +184,11 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
       try {
         data = JSON.parse(event.data);
       } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error(e);
+        // Message poste par le POS : tout ce qui commence par "{" n'est pas
+        // forcement du JSON. Trace dans le journal, pas sur la console.
+        window.log?.debug(
+          `[WINDOW CONTAINER] message POS non parsable: ${(e as Error).message}`,
+        );
       }
     } else if (
       event.type === "ipc-message" &&
@@ -191,8 +200,9 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
         try {
           data = JSON.parse(event.args[0]);
         } catch (e) {
-          // eslint-disable-next-line no-console
-          console.error(e);
+          window.log?.debug(
+            `[WINDOW CONTAINER] app.action non parsable: ${(e as Error).message}`,
+          );
         }
       } else if (typeof event.args[0] === "object") {
         data = event.args[0];
@@ -209,7 +219,12 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
             try {
               data.payload = JSON.parse(data.payload);
             } catch (err) {
-              // silent
+              // Charge utile non-JSON : on la remonte telle quelle.
+              window.log?.debug(
+                `[WINDOW CONTAINER] log SCO non parsable: ${
+                  (err as Error).message
+                }`,
+              );
             }
           }
           props.sendChildAction("log", data.level || "INFO", data.payload);

@@ -51,7 +51,13 @@ class CustomError extends Error {
 	}
 
 	toString() {
-		return JSON.stringify(this.format())
+		try {
+			return JSON.stringify(this.format())
+		} catch (err) {
+			// `data` est fourni par l'appelant : il peut etre circulaire. Un
+			// toString() qui throw masquerait l'erreur d'origine.
+			return `[CustomError ${this.api_code} non serialisable: ${err.message}] ${this.message}`
+		}
 	}
 
 	addSubError(field, code, message, data) {
@@ -98,7 +104,8 @@ class CustomError extends Error {
 	}
 
 	convert(err) {
-		for (const key in err.data) {
+		// `|| {}` : for-in tolerait un err.data absent, pas Object.keys.
+		for (const key of Object.keys(err.data || {})) {
 			const error = err.data[key][0]
 			if (error.keyword === 'required' && error.params.missingProperty) {
 				this.api_code = 'MISSING_KEYS'

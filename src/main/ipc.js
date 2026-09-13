@@ -17,6 +17,7 @@ const openLoaderDevTools = require("./helpers/open_loader_dev_tools");
 const sendOnReady = require("./helpers/send_on_ready");
 const handleScoLog = require("./helpers/handle_sco_log");
 const log = require("./helpers/electron_log");
+const { jsonOrMarker } = require("./helpers/safe_json");
 const getCentralRegister = require("./helpers/get_central_register");
 const clearCache = require("./helpers/clear_cache");
 const buildVersion = require("./helpers/build_version");
@@ -114,7 +115,7 @@ module.exports = function generateIpc(store, initCallback) {
         );
 
         if (store.conf && store.conf.extensions) {
-          for (const name in store.conf.extensions) {
+          for (const name of Object.keys(store.conf.extensions)) {
             const extPath = path.resolve(store.conf.extensions[name]);
             await session.defaultSession.loadExtension(extPath, {
               allowFileAccess: true,
@@ -157,9 +158,9 @@ module.exports = function generateIpc(store, initCallback) {
               tmpLogMessage += " ";
               const data = others[0][i];
               if (Array.isArray(data)) {
-                tmpLogMessage += JSON.stringify(data, null, 0);
+                tmpLogMessage += jsonOrMarker(data, "log renderer", 0);
               } else if (typeof data === "object") {
-                tmpLogMessage += JSON.stringify(data, null, 1);
+                tmpLogMessage += jsonOrMarker(data, "log renderer", 1);
               } else {
                 tmpLogMessage += data;
               }
@@ -209,7 +210,8 @@ module.exports = function generateIpc(store, initCallback) {
         try {
           await checkWptPlugin(store.wpt.socket, "FastPrinter");
         } catch (e) {
-          // ignore — on poursuit avec la requête
+          // On poursuit avec la requête : elle renverra sa propre erreur.
+          log.debug(`[WPT] check FastPrinter KO: ${e.message}`);
         }
       }
 

@@ -7,6 +7,7 @@ const reinitialize = require("./reinitialize")
 const getConfig = require('./config/get_config')
 const setConfig = require('./config/set_config')
 const log = require("./electron_log")
+const { jsonOrMarker } = require("./safe_json")
 const requestWPT = require("./request_wpt")
 const restartWPT = require("./reload_wpt")
 const getCentralRegister = require('./get_central_register')
@@ -28,8 +29,9 @@ module.exports = function onSocket(store, socket, initCallback) {
 			store.wpt.socket.emit("central.register", register)
 
 			log.info(
-				`[CENTRAL] > try to register name=${register.name} version=${register.version} versions=${JSON.stringify(
+				`[CENTRAL] > try to register name=${register.name} version=${register.version} versions=${jsonOrMarker(
 					register.app_versions,
+					"app_versions",
 				)}`,
 			)
 
@@ -45,7 +47,7 @@ module.exports = function onSocket(store, socket, initCallback) {
 	if (config.display_plugin_state && config.display_plugin_state.enable) {
 
 		store.wpt.plugins_state = {}
-		for (const eventPrefix in config.display_plugin_state) {
+		for (const eventPrefix of Object.keys(config.display_plugin_state)) {
 
 			if (eventPrefix !== 'enable' && !eventPrefix.startsWith('_')) {
 
@@ -141,7 +143,7 @@ module.exports = function onSocket(store, socket, initCallback) {
 				const messageToSend = centralState.pending_messages.shift()
 				setTimeout(() => {
 					socket.emit('central.message', messageToSend)
-					log.info(`[CENTRAL] > message pended to send ${JSON.stringify(messageToSend)}`)
+					log.info(`[CENTRAL] > message pended to send ${jsonOrMarker(messageToSend, "message")}`)
 				})
 			}
 		}
@@ -180,7 +182,8 @@ module.exports = function onSocket(store, socket, initCallback) {
 			err.datas = {}
 		}
 		err.datas.internal_state = centralState
-		log.error(`[CENTRAL] > error ${JSON.stringify(err)}`)
+		// `internal_state` porte l'etat central complet : circularite plausible.
+		log.error(`[CENTRAL] > error ${jsonOrMarker(err, "erreur central")}`)
 
 	})
 
@@ -459,7 +462,6 @@ module.exports = function onSocket(store, socket, initCallback) {
 					break;
 
 				case 'config/wpt':
-					// request.data = require('../../../draft/wpt.json')
 					messageRunning = false
 					requestWPT(store.wpt.socket, { emit: 'configuration.getfile' })
 						.then((data) => {
@@ -490,7 +492,6 @@ module.exports = function onSocket(store, socket, initCallback) {
 					break;
 
 				case 'config/wpt/change':
-					// request.data = require('../../../draft/wpt.json')
 					messageRunning = true
 					requestWPT(store.wpt.socket, { emit: 'configuration.changeall', datas: request.data })
 						.then((data) => {
@@ -517,7 +518,7 @@ module.exports = function onSocket(store, socket, initCallback) {
 						...store.conf.wpt
 					}
 					if (request.data && typeof request.data === "object") {
-						for (const key in wptConf) {
+						for (const key of Object.keys(wptConf)) {
 							if (Object.hasOwn(request.data, key)) {
 								wptConf[key] = request.data[key]
 							}

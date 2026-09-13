@@ -1,4 +1,9 @@
-const Validator = require('../../src/main/helpers/config_validator')
+const path = require('path')
+const Validator = require('../../src/main/helpers/config/config_validator')
+
+// Racine du depot, deduite de l'emplacement du test : les chemins attendus
+// etaient codes en dur sur la machine d'origine.
+const ROOT = path.join(__dirname, '..', '..')
 
 const cv = new Validator(__dirname)
 let config = null
@@ -65,7 +70,7 @@ describe("Validation config", () => {
 			url: {
 				"host": "",
 				"hostname": "",
-				"href": "/home/ppetit/electron/wynd-electron-launcher/src/local",
+				"href": path.join(ROOT, 'src', 'local'),
 				"port": "",
 				"protocol": "file",
 			},
@@ -126,7 +131,7 @@ describe("Validation config", () => {
 			url: {
 				"host": "",
 				"hostname": "",
-				"href": "/home/ppetit/electron/wynd-electron-launcher/src/local",
+				"href": path.join(ROOT, 'src', 'local'),
 				"port": "",
 				"protocol": "file",
 
@@ -205,7 +210,7 @@ describe("Validation config", () => {
 				url: {
 					"host": "",
 					"hostname": "",
-					"href": "/home/ppetit/electron/wynd-electron-launcher/src/local",
+					"href": path.join(ROOT, 'src', 'local'),
 					"port": "",
 					"protocol": "file",
 				},
@@ -253,7 +258,7 @@ describe("Validation config", () => {
 				url: {
 					"host": "",
 					"hostname": "",
-					"href": "/home/ppetit/electron/wynd-electron-launcher/__mocks__",
+					"href": path.join(ROOT, '__mocks__'),
 					"port": "",
 					"protocol": "file",
 				},
@@ -277,9 +282,9 @@ describe("Validation config", () => {
 				keyword: 'local',
 				schemaPath: '#/properties/url/allOf/1/local',
 				params: { ref: config.url },
-				message: 'Missing /home/ppetit/electron/wynd-electron-launcher/__tests__/config//index.html in config.url path',
+				message: `Missing ${__dirname}//index.html in config.url path`,
 				err: {
-					message: 'Missing /home/ppetit/electron/wynd-electron-launcher/__tests__/config//index.html in config.url path',
+					message: `Missing ${__dirname}//index.html in config.url path`,
 					status: 400,
 					api_code: 'INVALID_PARAMETER_VALUE',
 					code: 'Bad Request',
