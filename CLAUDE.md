@@ -161,8 +161,10 @@ Visualisation + contrôle distant de l'écran caisse depuis le BO central.
      `keydown` DOM → casse les listeners barcode du POS). Modifiers
      Ctrl/Alt/Cmd → vrais raccourcis ; Shift seul → `char` (majuscule déjà
      résolue par le BO).
-   - `screen` : `@nut-tree-fork/nut-js` (input système-wide). **Pas installé
-     par défaut** — `getNut()` échoue proprement (1 seul warn). Requiert la
+   - `screen` : `@nut-tree-fork/nut-js` (input système-wide). **Embarqué**
+     (dépendance de prod, ~17 Mo avec `jimp`) : le contrôle distant doit
+     marcher sur toutes les caisses. Chargé en *lazy require* au 1er event —
+     `getNut()` échoue proprement (1 seul warn) s'il manque. Requiert la
      permission **Accessibilité** macOS (probe au 1er event).
 6. **Reconnexion** : sur close WS anormal (≠1000/1008), backoff exponentiel
    1→2→4→8→16s, max 5 essais (re-fetch ticket à chaque fois). Le serveur a
