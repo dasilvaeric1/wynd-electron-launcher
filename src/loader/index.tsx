@@ -1,30 +1,21 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 
-import { Theme } from 'react-antd-cssvars'
-
 import App from './App'
-
 import './index.less'
-import { ICustomWindow } from '../helpers/interface'
-import computeTheme from '../helpers/compute_theme'
+import type { ILoaderWindow } from './interface'
 
-declare let window: ICustomWindow
-
-window.theme = new Theme(undefined, computeTheme())
-
-window.electronAPI.send('ready', 'loader')
+declare let window: ILoaderWindow
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 
-root.render(
-  <React.Fragment>
-    <App />
-  </React.Fragment>
-)
+root.render(<App />)
 
-// win.fullscreen = true
-
-// process.on('SIGTERM', () => {
-// 	closeApp(win, child)
-// })
+// `ready` declenche le show() de la fenetre cote main. L'ancien code l'envoyait
+// AVANT root.render() : la fenetre etait donc affichee alors qu'elle etait
+// encore vide, d'ou le flash blanc. On attend la frame qui suit le commit React.
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    window.electronAPI.send('ready', 'loader')
+  })
+})

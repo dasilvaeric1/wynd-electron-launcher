@@ -1,168 +1,306 @@
-@import "~react-antd-cssvars/dist/styles/variables.less";
-
+// Loader — thème sombre fixe, assumé : c'est l'écran produit, il ne suit pas
+// le thème système. Les quatre variables ci-dessous peuvent être surchargées
+// par config.ini [theme] (cf THEME_VARS dans App.tsx).
 #e-launcher-loader {
+	--l-bg1: #1c2234;
+	--l-bg2: #11141e;
+	--l-accent: #94a4cb;
+	--l-accent-deep: #425176;
+	--l-text: #f2f4f9;
+	--l-dim: #a7b0c8;
+	--l-faint: #6f7893;
+	--l-line: #ffffff1a;
+	--l-ok: #63c08e;
+	--l-bad: #e8776b;
+	--l-warn: #e2b25a;
+
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
 	height: 100%;
-	color: var(--text-color-inv);
-	padding: 16px 18px 12px;
-	user-select: none;
-	font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	padding: 20px 22px 16px;
 	overflow: hidden;
-	// Fond dégradé sombre + halo d'accent diffus en haut → look moderne.
+	color: var(--l-text);
+	font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	user-select: none;
 	background:
-		radial-gradient(
-			120% 80% at 100% 0%,
-			color-mix(in srgb, var(--menu-background) 35%, transparent) 0%,
-			transparent 60%
-		),
-		linear-gradient(
-			160deg,
-			color-mix(in srgb, var(--text-color) 92%, white) 0%,
-			var(--text-color) 100%
-		);
+		radial-gradient(120% 85% at 100% 0%, var(--l-accent-deep) 0%, transparent 58%),
+		linear-gradient(158deg, var(--l-bg1) 0%, var(--l-bg2) 100%);
 
-	.loader-container {
+	// ---- en-tête ----
+	.n-head {
 		display: flex;
-		flex-direction: column;
-		justify-content: space-between;
-		height: 100%;
-	}
-
-	// En-tête : intitulé de l'action + progression par étapes.
-	.loader-header {
-		display: flex;
+		flex: none;
+		gap: 11px;
 		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
+		padding-bottom: 14px;
+		border-bottom: 1px solid var(--l-line);
 	}
 
-	.loader-action {
-		font-size: 18px;
+	.n-mark {
+		display: grid;
+		flex: none;
+		place-items: center;
+		width: 30px;
+		height: 30px;
+		font-size: 14px;
 		font-weight: 700;
-		letter-spacing: 0.2px;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		// Léger dégradé sur le texte du titre.
-		background: linear-gradient(
-			90deg,
-			var(--text-color-inv) 0%,
-			color-mix(in srgb, var(--text-color-inv) 70%, var(--menu-background)) 100%
-		);
-		-webkit-background-clip: text;
-		background-clip: text;
-		-webkit-text-fill-color: transparent;
+		color: #fff;
+		background: linear-gradient(145deg, #5c6e9e, var(--l-accent-deep));
+		border-radius: 7px;
+		box-shadow: inset 0 1px 0 #ffffff33;
 	}
 
-	// Corps : dot pulsant d'accent + statut (2 lignes max).
-	.loader-content {
-		flex: 1;
+	.n-ident {
+		min-width: 0;
+	}
+
+	.n-title {
+		overflow: hidden;
+		font-size: 16px;
+		font-weight: 600;
+		letter-spacing: -0.01em;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.n-sub {
+		font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+		font-size: 10.5px;
+		letter-spacing: 0.04em;
+		color: var(--l-faint);
+	}
+
+	// ---- corps ----
+	.n-body {
 		display: flex;
+		flex: 1;
 		flex-direction: column;
 		justify-content: center;
-		gap: 10px;
 		min-height: 0;
+		padding: 14px 0;
 	}
 
-	.loader-status {
-		position: relative;
-		padding-left: 16px;
-		color: var(--menu-text-color);
-		font-size: 13px;
-		line-height: 1.35;
-		opacity: 0.9;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-
-		&::before {
-			content: "";
-			position: absolute;
-			left: 0;
-			top: 6px;
-			width: 8px;
-			height: 8px;
-			border-radius: 999px;
-			background: var(--menu-background);
-			box-shadow: 0 0 0 0 color-mix(in srgb, var(--menu-background) 70%, transparent);
-			animation: el-pulse 1.4s ease-out infinite;
-		}
+	.phases {
+		display: grid;
+		gap: 9px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
 	}
 
-	// Pied : nom (gauche) + version en pill (droite).
-	.loader-footer {
+	.phase {
 		display: flex;
-		justify-content: space-between;
+		gap: 10px;
 		align-items: center;
-		gap: 8px;
-		padding-top: 10px;
-		border-top: 1px solid color-mix(in srgb, var(--text-color-inv) 10%, transparent);
+		font-size: 13.5px;
+		color: var(--l-faint);
+
+		.dot {
+			display: grid;
+			flex: none;
+			place-items: center;
+			width: 15px;
+			height: 15px;
+			font-size: 9px;
+			line-height: 1;
+			border: 1.5px solid #ffffff26;
+			border-radius: 999px;
+		}
+
+		&.done {
+			color: var(--l-dim);
+
+			.dot {
+				font-weight: 700;
+				color: #0e2317;
+				background: var(--l-ok);
+				border-color: transparent;
+			}
+		}
+
+		&.active {
+			font-weight: 600;
+			color: var(--l-text);
+
+			.dot {
+				border-color: var(--l-accent);
+				border-right-color: transparent;
+				animation: el-spin 0.8s linear infinite;
+			}
+		}
+
+		&.failed {
+			color: var(--l-text);
+
+			.dot {
+				font-weight: 700;
+				color: #2a0d0a;
+				background: var(--l-bad);
+				border-color: transparent;
+			}
+		}
 	}
 
-	.loader-app-name {
-		font-size: 11px;
-		font-weight: 700;
-		opacity: 0.6;
-		text-transform: uppercase;
-		letter-spacing: 0.6px;
-		color: var(--text-color-inv);
-	}
-
-	.loader-version {
-		font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-		font-size: 10px;
-		line-height: 1;
-		padding: 3px 7px;
-		border-radius: 999px;
-		color: color-mix(in srgb, var(--text-color-inv) 75%, transparent);
-		background: color-mix(in srgb, var(--text-color-inv) 8%, transparent);
-		border: 1px solid color-mix(in srgb, var(--text-color-inv) 10%, transparent);
-		white-space: nowrap;
+	.n-detail {
+		margin-top: 14px;
 		overflow: hidden;
+		font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+		font-size: 11px;
+		color: var(--l-faint);
 		text-overflow: ellipsis;
-		max-width: 62%;
-		user-select: text;
+		white-space: nowrap;
 	}
 
-	// Progression par étapes (header) avec glow d'accent sur les actives.
-	.loader-action-progress {
-		.ant-progress-steps-item {
-			width: 4px !important;
-			height: 18px !important;
-			margin-right: 3px;
-			border-radius: 2px;
-			background: color-mix(in srgb, var(--text-color-inv) 14%, transparent);
-			transition: background 0.25s ease, box-shadow 0.25s ease;
-		}
+	.n-bar {
+		height: 3px;
+		margin-top: 9px;
+		overflow: hidden;
+		background: #ffffff1a;
+		border-radius: 2px;
 
-		.ant-progress-steps-item-active {
-			background: var(--menu-background);
-			box-shadow: 0 0 6px color-mix(in srgb, var(--menu-background) 60%, transparent);
+		i {
+			display: block;
+			height: 100%;
+			background: linear-gradient(90deg, var(--l-accent), #c4cfe8);
+			transition: width 0.35s ease;
 		}
 	}
 
-	// Barre de download (téléchargement d'update).
-	.loader-content .ant-progress-bg {
-		background: linear-gradient(
-			90deg,
-			var(--menu-background) 0%,
-			color-mix(in srgb, var(--menu-background) 55%, white) 100%
-		) !important;
+	.n-banner {
+		display: flex;
+		gap: 9px;
+		align-items: flex-start;
+		margin-top: 13px;
+		padding: 8px 10px;
+		font-size: 12px;
+		line-height: 1.4;
+		color: #ebd4a6;
+		background: #e2b25a1f;
+		border-left: 2px solid var(--l-warn);
+		border-radius: 0 4px 4px 0;
+	}
+
+	// ---- écran d'échec ----
+	.fail-head {
+		display: flex;
+		gap: 10px;
+		align-items: center;
+		margin-bottom: 10px;
+	}
+
+	.fail-badge {
+		display: grid;
+		flex: none;
+		place-items: center;
+		width: 26px;
+		height: 26px;
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--l-bad);
+		background: #e8776b22;
+		border-radius: 7px;
+	}
+
+	.fail-title {
+		font-size: 16px;
+		font-weight: 700;
+	}
+
+	.fail-msg {
+		// Volontairement non tronqué : l'ancien line-clamp coupait les messages
+		// d'erreur à deux lignes, en supprimant l'information utile.
+		margin: 0 0 11px;
+		overflow-y: auto;
+		font-size: 13.5px;
+		line-height: 1.45;
+		color: var(--l-dim);
+	}
+
+	.fail-meta {
+		display: grid;
+		gap: 3px;
+		margin-bottom: 13px;
+		padding: 7px 9px;
+		font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+		font-size: 10.5px;
+		color: var(--l-faint);
+		background: #ffffff0d;
+		border: 1px solid var(--l-line);
+		border-radius: 4px;
+	}
+
+	.btns {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 7px;
+	}
+
+	.btn {
+		padding: 9px 14px;
+		font-family: inherit;
+		font-size: 12.5px;
+		font-weight: 600;
+		line-height: 1;
+		color: var(--l-text);
+		cursor: pointer;
+		background: #ffffff0f;
+		border: 1px solid var(--l-line);
+		border-radius: 5px;
+
+		&.primary {
+			color: #141a2a;
+			background: var(--l-accent);
+			border-color: transparent;
+		}
+
+		&.ghost {
+			color: var(--l-faint);
+			background: transparent;
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--l-accent);
+			outline-offset: 2px;
+		}
+	}
+
+	// ---- pied ----
+	.n-foot {
+		display: flex;
+		flex: none;
+		gap: 8px;
+		align-items: center;
+		justify-content: space-between;
+		padding-top: 12px;
+		border-top: 1px solid var(--l-line);
+
+		.left {
+			font-size: 10.5px;
+			font-weight: 600;
+			letter-spacing: 0.7px;
+			color: var(--l-faint);
+			text-transform: uppercase;
+		}
+
+		.right {
+			font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+			font-size: 10px;
+			color: var(--l-faint);
+		}
 	}
 }
 
-@keyframes el-pulse {
-	0% {
-		box-shadow: 0 0 0 0 color-mix(in srgb, var(--menu-background) 60%, transparent);
-	}
-	70% {
-		box-shadow: 0 0 0 7px transparent;
-	}
-	100% {
-		box-shadow: 0 0 0 0 transparent;
+@keyframes el-spin {
+	to {
+		transform: rotate(360deg);
 	}
 }
 
-#e-launcher {
-	background: transparent;
+@media (prefers-reduced-motion: reduce) {
+	#e-launcher-loader .phase.active .dot {
+		border-right-color: var(--l-accent);
+		animation: none;
+	}
 }

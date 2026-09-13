@@ -53,6 +53,15 @@ export default defineConfig({
 		'process.env.DEBUG_PROD': JSON.stringify(process.env.DEBUG_PROD || ''),
 	},
 	build: {
+		// Les modules partages main <-> renderer (src/helpers/boot_plan.js,
+		// src/loader/store/reducer.js) sont ecrits en CommonJS : c'est ce que
+		// Jest sait lire sans babel ni ts-jest, et ce que le process main
+		// require directement. Par defaut le plugin commonjs de Vite ne couvre
+		// que node_modules, donc leurs exports nommes n'etaient pas resolus.
+		commonjsOptions: {
+			include: [/node_modules/, /src\/.*\.js$/],
+			transformMixedESModules: true,
+		},
 		outDir: `src/${RENDERER}/dist`,
 		emptyOutDir: true,
 		target: 'es2020', // Electron 42 = Chromium récent

@@ -111,8 +111,10 @@ const store = {
     },
     loader: {
       current: null,
-      width: 300,
-      height: 140,
+      // 300x140 ne tenait que deux lignes de texte : illisible sur un ecran
+      // tactile de caisse, et les messages d'erreur y etaient tronques.
+      width: 420,
+      height: 260,
     },
   },
   pm2: {

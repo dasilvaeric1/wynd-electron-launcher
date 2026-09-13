@@ -2,6 +2,7 @@ const {
   app,
   ipcMain,
   session,
+  shell,
   Notification,
   ipcRenderer,
 } = require("electron");
@@ -21,6 +22,8 @@ const { jsonOrMarker } = require("./helpers/safe_json");
 const getCentralRegister = require("./helpers/get_central_register");
 const clearCache = require("./helpers/clear_cache");
 const buildVersion = require("./helpers/build_version");
+const { buildBootPlan } = require("../helpers/boot_plan");
+const { reportBootFailure } = require("./helpers/boot_failure");
 
 module.exports = function generateIpc(store, initCallback) {
   let count = 0;
@@ -95,9 +98,12 @@ module.exports = function generateIpc(store, initCallback) {
               ? store.conf.title
               : store.infos.name;
 
+          // Le plan remplace le total code en dur de get_total.ts : il est
+          // calcule depuis la config reelle (update on/off, wpt on/off), donc
+          // la progression ne plafonne plus a 90 % ni ne depasse 100 %.
           store.windows.loader.current.webContents.send(
             "loader.action",
-            "initialize",
+            buildBootPlan(store.conf, "initialize"),
           );
           store.windows.loader.current.webContents.send("app_infos", {
             version: buildVersion(),
@@ -123,9 +129,49 @@ module.exports = function generateIpc(store, initCallback) {
           }
         }
       } catch (err) {
-        showDialogError(store, err);
+        // L'erreur s'affiche desormais DANS le loader, avec « Reessayer ».
+        // La dialog native qui tuait l'app ne sert plus que de repli.
+        reportBootFailure(store, err);
       }
     }
+  });
+
+  // --- Sorties de secours proposees par l'ecran d'echec du loader ---
+
+  ipcMain.on("boot.retry", async () => {
+    log.info("[BOOT] > relance demandee depuis le loader");
+    if (
+      store.windows.loader.current &&
+      !store.windows.loader.current.isDestroyed()
+    ) {
+      store.windows.loader.current.webContents.send(
+        "loader.action",
+        buildBootPlan(store.conf, "initialize"),
+      );
+    }
+    try {
+      await reinitialize(store, initCallback);
+    } catch (err) {
+      reportBootFailure(store, err);
+    }
+  });
+
+  ipcMain.on("boot.open_logs", () => {
+    const dir = (store.logs && store.logs.main) || null;
+    if (!dir) {
+      log.warn("[BOOT] > dossier de logs inconnu");
+      return;
+    }
+    shell.openPath(dir).then((err) => {
+      if (err) {
+        log.error(`[BOOT] > ouverture du dossier de logs: ${err}`);
+      }
+    });
+  });
+
+  ipcMain.on("boot.quit", () => {
+    log.info("[BOOT] > fermeture demandee depuis le loader");
+    app.quit();
   });
 
   ipcMain.on("container.response", (event, action, data) => {
@@ -356,7 +402,10 @@ module.exports = function generateIpc(store, initCallback) {
       ["close", "reload"].includes(action)
     ) {
       store.windows.loader.current.show();
-      store.windows.loader.current.webContents.send("loader.action", action);
+      store.windows.loader.current.webContents.send(
+        "loader.action",
+        buildBootPlan(store.conf, action),
+      );
     }
     switch (action) {
       case "reload":

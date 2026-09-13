@@ -15,15 +15,18 @@ try {
 }
 
 // --- Channel whitelists ---
-const SEND_CHANNELS = ["ready"];
+const SEND_CHANNELS = ["ready", "boot.retry", "boot.open_logs", "boot.quit"];
 
 const RECEIVE_CHANNELS = [
   "current_status",
   "download_progress",
   "app_infos",
   "loader.action",
+  "loader.plan",
+  "boot_error",
   "error",
   "user_path",
+  "conf",
 ];
 
 // --- Logger (initialise a l'arrivee de l'IPC user_path) ---
@@ -98,25 +101,17 @@ contextBridge.exposeInMainWorld("log", {
   },
 });
 
-// --- Dynamic script/CSS injection ---
-const sources = [];
+// --- Injection du bundle en DEVELOPPEMENT uniquement ---
+// En production, assets/index.html reference deja ../dist/index.js et
+// ../dist/index.css. Injecter les memes fichiers ici les chargeait une
+// SECONDE fois : le bundle etait parse et execute deux fois a chaque
+// demarrage, et React montait deux fois sur le meme noeud. Reliquat de
+// l'epoque webpack/dev-server, ou le HTML ne referencait rien.
 if (process.env.NODE_ENV === "development") {
   const port = process.env.PORT || 5000;
-  sources.push(`http://localhost:${port}/dist/loader.js`);
-} else {
-  sources.push("../dist/index.js");
-}
-
-window.addEventListener("DOMContentLoaded", () => {
-  if (process.env.NODE_ENV !== "development") {
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = "../dist/index.css";
-    document.getElementsByTagName("head")[0].appendChild(link);
-  }
-  for (let i = 0; i < sources.length; i++) {
+  window.addEventListener("DOMContentLoaded", () => {
     const scriptNode = document.createElement("script");
-    scriptNode.src = sources[i];
+    scriptNode.src = `http://localhost:${port}/dist/loader.js`;
     document.body.appendChild(scriptNode);
-  }
-});
+  });
+}

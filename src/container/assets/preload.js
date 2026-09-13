@@ -117,26 +117,22 @@ contextBridge.exposeInMainWorld(
   `file://${path.resolve(__dirname, "./preload_app.js")}`
 );
 
-// --- Dynamic script/CSS injection (shared DOM, works with contextIsolation) ---
-window.addEventListener("DOMContentLoaded", () => {
-  const sources = [];
-  if (document.getElementById("electron-launcher-root")) {
-    if (process.env.NODE_ENV === "development") {
-      const port = process.env.PORT || 5000;
-      sources.push(`http://localhost:${port}/dist/container.js`);
-    } else {
-      sources.push("../../container/dist/index.js");
+// --- Injection du bundle en DEVELOPPEMENT uniquement ---
+// En production, assets/index.html reference deja ../dist/index.js et
+// ../dist/index.css. Les reinjecter ici chargeait les memes fichiers une
+// SECONDE fois (1,9 Mo de JS parses et executes deux fois a chaque
+// demarrage). Reliquat de l'epoque webpack/dev-server.
+//
+// Le garde sur #electron-launcher-root reste indispensable : ce preload sert
+// aussi aux pages POS en mode raw, ou il ne faut rien injecter du tout.
+if (process.env.NODE_ENV === "development") {
+  window.addEventListener("DOMContentLoaded", () => {
+    if (!document.getElementById("electron-launcher-root")) {
+      return;
     }
-    if (process.env.NODE_ENV !== "development") {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "../../container/dist/index.css";
-      document.getElementsByTagName("head")[0].appendChild(link);
-    }
-    for (let i = 0; i < sources.length; i++) {
-      const scriptNode = document.createElement("script");
-      scriptNode.src = sources[i];
-      document.body.appendChild(scriptNode);
-    }
-  }
-});
+    const port = process.env.PORT || 5000;
+    const scriptNode = document.createElement("script");
+    scriptNode.src = `http://localhost:${port}/dist/container.js`;
+    document.body.appendChild(scriptNode);
+  });
+}
