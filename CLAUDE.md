@@ -72,13 +72,20 @@ grep -c "<symbole>" dist/win-unpacked/resources/app.asar
 # Toujours forcer --x64 pour une caisse Debian x64.
 env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron-builder --linux AppImage --x64 --publish never
 
-# .deb (recommandé sur Debian : pas de dépendance FUSE, apt-installable).
-# Le .deb exige des métadonnées absentes du package.json → override CLI :
-env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron-builder --linux deb --x64 --publish never \
-  -c.extraMetadata.homepage="https://wynd.eu" \
-  -c.extraMetadata.author="<Nom> <email>" \
-  -c.deb.maintainer="<Nom> <email>"
+# .deb (Debian/Ubuntu) et .rpm (RHEL/Rocky) : pas de dépendance FUSE,
+# installables via apt/dnf. Les métadonnées (homepage, maintainer, vendor)
+# sont désormais dans package.json → plus aucun override CLI nécessaire.
+env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron-builder --linux deb rpm --x64 --publish never
 ```
+
+⚠️ La cible **rpm** exige `rpmbuild` sur la machine de build (`apt install rpm`
+sur Debian, `brew install rpm` sur macOS). Sans lui, fpm échoue sur
+« Need executable 'rpmbuild' » — AppImage et .deb sortent quand même.
+
+Les trois formats sont produits par la CI GitLab : job `build:linux`,
+**automatique sur tag, manuel sur n'importe quelle branche**. Les artefacts se
+téléchargent directement depuis GitLab, sans passer par Nexus (réservé aux
+tags, c'est le canal que le control-center consomme).
 
 - **AppImage sur Debian 13 (Trixie)** : nécessite **FUSE 2** (`libfuse.so.2`), non
   fourni par défaut. Sinon `sudo apt install libfuse2t64`, OU lancer avec

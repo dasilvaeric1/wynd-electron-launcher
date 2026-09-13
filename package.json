@@ -28,6 +28,7 @@
   "author": "patrice petit",
   "license": "MIT",
   "description": "Wynd electron desktop app",
+  "homepage": "https://chapsvision.com",
   "build": {
     "appId": "eu.wynd.electron-launcher",
     "productName": "electron-launcher",
@@ -37,10 +38,16 @@
     "linux": {
       "icon": "assets/icons/png/256x256.png",
       "target": [
-        "AppImage"
+        "AppImage",
+        "deb",
+        "rpm"
       ],
       "artifactName": "${productName}-${version}.${ext}",
-      "category": "Office"
+      "category": "Office",
+      "maintainer": "Eric Da Silva <Edasilva@chapsvision.fr>",
+      "vendor": "ChapsVision",
+      "synopsis": "Launcher Octipas POS",
+      "description": "Affiche le point de vente Octipas en plein ecran sur les caisses."
     },
     "mac": {
       "icon": "assets/icons/mac/icon.icns",

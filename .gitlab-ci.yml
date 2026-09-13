@@ -2,9 +2,16 @@
 #
 # Pipeline :
 #   dist          → bundle renderer (Vite) sur node:22 / pnpm
-#   build:linux   → AppImage Linux (sur tag)
+#   build:linux   → AppImage + .deb + .rpm (auto sur tag, MANUEL sur branche)
 #   build:win     → .exe portable Windows x64 (cross-compile via wine) + zip Nexus
+#                   (auto sur tag, MANUEL sur branche)
 #   deploy:nexus  → upload du zip sur Nexus (sur tag uniquement)
+#
+# Builds a la demande sur une branche : pousser la branche cree un pipeline qui
+# ne lance QUE `dist`. Les jobs de packaging apparaissent avec un bouton ▶ ;
+# leurs artefacts se telechargent directement depuis GitLab, ce qui permet de
+# tester une install manuelle sans passer par Nexus (voir deploy:nexus, reserve
+# aux tags : c'est le canal que le control-center consomme).
 #
 # Le renderer est buildé UNE fois (job dist) puis partagé en artefact aux jobs
 # de packaging. pnpm + lockfile committé = builds reproductibles.
@@ -18,8 +25,16 @@ workflow:
   rules:
     - if: $CI_COMMIT_TAG # releases
     - if: $CI_PIPELINE_SOURCE == "web" # run manuel depuis l'UI GitLab
-    - if: $CI_COMMIT_BRANCH == "develop" # CI sur la branche de travail
-    - if: $CI_COMMIT_BRANCH == "chore/modernize-vite-pnpm" # branche de migration
+    # Toute branche : sans cette regle, AUCUN pipeline n'etait cree hors
+    # develop, donc les jobs `when: manual` de packaging restaient
+    # inatteignables. Seul `dist` demarre automatiquement ; le packaging reste
+    # sur bouton.
+    #
+    # Pas de regle `merge_request_event` : elle ferait coexister un pipeline de
+    # branche ET un pipeline de MR a chaque push (doublon), et les jobs de
+    # packaging s'appuient sur $CI_COMMIT_BRANCH, qui n'est pas defini dans un
+    # pipeline de MR — ils n'y apparaitraient donc pas.
+    - if: $CI_COMMIT_BRANCH
 
 # ---------------------------------------------------------------------------
 # Bundle renderer (container + loader) — Vite (remplace webpack).
@@ -27,6 +42,8 @@ workflow:
 dist:
   stage: dist
   image: node:22
+  # Un nouveau push sur la meme branche annule le pipeline precedent.
+  interruptible: true
   tags:
     - docker
   cache:
@@ -46,26 +63,44 @@ dist:
       - src/loader/dist/*
 
 # ---------------------------------------------------------------------------
-# AppImage Linux (uniquement sur tag).
+# Paquets Linux x64 : AppImage + .deb (Debian/Ubuntu) + .rpm (RHEL/Rocky).
+#
+# Les trois cibles sont declarees dans package.json (build.linux.target), avec
+# maintainer/vendor/homepage : plus besoin des overrides -c.extraMetadata.* en
+# ligne de commande.
+#
+# `rpmbuild` n'est pas dans l'image node:22 — fpm en a besoin pour la cible rpm.
+# AppImage exige FUSE 2 a l'EXECUTION (absent par defaut sur Debian 13 et sur
+# une Rocky minimale) : `apt install libfuse2t64` / `dnf install fuse-libs`, ou
+# lancer avec --appimage-extract-and-run. Le .deb et le .rpm evitent ce piege.
 # ---------------------------------------------------------------------------
 build:linux:
   stage: build
   image: node:22
+  interruptible: true
   tags:
     - docker
   needs:
     - dist
   rules:
-    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_TAG # auto sur release
+    - if: $CI_COMMIT_BRANCH # manuel sur n'importe quelle branche
+      when: manual
+      allow_failure: true
   before_script:
     - corepack enable
+    - apt-get update -qq && apt-get install -y -qq rpm fakeroot
   script:
     - pnpm install --frozen-lockfile
-    - pnpm build:linux
+    - node scripts/stamp_build.js # identifiant de build unique (version+date+sha)
+    - pnpm electron-builder --linux AppImage deb rpm --x64 --publish never
   artifacts:
+    expire_in: 1 week
     paths:
       - dist/*.yml
       - dist/*.AppImage
+      - dist/*.deb
+      - dist/*.rpm
 
 # ---------------------------------------------------------------------------
 # Windows x64 portable (.exe) — cross-compile via l'image electron-builder/wine.
@@ -75,6 +110,7 @@ build:linux:
 build:win:
   stage: build
   image: electronuserland/builder:wine
+  interruptible: true
   tags:
     - docker
   needs:
