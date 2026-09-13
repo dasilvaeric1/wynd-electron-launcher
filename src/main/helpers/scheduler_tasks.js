@@ -6,9 +6,21 @@ const log = require("./electron_log");
  * Etat des taches planifiees du service RetailScheduler, mis en forme pour le
  * panneau lateral de la caisse.
  *
- * Le service expose sur la loopback :
+ * ⚠️ EN DORMANCE — le RetailScheduler n'expose PAS encore ces routes.
+ *
+ * Ce module attend du service, sur la loopback :
  *   GET  {base}/api/tasks              -> ScheduledTaskStatus[]
  *   POST {base}/api/tasks/{name}/run   -> declenchement manuel (x-api-key)
+ *
+ * Aujourd'hui elles renvoient 404 : fetchTasks() renvoie null, le composant
+ * SchedulerTasks ne rend rien, et le panneau lateral est inchange. Le code
+ * s'activera tout seul le jour ou le service les exposera — decision qui lui
+ * appartient, cf docs/SUJETS-DE-FOND.md.
+ *
+ * A savoir si la question revient : `IsRunning` vit dans un dictionnaire EN
+ * MEMOIRE de TaskHistoryService (SetTaskRunning), il n'est jamais ecrit dans
+ * history.db. Lire la base ne dira donc JAMAIS ce qui tourne — seul le service
+ * peut le repondre. C'est pour cela qu'il n'existe pas de contournement.
  *
  * La vue est volontairement PAUVRE : un caissier n'a pas besoin de
  * l'historique, des compteurs ni des expressions cron. Il a besoin de savoir
