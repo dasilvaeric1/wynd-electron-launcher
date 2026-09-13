@@ -25,6 +25,7 @@ const buildVersion = require("./helpers/build_version");
 const { buildBootPlan } = require("../helpers/boot_plan");
 const { getCentralPresence, getCentralConfig } = require("./screen_session");
 const { sendIncident } = require("./helpers/incident_report");
+const schedulerTasks = require("./helpers/scheduler_tasks");
 const { reportBootFailure } = require("./helpers/boot_failure");
 
 module.exports = function generateIpc(store, initCallback) {
@@ -185,6 +186,53 @@ module.exports = function generateIpc(store, initCallback) {
   ipcMain.on("boot.quit", () => {
     log.info("[BOOT] > fermeture demandee depuis le loader");
     app.quit();
+  });
+
+  // --- Taches planifiees du RetailScheduler ---
+  //
+  // C'est le renderer qui pilote la cadence : il demande un rafraichissement a
+  // l'ouverture du panneau puis toutes les 30 s tant qu'il est ouvert. Le main
+  // ne garde donc aucun etat d'affichage, et rien n'est interroge quand le
+  // panneau est ferme.
+
+  ipcMain.on("scheduler.refresh", async () => {
+    const tasks = await schedulerTasks.fetchTasks();
+    if (
+      store.windows.container.current &&
+      !store.windows.container.current.isDestroyed()
+    ) {
+      store.windows.container.current.webContents.send("scheduler.tasks", tasks);
+    }
+  });
+
+  ipcMain.on("scheduler.run", async (event, name) => {
+    if (typeof name !== "string" || !name) {
+      return;
+    }
+    // L'api-key vient de l'appsettings du service C#, par le meme chemin que
+    // le screen-session. Le PIN cote renderer est un garde-fou d'usage ; le
+    // controle d'acces reel est cette cle, exigee par le service.
+    let apiKey = null;
+    try {
+      const cfg = await getCentralConfig();
+      apiKey = cfg && cfg.apiKey;
+    } catch (err) {
+      log.debug(`[SCHEDULER] config centrale indisponible: ${err.message}`);
+    }
+    log.info(`[SCHEDULER] execution manuelle demandee: ${name}`);
+    const result = await schedulerTasks.runTask(name, apiKey);
+    if (
+      store.windows.container.current &&
+      !store.windows.container.current.isDestroyed()
+    ) {
+      store.windows.container.current.webContents.send("scheduler.run.result", {
+        name,
+        ...result,
+      });
+      // Rafraichit dans la foulee : la tache passe en « en cours ».
+      const tasks = await schedulerTasks.fetchTasks();
+      store.windows.container.current.webContents.send("scheduler.tasks", tasks);
+    }
   });
 
   ipcMain.on("container.response", (event, action, data) => {

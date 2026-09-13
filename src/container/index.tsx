@@ -346,6 +346,9 @@ const onCallback = (action: TNextAction, ...data: any) => {
     case TNextAction.CLOSE:
       window.electronAPI.send("main.action", "close");
       break;
+    case TNextAction.SCHEDULER_RUN:
+      window.electronAPI.send("scheduler.run", data[0]);
+      break;
     case TNextAction.RELOAD:
       const modal = confirm({
         // className: 'emergency-modal',

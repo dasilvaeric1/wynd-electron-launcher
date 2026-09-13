@@ -17,6 +17,7 @@ import { MenuInfo } from "rc-menu/lib/interface";
 import LogoMenu from "./Logo";
 import Device from "./Device";
 import CentralPresence from "./CentralPresence";
+import SchedulerTasks from "./SchedulerTasks";
 import IncidentReport from "./IncidentReport";
 
 import { IRootState, IScreen } from "../interface";
@@ -186,6 +187,7 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
     <React.Fragment>
       <LogoMenu />
       <CentralPresence />
+      <SchedulerTasks onRun={props.onMenuClick} />
       <Menu id="e-launcher-menu" items={generateItems()} />
       <IncidentReport open={incidentOpen} onClose={() => setIncidentOpen(false)} />
       <div className="e-launcher-menu-footer">

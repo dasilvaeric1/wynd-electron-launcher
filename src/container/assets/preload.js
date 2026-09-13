@@ -18,6 +18,8 @@ try {
 const SEND_CHANNELS = [
   "ready",
   "main.action",
+  "scheduler.refresh",
+  "scheduler.run",
   "request_wpt",
   "child.action",
   "container.response",
@@ -42,6 +44,8 @@ const RECEIVE_CHANNELS = [
   "user_path",
   "central.presence",
   "incident.result",
+  "scheduler.tasks",
+  "scheduler.run.result",
 ];
 
 // --- Logger (initialise a l'arrivee de l'IPC user_path) ---

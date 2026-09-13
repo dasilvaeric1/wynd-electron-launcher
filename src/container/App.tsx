@@ -279,6 +279,9 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
       case TNextAction.REQUEST_WPT:
       case TNextAction.WPT_STATUS:
       case TNextAction.REPORT:
+      // Le declenchement manuel d'une tache planifiee passe par le meme
+      // garde-fou que les autres actions sensibles du menu.
+      case TNextAction.SCHEDULER_RUN:
         if (
           conf &&
           conf.menu &&

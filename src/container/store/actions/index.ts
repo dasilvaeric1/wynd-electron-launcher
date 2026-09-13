@@ -47,6 +47,7 @@ export enum TNextAction {
   "REQUEST_WPT" = "REQUEST_WPT",
   "REPORT" = "REPORT",
   "OPEN_DEV_TOOLS" = "OPEN_DEV_TOOLS",
+  "SCHEDULER_RUN" = "SCHEDULER_RUN",
 }
 
 export function setWPTPluginsAction(
