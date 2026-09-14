@@ -158,22 +158,26 @@ build:win:
     # 7za etait tue par un signal (exit code null) pendant la compression du
     # payload NSIS. Mesure sur une charge comparable (294 Mo) :
     #
-    #   niveau   duree   memoire de pointe   archive   decompression
-    #   -mx=1     1,9 s          41 Mo        101 Mo       5,8 s
-    #   -mx=5      27 s         971 Mo         80 Mo       4,5 s
-    #   -mx=9      72 s         966 Mo         74 Mo       3,2 s
+    #   niveau   duree   memoire de pointe   archive
+    #   -mx=1     2,0 s          43 Mo        101 Mo
+    #   -mx=2     2,1 s          54 Mo         97 Mo
+    #   -mx=3     3,7 s         137 Mo         93 Mo   <- retenu
+    #   -mx=4     7,6 s         478 Mo         91 Mo
+    #   -mx=5      27 s         971 Mo         80 Mo
+    #   -mx=9      72 s         966 Mo         74 Mo   <- defaut, tue par le noyau
     #
-    # -mx=9 est le defaut d'electron-builder pour le format 7z, quel que soit
+    # -mx=9 est le defaut d'electron-builder pour le format 7z quel que soit
     # `compression` (seul "store" donne -mx=0). Un pic a ~1 Go pour une etape
     # de compression, sur un runner conteneurise, c'est le profil d'un OOM.
     #
-    # -mx=5 ne gagne RIEN en memoire : il n'existe pas de compromis
-    # intermediaire, seul -mx=1 sort du regime gourmand.
+    # -mx=3 tient en 137 Mo — sept fois moins que ce qui a tue le job — pour
+    # 8 % de moins que -mx=1. Au-dela, la memoire explose sans gain
+    # proportionnel : -mx=4 triple l'empreinte pour 2 % de plus.
     #
-    # Contrepartie assumee : le .exe grossit d'environ un tiers et se
-    # decompresse un peu plus lentement (archive plus grosse a lire). Si le
-    # runner peut disposer de 2 Go, retirer cette ligne rend les 74 Mo.
-    ELECTRON_BUILDER_COMPRESSION_LEVEL: "1"
+    # LE VRAI LEVIER EST AILLEURS : avec 2 Go sur le runner, supprimer cette
+    # variable rend -mx=9, soit ~27 % de moins qu'ici ET une extraction plus
+    # rapide sur les caisses. Tout le reste n'est que grappillage.
+    ELECTRON_BUILDER_COMPRESSION_LEVEL: "3"
   cache:
     key: wine-electron-cache
     paths:
