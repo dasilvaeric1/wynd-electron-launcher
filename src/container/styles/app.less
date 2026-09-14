@@ -1,5 +1,28 @@
 @import "~react-antd-cssvars/dist/styles/variables.less";
 
+// ---- Palette sombre du launcher ----
+// Une seule source pour TOUTES les surfaces propres au launcher : panneau
+// lateral, modales, pinpad, signalement. Elles se superposent (une modale
+// s'ouvre par-dessus le panneau), donc un ecart de teinte se voit tout de
+// suite. Le panneau heritait auparavant de `var(--text-color)`, une variable
+// antd prevue pour du TEXTE sur fond clair (rgba(0,0,0,.85)) : le fond en
+// sortait gris, alors que les modales etaient deja en bleu nuit.
+//
+// Ces valeurs sont identiques a `--l-*` dans src/loader/App.less. Le loader
+// est un bundle et une fenetre separes, il ne peut pas importer d'ici ; on
+// passe de l'un a l'autre au demarrage, donc les deux doivent bouger ensemble.
+//
+// L'accent (halo, bordures actives) n'est PAS fige ici : il reste
+// `var(--menu-background)`, pilotable par le theme.
+:root {
+	--el-bg1: #1c2234;
+	--el-bg2: #11141e;
+	--el-text: #f2f4f9;
+	--el-dim: #a7b0c8;
+	--el-faint: #6f7893;
+	--el-line: #ffffff1a;
+}
+
 #e-launcher-layout {
     min-height: 100vh;
 }
@@ -119,8 +142,10 @@
 	&:not(.ant-drawer-open) {
 		transform: translateX(-1px);
 	}
-	// Panneau sombre cohérent avec l'écran de chargement : dégradé + halo
-	// d'accent → look moderne et unifié.
+	// Meme bleu nuit que l'ecran de chargement et que les modales (palette
+	// `--el-*` en tete de fichier) : le caissier passe du loader au panneau,
+	// puis ouvre une modale par-dessus le panneau — les trois surfaces se
+	// succedent ou se superposent, elles doivent etre de la meme famille.
 	.ant-drawer-body {
 			padding: 0px;
 			display: flex;
@@ -129,14 +154,10 @@
 			background:
 				radial-gradient(
 					100% 30% at 0% 0%,
-					color-mix(in srgb, var(--menu-background) 30%, transparent) 0%,
+					color-mix(in srgb, var(--menu-background) 40%, transparent) 0%,
 					transparent 55%
 				),
-				linear-gradient(
-					180deg,
-					color-mix(in srgb, var(--text-color) 94%, white) 0%,
-					var(--text-color) 100%
-				);
+				linear-gradient(180deg, var(--el-bg1) 0%, var(--el-bg2) 100%);
 	}
 	// Zone logo : bande dédiée en haut, logo blanc aligné à gauche.
 	#e-launcher-logo {
@@ -1049,82 +1070,75 @@
 .emergency-modal,
 .pinpad,
 .incident-report {
-	--m-bg: #1c2234;
-	--m-bg-2: #11141e;
-	--m-text: #f2f4f9;
-	--m-dim: #a7b0c8;
-	--m-faint: #6f7893;
-	--m-line: #ffffff1a;
-
 	.ant-modal-content,
 	.ant-modal-confirm-body-wrapper {
-		color: var(--m-text);
-		background: linear-gradient(158deg, var(--m-bg) 0%, var(--m-bg-2) 100%);
+		color: var(--el-text);
+		background: linear-gradient(158deg, var(--el-bg1) 0%, var(--el-bg2) 100%);
 	}
 
 	.ant-modal-content {
-		border: 1px solid var(--m-line);
+		border: 1px solid var(--el-line);
 		box-shadow: 0 18px 44px -16px #0b0e16b3;
 	}
 
 	.ant-modal-header {
 		background: transparent;
-		border-bottom: 1px solid var(--m-line);
+		border-bottom: 1px solid var(--el-line);
 	}
 
 	.ant-modal-footer {
-		border-top: 1px solid var(--m-line);
+		border-top: 1px solid var(--el-line);
 	}
 
 	.ant-modal-title,
 	.ant-modal-confirm-title {
-		color: var(--m-text);
+		color: var(--el-text);
 	}
 
 	.ant-modal-body,
 	.ant-modal-confirm-content {
-		color: var(--m-dim);
+		color: var(--el-dim);
 	}
 
 	.ant-modal-close-x {
-		color: var(--m-faint);
+		color: var(--el-faint);
 
 		&:hover {
-			color: var(--m-text);
+			color: var(--el-text);
 		}
 	}
 
 	// Bouton secondaire : le defaut antd est blanc sur blanc ici.
 	.ant-btn-default {
-		color: var(--m-dim);
+		color: var(--el-dim);
 		background: #ffffff0f;
-		border-color: var(--m-line);
+		border-color: var(--el-line);
 
 		&:hover,
 		&:focus {
-			color: var(--m-text);
+			color: var(--el-text);
 			background: #ffffff1a;
-			border-color: var(--m-faint);
+			border-color: var(--el-faint);
 		}
 	}
 
 	.ant-btn-link {
-		color: var(--m-dim);
+		color: var(--el-dim);
 
 		&:hover {
-			color: var(--m-text);
+			color: var(--el-text);
 		}
 	}
 
 	// Champ de saisie du signalement.
 	textarea.ant-input,
 	.ant-input {
-		color: var(--m-text);
+		color: var(--el-text);
 		background: #ffffff0d;
-		border-color: var(--m-line);
+		border-color: var(--el-line);
 
 		&::placeholder {
-			color: var(--m-faint);
+			color: var(--el-faint);
 		}
 
 		&:focus,
@@ -1141,16 +1155,16 @@
 	}
 
 	.pinpad-message {
-		color: var(--m-faint);
+		color: var(--el-faint);
 	}
 
 	.pinpad-key {
-		color: var(--m-text);
+		color: var(--el-text);
 		background: #ffffff0f;
-		border-color: var(--m-line);
+		border-color: var(--el-line);
 
 		&.util {
-			color: var(--m-dim);
+			color: var(--el-dim);
 		}
 
 		&:hover:not(:disabled) {
@@ -1159,7 +1173,7 @@
 	}
 
 	.pinpad-hint {
-		color: var(--m-faint);
+		color: var(--el-faint);
 	}
 }
 
@@ -1167,11 +1181,11 @@
 	label,
 	.incident-attach .cap,
 	.incident-attach ul {
-		color: var(--m-dim);
+		color: var(--el-dim);
 	}
 
 	.incident-attach {
-		border-color: var(--m-line);
+		border-color: var(--el-line);
 	}
 }
 
