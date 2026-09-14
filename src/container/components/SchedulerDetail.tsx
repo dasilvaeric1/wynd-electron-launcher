@@ -4,12 +4,13 @@ import { Modal } from 'antd'
 
 import { ITache, IRunResult, TEtat, RAISONS } from './SchedulerTasks'
 
-const GLYPHE: Record<TEtat, string> = { running: '⟳', failed: '✗', ok: '✓' }
+const GLYPHE: Record<TEtat, string> = { running: '⟳', failed: '✗', ok: '✓', disabled: '–' }
 
 const ETAT_LABEL: Record<TEtat, string> = {
 	running: 'en cours',
 	failed: 'en échec',
 	ok: 'à jour',
+	disabled: 'désactivée',
 }
 
 /** « il y a 12 min », « à 23:05 » — rien de plus verbeux sur une caisse. */
@@ -17,12 +18,19 @@ function quand(tache: ITache): string {
 	if (tache.etat === 'running') {
 		return 'démarrée à l’instant'
 	}
+	if (tache.etat === 'disabled') {
+		return 'ne sera pas exécutée'
+	}
 	if (tache.etat === 'failed' && tache.lastRunUtc) {
 		const minutes = Math.max(0, Math.round((Date.now() - Date.parse(tache.lastRunUtc)) / 60000))
 		if (minutes < 60) {
 			return `échec il y a ${minutes} min`
 		}
-		return `échec il y a ${Math.floor(minutes / 60)} h`
+		const heures = Math.floor(minutes / 60)
+		if (heures < 48) {
+			return `échec il y a ${heures} h`
+		}
+		return `échec il y a ${Math.floor(heures / 24)} j`
 	}
 	if (tache.nextRunUtc) {
 		const d = new Date(tache.nextRunUtc)
@@ -66,6 +74,11 @@ const SchedulerDetail = ({ open, taches, resultat, onClose, onRun }: ISchedulerD
 			{!taches || taches.length === 0 ? (
 				<p className="sd-vide">Aucune tâche remontée par le planificateur.</p>
 			) : (
+				<>
+				<p className="sd-count">
+					{taches.length} tâche{taches.length > 1 ? 's' : ''} configurée
+					{taches.length > 1 ? 's' : ''}
+				</p>
 				<ul className="sd-list">
 					{taches.map((tache) => (
 						<li key={tache.name} className={`sd-row ${tache.etat}`}>
@@ -78,16 +91,17 @@ const SchedulerDetail = ({ open, taches, resultat, onClose, onRun }: ISchedulerD
 									{ETAT_LABEL[tache.etat]} · {quand(tache)}
 								</span>
 							</span>
-							{tache.etat !== 'running' ? (
+							{tache.etat === 'running' ? (
+								<span className="sd-encours">…</span>
+							) : tache.etat === 'disabled' ? null : (
 								<button type="button" className="sd-run" onClick={() => onRun(tache.name)}>
 									Rejouer
 								</button>
-							) : (
-								<span className="sd-encours">…</span>
 							)}
 						</li>
 					))}
 				</ul>
+				</>
 			)}
 
 			{resultat && !resultat.ok ? (

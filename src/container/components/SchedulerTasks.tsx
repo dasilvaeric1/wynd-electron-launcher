@@ -7,12 +7,14 @@ declare let window: ICustomWindow
 /** Cadence de rafraichissement tant que le panneau est ouvert. */
 const REFRESH_MS = 30000
 
-export type TEtat = 'running' | 'failed' | 'ok'
+export type TEtat = 'running' | 'failed' | 'ok' | 'disabled'
 
 export interface ITache {
 	name: string
 	description: string
 	etat: TEtat
+	/** Uniquement pour 'failed' : l'echec date de moins de 12 h. */
+	recent: boolean
 	lastRunUtc: string | null
 	nextRunUtc: string | null
 }
@@ -67,12 +69,16 @@ export function useSchedulerTasks() {
 	return { taches, resultat, setResultat }
 }
 
-/** Rouge des qu'une tache est en echec, orange si quelque chose tourne. */
+/**
+ * Rouge sur un echec RECENT seulement. Un echec vieux de trois jours ne doit
+ * pas laisser le panneau rouge en permanence — plus personne ne le regarderait.
+ * Il reste visible en orange, et dans le detail.
+ */
 export function sante(taches: ITache[]): TSante {
-	if (taches.some((t) => t.etat === 'failed')) {
+	if (taches.some((t) => t.etat === 'failed' && t.recent)) {
 		return 'bad'
 	}
-	if (taches.some((t) => t.etat === 'running')) {
+	if (taches.some((t) => t.etat === 'running' || t.etat === 'failed')) {
 		return 'warn'
 	}
 	return 'ok'
@@ -81,12 +87,16 @@ export function sante(taches: ITache[]): TSante {
 /** Le libelle doit tenir sur une ligne etroite : pas de phrase. */
 function resume(taches: ITache[], etat: TSante): string {
 	if (etat === 'bad') {
-		const n = taches.filter((t) => t.etat === 'failed').length
+		const n = taches.filter((t) => t.etat === 'failed' && t.recent).length
 		return n > 1 ? `${n} échecs` : '1 échec'
 	}
 	if (etat === 'warn') {
-		const n = taches.filter((t) => t.etat === 'running').length
-		return n > 1 ? `${n} en cours` : '1 en cours'
+		const enCours = taches.filter((t) => t.etat === 'running').length
+		if (enCours > 0) {
+			return enCours > 1 ? `${enCours} en cours` : '1 en cours'
+		}
+		const anciens = taches.filter((t) => t.etat === 'failed').length
+		return anciens > 1 ? `${anciens} échecs anciens` : '1 échec ancien'
 	}
 	return 'à jour'
 }

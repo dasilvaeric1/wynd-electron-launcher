@@ -4,7 +4,7 @@ jest.mock('../../src/main/helpers/electron_log', () => ({
 	error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn(),
 }))
 
-const { shapeForCashier, MAX_LIGNES } = require('../../src/main/helpers/scheduler_tasks')
+const { shapeForCashier } = require('../../src/main/helpers/scheduler_tasks')
 
 const NOW = Date.parse('2026-09-13T22:00:00Z')
 const iso = (minutesDepuisNow) => new Date(NOW + minutesDepuisNow * 60000).toISOString()
@@ -38,12 +38,30 @@ describe('shapeForCashier', () => {
 		expect(out[0].etat).toBe('failed')
 	})
 
-	it('ignore un echec trop ancien', () => {
-		// Un echec d'avant-hier n'apprend rien au caissier ce matin.
+	it('garde un echec ancien mais ne le signale plus comme recent', () => {
+		// Le masquer donnait une liste plus courte que ce qui est configure, ce
+		// qui fait douter de l'outil. C'est `recent` qui decide si on alerte.
 		const out = shapeForCashier([
 			tache({ name: 'vieux', lastRunUtc: iso(-60 * 48), lastRunSuccess: false }),
 		], NOW)
-		expect(out.find((t) => t.name === 'vieux')).toBeUndefined()
+		expect(out).toHaveLength(1)
+		expect(out[0].etat).toBe('failed')
+		expect(out[0].recent).toBe(false)
+	})
+
+	it('marque un echec recent', () => {
+		const out = shapeForCashier([
+			tache({ name: 'frais', lastRunUtc: iso(-30), lastRunSuccess: false }),
+		], NOW)
+		expect(out[0].recent).toBe(true)
+	})
+
+	it('classe un echec recent avant un echec ancien', () => {
+		const out = shapeForCashier([
+			tache({ name: 'vieux', lastRunUtc: iso(-60 * 48), lastRunSuccess: false }),
+			tache({ name: 'frais', lastRunUtc: iso(-30), lastRunSuccess: false }),
+		], NOW)
+		expect(out.map((t) => t.name)).toEqual(['frais', 'vieux'])
 	})
 
 	it('montre la prochaine echeance des taches saines', () => {
@@ -54,20 +72,25 @@ describe('shapeForCashier', () => {
 		expect(out[0].nextRunUtc).toBe(iso(45))
 	})
 
-	it('ecarte les taches desactivees', () => {
-		const out = shapeForCashier([tache({ name: 'off', enabled: false, nextRunUtc: iso(10) })], NOW)
-		expect(out).toEqual([])
+	it('garde les taches desactivees, en dernier', () => {
+		// Les ecarter faisait mentir le total affiche dans la modale.
+		const out = shapeForCashier([
+			tache({ name: 'off', enabled: false, nextRunUtc: iso(10) }),
+			tache({ name: 'on', lastRunUtc: iso(-1), lastRunSuccess: true, nextRunUtc: iso(20) }),
+		], NOW)
+		expect(out.map((t) => t.name)).toEqual(['on', 'off'])
+		expect(out[1].etat).toBe('disabled')
 	})
 
-	it('borne la liste pour rester lisible sur une caisse', () => {
+	it('ne tronque plus la liste', () => {
+		// L'ancien plafond a 5 masquait 7 des 12 taches de la caisse de test.
+		// La modale de detail doit montrer TOUT ce qui est configure.
 		const beaucoup = Array.from({ length: 20 }, (_u, i) =>
 			tache({ name: 't' + i, lastRunUtc: iso(-1), lastRunSuccess: true, nextRunUtc: iso(i + 1) }))
-		expect(shapeForCashier(beaucoup, NOW).length).toBeLessThanOrEqual(MAX_LIGNES)
+		expect(shapeForCashier(beaucoup, NOW)).toHaveLength(20)
 	})
 
-	it('garde toutes les taches en cours meme au-dela du plafond', () => {
-		// Une tache qui tourne est l'information la plus utile : elle ne doit
-		// jamais etre evincee par le plafond d'affichage.
+	it('remonte toutes les taches en cours', () => {
 		const beaucoup = Array.from({ length: 12 }, (_u, i) => tache({ name: 'r' + i, isRunning: true }))
 		const out = shapeForCashier(beaucoup, NOW)
 		expect(out.filter((t) => t.etat === 'running')).toHaveLength(12)

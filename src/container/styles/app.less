@@ -1273,12 +1273,34 @@
 
 // ---- Detail des taches : modale derriere le code superviseur ----
 .scheduler-detail {
+	.sd-count {
+		margin: 0 0 11px;
+		font-size: 11px;
+		letter-spacing: 0.04em;
+		color: var(--el-faint);
+		text-transform: uppercase;
+	}
+
 	.sd-list {
 		display: grid;
 		gap: 8px;
 		margin: 0;
-		padding: 0;
+		// La caisse de test a 12 taches configurees ; sans plafond la modale
+		// depassait l'ecran, le bas de la liste devenait inatteignable.
+		max-height: 52vh;
+		padding: 0 4px 0 0;
+		overflow-y: auto;
 		list-style: none;
+		overscroll-behavior: contain;
+
+		&::-webkit-scrollbar {
+			width: 8px;
+		}
+
+		&::-webkit-scrollbar-thumb {
+			background: #ffffff26;
+			border-radius: 999px;
+		}
 	}
 
 	.sd-row {
@@ -1300,9 +1322,12 @@
 
 		.txt {
 			display: flex;
+			flex: 1 1 auto;
 			flex-direction: column;
 			gap: 2px;
-			// Sans ca, un libelle long elargit la modale au lieu de se tronquer.
+			// flex-basis auto + min-width 0 : sans les deux, un libelle long
+			// pousse le bouton « Rejouer » hors de la modale au lieu d'etre
+			// tronque. C'etait le debordement horizontal signale.
 			min-width: 0;
 		}
 
@@ -1327,12 +1352,22 @@
 
 		&.failed .ico { color: var(--el-bad); }
 		&.ok .ico { color: var(--el-ok); }
+
+		// Desactivee : presente pour que le total corresponde a ce qui est
+		// configure, mais visuellement en retrait — elle ne tournera pas.
+		&.disabled {
+			opacity: 0.55;
+
+			.nom {
+				text-decoration: line-through;
+				text-decoration-color: var(--el-faint);
+			}
+		}
 	}
 
 	// Cible tactile confortable : on est sur un ecran de caisse.
 	.sd-run {
 		flex: none;
-		margin-left: auto;
 		padding: 9px 15px;
 		font-family: inherit;
 		font-size: 12px;
@@ -1354,7 +1389,6 @@
 
 	.sd-encours {
 		flex: none;
-		margin-left: auto;
 		padding: 0 10px;
 		color: var(--el-faint);
 	}

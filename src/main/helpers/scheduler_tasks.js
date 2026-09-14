@@ -29,10 +29,8 @@ const log = require("./electron_log");
 
 /** Port par defaut du RetailScheduler (cf appsettings UiPort). */
 const DEFAULT_PORT = 5088;
-/** Au-dela, un echec n'apprend plus rien au caissier. */
+/** Au-dela, un echec ne justifie plus d'alerter : il reste visible, sans rougir. */
 const FRESH_FAILURE_MS = 12 * 60 * 60 * 1000;
-/** Plafond d'affichage : la liste doit tenir dans le panneau. */
-const MAX_LIGNES = 5;
 
 const baseUrl = () =>
   `http://127.0.0.1:${process.env.EL_SCHEDULER_PORT || DEFAULT_PORT}`;
@@ -70,37 +68,44 @@ function shapeForCashier(statuses, now) {
 
     const name = champ(brut, "name");
     if (typeof name !== "string" || !name) continue;
-    // Une tache desactivee ne tournera pas : l'afficher n'aiderait personne.
-    if (champ(brut, "enabled") === false) continue;
 
+    const active = champ(brut, "enabled") !== false;
     const running = champ(brut, "isRunning") === true;
     const lastRunUtc = champ(brut, "lastRunUtc") || null;
     const nextRunUtc = champ(brut, "nextRunUtc") || null;
     const success = champ(brut, "lastRunSuccess");
     const lastRunAt = horodatage(lastRunUtc);
 
+    // Un echec reste un echec quel que soit son age : le masquer donnait une
+    // liste plus courte que ce qui est configure, ce qui fait douter de l'outil.
+    // C'est `recent` qui decide si on alerte, pas la presence dans la liste.
     let etat = "ok";
-    if (running) {
+    let recent = false;
+    if (!active) {
+      etat = "disabled";
+    } else if (running) {
       etat = "running";
-    } else if (success === false && lastRunAt !== null && now - lastRunAt <= FRESH_FAILURE_MS) {
-      etat = "failed";
     } else if (success === false) {
-      // Echec trop ancien : on ne le remonte pas.
-      continue;
+      etat = "failed";
+      recent = lastRunAt !== null && now - lastRunAt <= FRESH_FAILURE_MS;
     }
 
     lignes.push({
       name,
       description: champ(brut, "description") || "",
       etat,
+      recent,
       lastRunUtc,
       nextRunUtc,
     });
   }
 
-  const rang = { running: 0, failed: 1, ok: 2 };
+  // Ce qui demande une action d'abord, ce qui ne tournera pas en dernier.
+  const rang = { running: 0, failed: 1, ok: 2, disabled: 3 };
   lignes.sort((a, b) => {
     if (rang[a.etat] !== rang[b.etat]) return rang[a.etat] - rang[b.etat];
+    // Entre deux echecs, le plus recent est le plus actionnable.
+    if (a.etat === "failed" && a.recent !== b.recent) return a.recent ? -1 : 1;
     const na = horodatage(a.nextRunUtc);
     const nb = horodatage(b.nextRunUtc);
     if (na === null) return 1;
@@ -108,9 +113,10 @@ function shapeForCashier(statuses, now) {
     return na - nb;
   });
 
-  const enCours = lignes.filter((l) => l.etat === "running");
-  const reste = lignes.filter((l) => l.etat !== "running");
-  return enCours.concat(reste.slice(0, Math.max(0, MAX_LIGNES - enCours.length)));
+  // Aucun plafond : la modale de detail doit montrer TOUT ce qui est configure.
+  // Le panneau lateral n'affiche qu'une ligne de synthese, il n'a plus besoin
+  // qu'on tronque pour lui.
+  return lignes;
 }
 
 /** Lit l'etat des taches. Renvoie null si le service est absent. */
@@ -155,7 +161,6 @@ module.exports = {
   shapeForCashier,
   fetchTasks,
   runTask,
-  MAX_LIGNES,
   FRESH_FAILURE_MS,
   DEFAULT_PORT,
 };
