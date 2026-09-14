@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useSelector } from "react-redux";
 
 import { Menu, Modal } from "antd";
@@ -9,12 +9,16 @@ import {
   InfoCircleOutlined,
   ToolOutlined,
   FileDoneOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 
 import { MenuInfo } from "rc-menu/lib/interface";
 
 import LogoMenu from "./Logo";
 import Device from "./Device";
+import CentralPresence from "./CentralPresence";
+import SchedulerTasks from "./SchedulerTasks";
+import IncidentReport from "./IncidentReport";
 
 import { IRootState, IScreen } from "../interface";
 import { IConfig } from "../helpers/config";
@@ -32,6 +36,7 @@ export interface IMenuProps {
 const { info } = Modal;
 
 const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
+  const [incidentOpen, setIncidentOpen] = useState(false);
   const conf = useSelector<IRootState, IConfig>(
     (state) => state.conf as IConfig
   );
@@ -56,13 +61,13 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
     window.log.info("[WINDOW CONTAINER] Click Support Menu");
     const modal = info({
       className: "modal-support",
-      title: "CONTACT",
+      title: "Contacter le support",
       centered: true,
       autoFocusButton: null,
       content: (
         <div>
-          {conf.menu.email && <div>Email: {conf.menu.email}</div>}
-          {conf.menu.phone_number && <div>Phone: {conf.menu.phone_number}</div>}
+          {conf.menu.email && <div>Courriel : {conf.menu.email}</div>}
+          {conf.menu.phone_number && <div>Téléphone : {conf.menu.phone_number}</div>}
         </div>
       ),
       onOk: () => {
@@ -94,7 +99,7 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
       return (
         <div key={`screen-${index}`}>
           <div>
-            Screen <span className="label">{index}</span>:{" "}
+            Écran <span className="label">{index}</span> :{" "}
             <span className="label">{screen.width}</span> x{" "}
             <span className="label">{screen.height}</span>
           </div>
@@ -104,7 +109,7 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
     const modal = info({
       className: "modal-support",
       centered: true,
-      title: "App infos",
+      title: "Écrans détectés",
       autoFocusButton: null,
       content: <div>{content}</div>,
       onOk: () => {
@@ -116,7 +121,7 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
   const generateItems = () => {
     const items: ItemType[] = [
       {
-        label: "Reload",
+        label: "Recharger la caisse",
         key: "menu-item-reload",
         icon: <ReloadOutlined style={{ fontSize: "20px" }} />,
         onClick: onClickReload,
@@ -124,7 +129,7 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
     ];
     if (conf && conf.report && conf.report.enable) {
       items.push({
-        label: "Report",
+        label: "Rapport de caisse",
         key: "menu-item-report",
         icon: <FileDoneOutlined style={{ fontSize: "20px" }} />,
         onClick: onClickReport,
@@ -133,7 +138,7 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
 
     if (conf && conf.menu && (conf.menu.phone_number || conf.menu.email)) {
       items.push({
-        label: "Support",
+        label: "Contacter le support",
         key: "menu-item-support",
         icon: <ToolOutlined style={{ fontSize: "20px" }} />,
         onClick: onClickSupport,
@@ -141,14 +146,24 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
     }
 
     items.push({
-      label: "Screens",
+      label: "Écrans",
       key: "menu-item-screens",
       icon: <InfoCircleOutlined style={{ fontSize: "20px" }} />,
       onClick: onClickScreeensInfo,
     });
 
     items.push({
-      label: "Close",
+      label: "Signaler une anomalie",
+      key: "menu-item-incident",
+      icon: <WarningOutlined style={{ fontSize: "20px" }} />,
+      onClick: () => {
+        window.log.info("[WINDOW CONTAINER] Click Signaler une anomalie");
+        setIncidentOpen(true);
+      },
+    });
+
+    items.push({
+      label: "Quitter l’application",
       key: "menu-item-close",
       icon: <PoweroffOutlined style={{ fontSize: "20px" }} />,
       onClick: onClickClose,
@@ -171,7 +186,10 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
   return (
     <React.Fragment>
       <LogoMenu />
+      <CentralPresence />
+      <SchedulerTasks onRun={props.onMenuClick} />
       <Menu id="e-launcher-menu" items={generateItems()} />
+      <IncidentReport open={incidentOpen} onClose={() => setIncidentOpen(false)} />
       <div className="e-launcher-menu-footer">
         <span className="e-launcher-menu-version">
           {(() => {

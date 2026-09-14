@@ -15,7 +15,7 @@ Application Electron qui affiche le POS Wynd en plein écran sur les caisses
 
 ## Stack
 
-- Electron **42.4.0** (Node ~22 embarqué → `fetch` global dispo, mais le code
+- Electron **42.11.3** (Node 24 embarqué → `fetch` global dispo, mais le code
   historique du main utilise `axios`, cf `screen_session.js`).
 - Renderer : React + **Vite** (`npm run dist` → `RENDERER=container` puis
   `RENDERER=loader`). ⚠️ plus de webpack (l'ancienne mention
@@ -72,13 +72,20 @@ grep -c "<symbole>" dist/win-unpacked/resources/app.asar
 # Toujours forcer --x64 pour une caisse Debian x64.
 env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron-builder --linux AppImage --x64 --publish never
 
-# .deb (recommandé sur Debian : pas de dépendance FUSE, apt-installable).
-# Le .deb exige des métadonnées absentes du package.json → override CLI :
-env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron-builder --linux deb --x64 --publish never \
-  -c.extraMetadata.homepage="https://wynd.eu" \
-  -c.extraMetadata.author="<Nom> <email>" \
-  -c.deb.maintainer="<Nom> <email>"
+# .deb (Debian/Ubuntu) et .rpm (RHEL/Rocky) : pas de dépendance FUSE,
+# installables via apt/dnf. Les métadonnées (homepage, maintainer, vendor)
+# sont désormais dans package.json → plus aucun override CLI nécessaire.
+env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron-builder --linux deb rpm --x64 --publish never
 ```
+
+⚠️ La cible **rpm** exige `rpmbuild` sur la machine de build (`apt install rpm`
+sur Debian, `brew install rpm` sur macOS). Sans lui, fpm échoue sur
+« Need executable 'rpmbuild' » — AppImage et .deb sortent quand même.
+
+Les trois formats sont produits par la CI GitLab : job `build:linux`,
+**automatique sur tag, manuel sur n'importe quelle branche**. Les artefacts se
+téléchargent directement depuis GitLab, sans passer par Nexus (réservé aux
+tags, c'est le canal que le control-center consomme).
 
 - **AppImage sur Debian 13 (Trixie)** : nécessite **FUSE 2** (`libfuse.so.2`), non
   fourni par défaut. Sinon `sudo apt install libfuse2t64`, OU lancer avec
@@ -161,8 +168,10 @@ Visualisation + contrôle distant de l'écran caisse depuis le BO central.
      `keydown` DOM → casse les listeners barcode du POS). Modifiers
      Ctrl/Alt/Cmd → vrais raccourcis ; Shift seul → `char` (majuscule déjà
      résolue par le BO).
-   - `screen` : `@nut-tree-fork/nut-js` (input système-wide). **Pas installé
-     par défaut** — `getNut()` échoue proprement (1 seul warn). Requiert la
+   - `screen` : `@nut-tree-fork/nut-js` (input système-wide). **Embarqué**
+     (dépendance de prod, ~17 Mo avec `jimp`) : le contrôle distant doit
+     marcher sur toutes les caisses. Chargé en *lazy require* au 1er event —
+     `getNut()` échoue proprement (1 seul warn) s'il manque. Requiert la
      permission **Accessibilité** macOS (probe au 1er event).
 6. **Reconnexion** : sur close WS anormal (≠1000/1008), backoff exponentiel
    1→2→4→8→16s, max 5 essais (re-fetch ticket à chaque fois). Le serveur a

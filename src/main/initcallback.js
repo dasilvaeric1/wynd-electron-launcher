@@ -9,6 +9,7 @@ const onSocket = require("./helpers/on_socket")
 const sendOnReady = require("./helpers/send_on_ready")
 const clearCache = require('./helpers/clear_cache')
 const getCentralRegister = require('./helpers/get_central_register')
+const { buildBootPlan } = require('../helpers/boot_plan')
 
 module.exports = function generataInitCallback(store) {
 
@@ -28,7 +29,7 @@ module.exports = function generataInitCallback(store) {
 			action === 'show_loader' && data2 === "start"
 		) {
 			store.windows.loader.current.show()
-			store.windows.loader.current.webContents.send("loader.action", data)
+			store.windows.loader.current.webContents.send("loader.action", buildBootPlan(store.conf, data))
 		} else if (
 			store.windows.loader.current &&
 			store.windows.loader.current.isVisible() &&
@@ -64,6 +65,12 @@ module.exports = function generataInitCallback(store) {
 				break;
 			case 'check_conf_done':
 				store.conf = data
+				// La config est desormais validee et completee par ses defauts :
+				// on affine le plan envoye au demarrage, qui avait ete calcule
+				// sur la config brute (voire sur rien si sa lecture a echoue).
+				if (store.windows.loader.current && !store.windows.loader.current.isDestroyed()) {
+					store.windows.loader.current.webContents.send("loader.plan", buildBootPlan(data, 'initialize'))
+				}
 				if (store.conf.central && store.conf.central.enable && store.conf.central.mode === "AUTO") {
 					if (store.central.status === 'READY' && !store.central.registered && !store.central.registering) {
 						const register = getCentralRegister(store)

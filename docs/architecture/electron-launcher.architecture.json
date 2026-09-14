@@ -1,0 +1,317 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "electron-launcher — POS en kiosque et telemaintenance",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "git@gitlab.wynd.eu:product/common/pocs/electron-launcher.git",
+      "link_mode": "local-only",
+      "revision": "99eb804ec81c634e7b8a5541ea79fdf2025699ba"
+    },
+    "viewBox": [
+      1310,
+      570
+    ],
+    "views": [
+      {
+        "id": "affichage",
+        "label": "Affichage du POS",
+        "focus": [
+          "configIni",
+          "mainProcess",
+          "containerWindow",
+          "posWeb"
+        ],
+        "note": "La config decide de l'URL et du mode d'encapsulation du POS."
+      },
+      {
+        "id": "bootstrap",
+        "label": "Bootstrap materiel",
+        "focus": [
+          "containerWindow",
+          "wpt"
+        ],
+        "note": "Le loader reste affiche jusqu'a ce que le pont WPT reponde."
+      },
+      {
+        "id": "telemaintenance",
+        "label": "Telemaintenance",
+        "focus": [
+          "retailScheduler",
+          "screenSession",
+          "central"
+        ],
+        "note": "Visualisation et controle distant de l'ecran caisse depuis le BO."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "configIni",
+      "type": "database",
+      "label": "config.ini",
+      "sublabel": "url, view, kiosk, menu",
+      "tag": "EL_CONFIG_PATH",
+      "pos": [
+        390,
+        30
+      ],
+      "size": [
+        210,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/main/helpers/config/get_config.js",
+          "label": "lecture"
+        },
+        {
+          "path": "src/main/helpers/config/config_validator.js",
+          "label": "validation"
+        }
+      ]
+    },
+    {
+      "id": "posWeb",
+      "type": "external",
+      "label": "POS Wynd",
+      "sublabel": "application web marchande",
+      "pos": [
+        720,
+        30
+      ],
+      "size": [
+        210,
+        76
+      ]
+    },
+    {
+      "id": "mainProcess",
+      "type": "backend",
+      "label": "Process principal",
+      "sublabel": "Electron 21, Node 16",
+      "tag": "axios",
+      "pos": [
+        390,
+        220
+      ],
+      "size": [
+        210,
+        110
+      ],
+      "sources": [
+        {
+          "path": "src/main/index.js",
+          "label": "point d'entree"
+        },
+        {
+          "path": "src/main/ipc.js",
+          "label": "ponts IPC"
+        }
+      ]
+    },
+    {
+      "id": "containerWindow",
+      "type": "frontend",
+      "label": "Fenetre container",
+      "sublabel": "React, iframe ou webview",
+      "pos": [
+        720,
+        220
+      ],
+      "size": [
+        210,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/main/container_window.js",
+          "label": "fenetre POS"
+        },
+        {
+          "path": "src/main/loader_window.js",
+          "label": "ecran de chargement"
+        }
+      ]
+    },
+    {
+      "id": "wpt",
+      "type": "external",
+      "label": "Pont WPT",
+      "sublabel": "peripheriques de la caisse",
+      "pos": [
+        1050,
+        220
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/main/helpers/connect_to_wpt.js",
+          "label": "connexion"
+        },
+        {
+          "path": "src/main/helpers/check_wpt_plugin.js",
+          "label": "verification plugin"
+        }
+      ]
+    },
+    {
+      "id": "retailScheduler",
+      "type": "external",
+      "label": "RetailScheduler",
+      "sublabel": "service C#, appsettings.json",
+      "tag": ":5088",
+      "pos": [
+        60,
+        450
+      ],
+      "size": [
+        210,
+        76
+      ]
+    },
+    {
+      "id": "screenSession",
+      "type": "backend",
+      "label": "Screen session",
+      "sublabel": "capture JPEG ou WebRTC, input",
+      "pos": [
+        390,
+        450
+      ],
+      "size": [
+        210,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/main/screen_session.js",
+          "line": 66,
+          "end_line": 74,
+          "label": "poll et cadence"
+        },
+        {
+          "path": "src/main/webrtc/capture_window.js",
+          "label": "fenetre de capture"
+        }
+      ]
+    },
+    {
+      "id": "central",
+      "type": "external",
+      "label": "BO central",
+      "sublabel": "sessions, relais WS, TURN",
+      "pos": [
+        1050,
+        450
+      ],
+      "size": [
+        200,
+        76
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Poste de caisse — processus Electron",
+      "wraps": [
+        "mainProcess",
+        "containerWindow",
+        "screenSession"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Telemaintenance — consentement auto par defaut",
+      "wraps": [
+        "screenSession"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "cfg-main",
+      "from": "configIni",
+      "to": "mainProcess",
+      "label": "url, view, kiosk",
+      "labelDy": 60
+    },
+    {
+      "id": "main-container",
+      "from": "mainProcess",
+      "to": "containerWindow",
+      "label": "cree la fenetre",
+      "variant": "emphasis"
+    },
+    {
+      "id": "container-pos",
+      "from": "containerWindow",
+      "to": "posWeb",
+      "label": "iframe ou webview",
+      "variant": "emphasis",
+      "labelDy": -60
+    },
+    {
+      "id": "container-wpt",
+      "from": "containerWindow",
+      "to": "wpt",
+      "label": "attend le bootstrap",
+      "variant": "dashed"
+    },
+    {
+      "id": "main-screen",
+      "from": "mainProcess",
+      "to": "screenSession",
+      "label": "poll toutes les 5s",
+      "labelDy": 65
+    },
+    {
+      "id": "scheduler-screen",
+      "from": "retailScheduler",
+      "to": "screenSession",
+      "label": "api-key et serial",
+      "variant": "security"
+    },
+    {
+      "id": "screen-central",
+      "from": "screenSession",
+      "to": "central",
+      "label": "ticket single-use puis WS",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Affichage",
+      "items": [
+        "view=webview est requis si le POS renvoie X-Frame-Options sameorigin",
+        "raw=true charge l'url directement, sans wrapper React ni menu",
+        "Le renderer est compile en target web : nodeIntegration off, contextIsolation on"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Capture et controle",
+      "items": [
+        "Mode window : capture de la container, car capturer le webview rend du noir",
+        "JPEG 10 fps reste actif en parallele de WebRTC, comme repli transparent",
+        "Coordonnees d'input en pixels CSS, pas physiques"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Points de vigilance",
+      "items": [
+        "Le consentement caissier est auto-accepte par defaut et l'indicateur masque",
+        "Sans TURN pousse par le central, WebRTC echoue en NAT symetrique",
+        "EL_STRICT_NAV n'est pas actif par defaut : les navigations sont seulement journalisees"
+      ]
+    }
+  ]
+}

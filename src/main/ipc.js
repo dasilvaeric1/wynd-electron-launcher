@@ -2,6 +2,7 @@ const {
   app,
   ipcMain,
   session,
+  shell,
   Notification,
   ipcRenderer,
 } = require("electron");
@@ -21,6 +22,11 @@ const { jsonOrMarker } = require("./helpers/safe_json");
 const getCentralRegister = require("./helpers/get_central_register");
 const clearCache = require("./helpers/clear_cache");
 const buildVersion = require("./helpers/build_version");
+const { buildBootPlan } = require("../helpers/boot_plan");
+const { getCentralPresence, getCentralConfig } = require("./screen_session");
+const { sendIncident } = require("./helpers/incident_report");
+const schedulerTasks = require("./helpers/scheduler_tasks");
+const { reportBootFailure } = require("./helpers/boot_failure");
 
 module.exports = function generateIpc(store, initCallback) {
   let count = 0;
@@ -70,6 +76,17 @@ module.exports = function generateIpc(store, initCallback) {
       if (store.finish) {
         store.windows.container.current.webContents.send("ready", true);
       }
+
+      // Etat de liaison central des l'ouverture, sans attendre le prochain
+      // tick du poller (5 s).
+      try {
+        store.windows.container.current.webContents.send(
+          "central.presence",
+          getCentralPresence(),
+        );
+      } catch (err) {
+        log.debug(`[CENTRAL] presence initiale: ${err.message}`);
+      }
     } else if (
       who === "loader" &&
       store.windows.loader.current &&
@@ -95,9 +112,12 @@ module.exports = function generateIpc(store, initCallback) {
               ? store.conf.title
               : store.infos.name;
 
+          // Le plan remplace le total code en dur de get_total.ts : il est
+          // calcule depuis la config reelle (update on/off, wpt on/off), donc
+          // la progression ne plafonne plus a 90 % ni ne depasse 100 %.
           store.windows.loader.current.webContents.send(
             "loader.action",
-            "initialize",
+            buildBootPlan(store.conf, "initialize"),
           );
           store.windows.loader.current.webContents.send("app_infos", {
             version: buildVersion(),
@@ -123,8 +143,95 @@ module.exports = function generateIpc(store, initCallback) {
           }
         }
       } catch (err) {
-        showDialogError(store, err);
+        // L'erreur s'affiche desormais DANS le loader, avec « Reessayer ».
+        // La dialog native qui tuait l'app ne sert plus que de repli.
+        reportBootFailure(store, err);
       }
+    }
+  });
+
+  // --- Sorties de secours proposees par l'ecran d'echec du loader ---
+
+  ipcMain.on("boot.retry", async () => {
+    log.info("[BOOT] > relance demandee depuis le loader");
+    if (
+      store.windows.loader.current &&
+      !store.windows.loader.current.isDestroyed()
+    ) {
+      store.windows.loader.current.webContents.send(
+        "loader.action",
+        buildBootPlan(store.conf, "initialize"),
+      );
+    }
+    try {
+      await reinitialize(store, initCallback);
+    } catch (err) {
+      reportBootFailure(store, err);
+    }
+  });
+
+  ipcMain.on("boot.open_logs", () => {
+    const dir = (store.logs && store.logs.main) || null;
+    if (!dir) {
+      log.warn("[BOOT] > dossier de logs inconnu");
+      return;
+    }
+    shell.openPath(dir).then((err) => {
+      if (err) {
+        log.error(`[BOOT] > ouverture du dossier de logs: ${err}`);
+      }
+    });
+  });
+
+  ipcMain.on("boot.quit", () => {
+    log.info("[BOOT] > fermeture demandee depuis le loader");
+    app.quit();
+  });
+
+  // --- Taches planifiees du RetailScheduler ---
+  //
+  // C'est le renderer qui pilote la cadence : il demande un rafraichissement a
+  // l'ouverture du panneau puis toutes les 30 s tant qu'il est ouvert. Le main
+  // ne garde donc aucun etat d'affichage, et rien n'est interroge quand le
+  // panneau est ferme.
+
+  ipcMain.on("scheduler.refresh", async () => {
+    const tasks = await schedulerTasks.fetchTasks();
+    if (
+      store.windows.container.current &&
+      !store.windows.container.current.isDestroyed()
+    ) {
+      store.windows.container.current.webContents.send("scheduler.tasks", tasks);
+    }
+  });
+
+  ipcMain.on("scheduler.run", async (event, name) => {
+    if (typeof name !== "string" || !name) {
+      return;
+    }
+    // L'api-key vient de l'appsettings du service C#, par le meme chemin que
+    // le screen-session. Le PIN cote renderer est un garde-fou d'usage ; le
+    // controle d'acces reel est cette cle, exigee par le service.
+    let apiKey = null;
+    try {
+      const cfg = await getCentralConfig();
+      apiKey = cfg && cfg.apiKey;
+    } catch (err) {
+      log.debug(`[SCHEDULER] config centrale indisponible: ${err.message}`);
+    }
+    log.info(`[SCHEDULER] execution manuelle demandee: ${name}`);
+    const result = await schedulerTasks.runTask(name, apiKey);
+    if (
+      store.windows.container.current &&
+      !store.windows.container.current.isDestroyed()
+    ) {
+      store.windows.container.current.webContents.send("scheduler.run.result", {
+        name,
+        ...result,
+      });
+      // Rafraichit dans la foulee : la tache passe en « en cours ».
+      const tasks = await schedulerTasks.fetchTasks();
+      store.windows.container.current.webContents.send("scheduler.tasks", tasks);
     }
   });
 
@@ -356,7 +463,10 @@ module.exports = function generateIpc(store, initCallback) {
       ["close", "reload"].includes(action)
     ) {
       store.windows.loader.current.show();
-      store.windows.loader.current.webContents.send("loader.action", action);
+      store.windows.loader.current.webContents.send(
+        "loader.action",
+        buildBootPlan(store.conf, action),
+      );
     }
     switch (action) {
       case "reload":
@@ -384,6 +494,31 @@ module.exports = function generateIpc(store, initCallback) {
           store.windows.container.current.close();
         }
         break;
+
+      case "report_incident": {
+        // Signalement declenche par le caissier. Le ZIP part en direct vers le
+        // stockage objet via la meme chaine que les traces : aucun egress
+        // central, aucune nouvelle route cote dashboard.
+        let result;
+        try {
+          result = await sendIncident(store, other, {
+            getConfig: getCentralConfig,
+          });
+        } catch (err) {
+          log.error(`[INCIDENT] envoi KO: ${err.message}`);
+          result = { ok: false, reason: "UPLOAD_FAILED", message: err.message };
+        }
+        if (
+          store.windows.container.current &&
+          !store.windows.container.current.isDestroyed()
+        ) {
+          store.windows.container.current.webContents.send(
+            "incident.result",
+            result,
+          );
+        }
+        break;
+      }
 
       case "emergency":
         if (store.wpt.socket && store.wpt.plugins) {

@@ -1,5 +1,5 @@
 const { webFrame } = require('electron')
-const showDialogError = require("../dialog_err")
+const { reportBootFailure } = require("./boot_failure")
 const initialize = require('./initialize')
 const closeHttp = require('./close_http')
 
@@ -32,7 +32,10 @@ module.exports = async function reinitialize(store, initCallback, opts) {
 		// }
 	}
 	catch (err) {
-		showDialogError(store, err)
+		// Une relance qui echoue doit rester DANS le loader : l'utilisateur
+		// vient justement d'y cliquer « Reessayer ». Retomber sur la dialog
+		// native fermait l'application au deuxieme echec.
+		reportBootFailure(store, err)
 	}
 
 	if (store.windows.container.current) {

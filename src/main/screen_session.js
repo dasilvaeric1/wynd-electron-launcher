@@ -64,6 +64,25 @@ const WEBRTC_SIGNAL_TYPES = new Set([
 
 const APPSETTINGS_PATH = resolveAppsettingsPath();
 const POLL_INTERVAL_MS = 5_000;
+
+// Presence aupres du dashboard central : le poll ci-dessous EST le heartbeat,
+// il ne manquait qu'une remontee vers l'ecran de la caisse.
+const presence = require("./helpers/central_presence");
+
+/**
+ * Pousse l'etat de liaison au container, qui l'affiche dans le panneau lateral.
+ * Silencieux si la fenetre n'existe pas encore ou a ete detruite.
+ */
+function pushPresence() {
+  try {
+    const win = sharedStore && sharedStore.windows && sharedStore.windows.container.current;
+    if (win && !win.isDestroyed() && sharedStore.ready) {
+      win.webContents.send("central.presence", presence.snapshot());
+    }
+  } catch (err) {
+    log.debug(`[SCREEN] pushPresence: ${err.message}`);
+  }
+}
 // 100ms = 10 fps. Compromise raisonnable :
 //  - assez fluide pour observer/contrôler une caisse à distance
 //  - charge réseau ~JPEG_QUALITY * 10 ≈ 80-250 KB/s par session, OK sur LAN
@@ -381,7 +400,11 @@ const launcherStartedAt = Date.now();
 
 async function pollOnce() {
   const cfg = await readCentralConfig();
-  if (!cfg) return;
+  if (!cfg) {
+    presence.noteUnconfigured();
+    pushPresence();
+    return;
+  }
   const uptimeSeconds = Math.floor((Date.now() - launcherStartedAt) / 1000);
   // Résumé périphériques (imprimante/TPE/Central) pour la vue flotte BO.
   // Collecte throttlée (voir device_summary.js) — l'échec n'empêche pas le poll.
@@ -409,12 +432,18 @@ async function pollOnce() {
         `[SCREEN] poll auth refusé (${r.status}), invalide cache config`,
       );
       clearCachedConfig();
+      presence.noteFailure(Date.now());
+      pushPresence();
       return;
     }
     if (!r.ok) {
       log.debug(`[SCREEN] poll non-OK: ${r.status}`);
+      presence.noteFailure(Date.now());
+      pushPresence();
       return;
     }
+    presence.noteSuccess(Date.now());
+    pushPresence();
     // Tunnel WPT demandé par le BO → ouverture d'une WS sortante dédiée
     // (canal indépendant des sessions écran). open() est idempotent.
     // Trace continue : ordre d'activation/desactivation pousse par le BO.
@@ -461,6 +490,8 @@ async function pollOnce() {
     }
   } catch (err) {
     log.debug(`[SCREEN] poll error (non-fatal): ${err.message}`);
+    presence.noteFailure(Date.now());
+    pushPresence();
   }
 }
 
@@ -1499,6 +1530,8 @@ function teardownScreenSessions() {
 module.exports = {
   initScreenSessions,
   teardownScreenSessions,
+  // Etat de liaison central, pour le panneau lateral du container.
+  getCentralPresence: presence.snapshot,
   // Expose la config central (baseUrl/apiKey/serial) a l'uploader de
   // traces continues : meme source d'auth, meme cache.
   getCentralConfig: readCentralConfig,

@@ -10,8 +10,10 @@ module.exports = function generateLoaderWindow(store) {
 		closable: false,
 		hasShadow: true,
 		show: false,
-		closable: false,
 		resizable: false,
+		// Sans fond explicite, Chromium peint la fenetre en BLANC avant le
+		// premier rendu React : sur un loader sombre, le flash est franc.
+		backgroundColor: '#11141E',
 		width: store.windows.loader.width,
 		height: store.windows.loader.height,
 		x: store.choosen_screen.x + store.choosen_screen.width / 2 - store.windows.loader.width / 2,
@@ -20,7 +22,14 @@ module.exports = function generateLoaderWindow(store) {
 		frame: false,
 		parent: store.windows.container.current,
 		enableLargerThanScreen: false,
-		paintWhenInitiallyHidden: false,
+		// DOIT rester true (valeur par defaut d'Electron) : la fenetre est creee
+		// avec show:false et n'est affichee qu'a reception de l'IPC `ready`, que
+		// le renderer envoie apres son premier rendu. Une fenetre masquee qui ne
+		// peint pas ne produit aucune frame -> requestAnimationFrame ne se
+		// declenche jamais -> `ready` ne part pas -> la fenetre n'est jamais
+		// affichee. Peindre masque permet aussi d'avoir l'UI complete des la
+		// premiere frame visible, donc zero flash.
+		paintWhenInitiallyHidden: true,
 		alwaysOnTop: true,
 		webPreferences: {
 			nodeIntegration: false,

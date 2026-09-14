@@ -1,13 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Loader</title>
+    <title>Démarrage</title>
+    <link rel="stylesheet" href="../dist/index.css" />
+    <style>
+      /*
+       * Squelette inline : affiché dès le loadURL, avant même que le bundle
+       * soit téléchargé et parsé. React le remplace au premier commit, puisque
+       * createRoot() vide le conteneur. Aucun JS nécessaire pour le retirer.
+       */
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #11141e;
+      }
+      #root {
+        width: 100%;
+        height: 100%;
+      }
+      .boot-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        justify-content: center;
+        height: 100%;
+        padding: 20px 22px;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #6f7893;
+        background: radial-gradient(120% 85% at 100% 0%, #425176 0%, transparent 58%);
+      }
+      .boot-skeleton b {
+        font-size: 16px;
+        font-weight: 600;
+        color: #f2f4f9;
+      }
+      .boot-skeleton span {
+        font-size: 12.5px;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <link rel="stylesheet" href="../dist/index.css" />
+    <div id="root">
+      <div class="boot-skeleton">
+        <b>Point de vente</b>
+        <span>Démarrage…</span>
+      </div>
+    </div>
     <script defer src="../dist/index.js"></script>
   </body>
 </html>

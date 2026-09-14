@@ -39,20 +39,29 @@ enable=false
 main=info
 INI
 
-case "$(uname -s)" in
-  Darwin) TARGET="--mac dir"; BIN_GLOB="dist/mac*/*.app/Contents/MacOS/*" ;;
-  Linux)  TARGET="--linux dir"; BIN_GLOB="dist/linux*unpacked/*" ;;
-  *) echo "plateforme non geree"; exit 2 ;;
-esac
+# SMOKE_BIN permet de fumiger un binaire DEJA installe (ex : en CI, apres
+# `apt-get install ./dist/*.deb`). Ca teste en plus la liste de dependances du
+# paquet, puisque apt refuse d'installer si elle est incomplete.
+if [ -n "${SMOKE_BIN:-}" ]; then
+  BIN="$SMOKE_BIN"
+  [ -x "$BIN" ] || { echo "✗ SMOKE_BIN n'est pas executable : $BIN"; exit 1; }
+  echo "→ binaire fourni : $BIN (pas de build)"
+else
+  case "$(uname -s)" in
+    Darwin) TARGET="--mac dir"; BIN_GLOB="dist/mac*/*.app/Contents/MacOS/*" ;;
+    Linux)  TARGET="--linux dir"; BIN_GLOB="dist/linux*unpacked/*" ;;
+    *) echo "plateforme non geree"; exit 2 ;;
+  esac
 
-echo "→ build packagé ($TARGET)"
-rm -rf dist
-CSC_IDENTITY_AUTO_DISCOVERY=false \
-  env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron-builder $TARGET --publish never \
-  >/dev/null 2>&1
+  echo "→ build packagé ($TARGET)"
+  rm -rf dist
+  CSC_IDENTITY_AUTO_DISCOVERY=false \
+    env -u ELECTRON_RUN_AS_NODE ./node_modules/.bin/electron-builder $TARGET --publish never \
+    >/dev/null 2>&1
 
-BIN=$(ls $BIN_GLOB 2>/dev/null | head -1)
-[ -x "$BIN" ] || { echo "✗ binaire introuvable apres le build"; exit 1; }
+  BIN=$(ls $BIN_GLOB 2>/dev/null | head -1)
+  [ -x "$BIN" ] || { echo "✗ binaire introuvable apres le build"; exit 1; }
+fi
 
 echo "→ lancement de $BIN"
 env -u ELECTRON_RUN_AS_NODE "$BIN" --user-data-dir="$UD" --no-sandbox >"$UD/stdout.log" 2>&1 &

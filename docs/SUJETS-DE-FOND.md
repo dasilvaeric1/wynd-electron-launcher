@@ -129,6 +129,29 @@ Aucune limite de sessions concurrentes / durée max imposée côté launcher
 
 ---
 
+## F. En dormance
+
+### 🟡 F1 — Tâches planifiées dans le panneau latéral
+`helpers/scheduler_tasks.js` + `components/SchedulerTasks.tsx` affichent l'état
+des tâches du RetailScheduler (ce qui tourne, échecs récents, prochaine
+échéance) et permettent un lancement manuel sous PIN. **Le code est en place,
+testé, et inerte** : le service n'expose pas les routes attendues.
+
+Pour l'activer, deux routes à ajouter côté RetailScheduler (`Program.cs`,
+à côté de `/api/identity`, ~40 lignes) :
+- `GET /api/tasks` → `TaskManagementService.GetAllTaskStatusesAsync()`, qui
+  existe déjà et alimente l'UI Blazor ;
+- `POST /api/tasks/{name}/run` → `RunTaskNowAsync`, **protégée par l'api-key**
+  de `CentralApi.ApiKey`. Indispensable : elle exécute la commande configurée
+  de la tâche avec les droits du service. Le PIN côté launcher vit dans le
+  renderer — c'est un garde-fou d'usage, pas un contrôle d'accès.
+
+⚠️ Pas de contournement possible sans le service : `IsRunning` vit dans un
+dictionnaire **en mémoire** de `TaskHistoryService` et n'est jamais écrit dans
+`history.db` (pourtant lisible). Lire la base ne dira jamais ce qui tourne.
+
+---
+
 ## Ordre recommandé
 
 1. **A1** (git) — socle, débloque tout.
