@@ -267,6 +267,11 @@ deploy:nexus:
     - 'if [ -z "$ZIP" ]; then echo "ERREUR aucune archive a publier"; exit 1; fi'
     - 'NAME=$(basename "$ZIP")'
     - 'TARGET="https://nexus.wynd.eu/repository/integration/product/electron_zip/$NAME"'
-    - 'echo "Uploading $NAME vers $TARGET"'
-    - 'curl --fail -u "${NEXUS_USER}:${NEXUS_PASSWORD}" --upload-file "$ZIP" "$TARGET"'
+    - 'echo "Uploading $NAME ($(du -h "$ZIP" | cut -f1)) vers $TARGET"'
+    # --fail-with-body : sans lui, --fail jette le corps de la reponse, et un
+    #   echec Nexus n'affiche que « error: 500 » sans la moindre cause.
+    # --retry 3 --retry-all-errors : un 5xx transitoire (blob store occupe,
+    #   redemarrage) ne doit pas couler une release. curl renvoie tout le
+    #   fichier a chaque tentative, ce qui est acceptable sur le LAN.
+    - 'curl --fail-with-body --retry 3 --retry-all-errors --retry-delay 5 -u "${NEXUS_USER}:${NEXUS_PASSWORD}" --upload-file "$ZIP" "$TARGET"'
     - 'echo "Upload OK -> $TARGET"'
