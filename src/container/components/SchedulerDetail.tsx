@@ -67,7 +67,7 @@ const SchedulerDetail = ({ open, taches, resultat, onClose, onRun }: ISchedulerD
 			open={open}
 			onCancel={onClose}
 			footer={null}
-			width={520}
+			width={960}
 			centered
 			destroyOnClose
 		>
@@ -85,8 +85,8 @@ const SchedulerDetail = ({ open, taches, resultat, onClose, onRun }: ISchedulerD
 							<span className="ico" aria-hidden="true">
 								{GLYPHE[tache.etat]}
 							</span>
-							<span className="txt">
-								<span className="nom">{tache.description || tache.name}</span>
+							<span className="txt" title={tache.description || tache.name}>
+								<span className="nom">{tache.name}</span>
 								<span className="meta">
 									{ETAT_LABEL[tache.etat]} · {quand(tache)}
 								</span>

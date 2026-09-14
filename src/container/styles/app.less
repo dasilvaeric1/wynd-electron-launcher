@@ -155,6 +155,7 @@
 			padding: 0px;
 			display: flex;
 			flex-direction: column;
+			overflow-x: hidden;
 			color: var(--text-color-inv);
 			background:
 				radial-gradient(
@@ -1273,6 +1274,8 @@
 
 // ---- Detail des taches : modale derriere le code superviseur ----
 .scheduler-detail {
+	max-width: 94vw;
+
 	.sd-count {
 		margin: 0 0 11px;
 		font-size: 11px;
@@ -1283,11 +1286,15 @@
 
 	.sd-list {
 		display: grid;
+		// Colonnes automatiques : 12 taches en une colonne ne tiennent sur aucun
+		// ecran de caisse. A 960 px on obtient deux colonnes, donc six rangees ;
+		// sur un ecran etroit la grille retombe seule sur une colonne.
+		grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
 		gap: 8px;
 		margin: 0;
-		// La caisse de test a 12 taches configurees ; sans plafond la modale
-		// depassait l'ecran, le bas de la liste devenait inatteignable.
-		max-height: 52vh;
+		// Garde-fou seulement : a 12 taches on est tres en dessous. Il ne se
+		// declenche que sur un parc qui en configurerait beaucoup plus.
+		max-height: 76vh;
 		padding: 0 4px 0 0;
 		overflow-y: auto;
 		list-style: none;
@@ -1305,9 +1312,10 @@
 
 	.sd-row {
 		display: flex;
-		gap: 11px;
+		gap: 10px;
 		align-items: center;
-		padding: 9px 11px;
+		min-width: 0;
+		padding: 7px 10px;
 		background: #ffffff08;
 		border: 1px solid var(--el-line);
 		border-radius: 8px;
@@ -1333,16 +1341,21 @@
 
 		.nom {
 			overflow: hidden;
-			font-size: 13px;
+			font-size: 12.5px;
+			line-height: 1.25;
 			color: var(--el-text);
 			white-space: nowrap;
 			text-overflow: ellipsis;
 		}
 
 		.meta {
+			overflow: hidden;
 			font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-			font-size: 10.5px;
+			font-size: 10px;
+			line-height: 1.3;
 			color: var(--el-faint);
+			white-space: nowrap;
+			text-overflow: ellipsis;
 		}
 
 		&.running .ico {
@@ -1368,9 +1381,9 @@
 	// Cible tactile confortable : on est sur un ecran de caisse.
 	.sd-run {
 		flex: none;
-		padding: 9px 15px;
+		padding: 7px 11px;
 		font-family: inherit;
-		font-size: 12px;
+		font-size: 11.5px;
 		font-weight: 600;
 		line-height: 1;
 		color: var(--el-text);
