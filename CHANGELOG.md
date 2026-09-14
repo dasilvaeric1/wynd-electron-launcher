@@ -2,6 +2,100 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.9.X]
+
+### [2.9.0]
+
+- perf(build): l'application packagee perd 40 % de son poids.
+
+  Le renderer est bundle par Vite depuis le passage a Vite : antd, React,
+  redux et les jeux d'icones etaient donc embarques DEUX fois — une fois
+  bundles, une fois en node_modules brut. L'asar pesait 160 Mo, dont ~140 que
+  le process main ne require jamais. S'y ajoutaient 13 Mo de sourcemaps et la
+  cinquantaine de locales de Chromium.
+
+  Mesure sur un portable Windows reel : `.exe` 100 -> 85 Mo, dossier extrait
+  dans `%TEMP%` 540 -> 356 Mo, app.asar 160 -> 25 Mo. C'est autant de
+  decompression en moins au premier lancement, qui est le point de douleur sur
+  les caisses a vieux processeur.
+
+- perf(loader): le bundle du loader passe de 1946 a 157 Ko, et n'est plus
+  charge deux fois.
+
+  `react-antd-cssvars` faisait un `require('antd')` nu en CommonJS : Vite ne
+  pouvait rien tree-shaker et embarquait antd en entier — avec `moment`, un
+  date-picker et un carrousel — dans un ecran qui affiche trois composants.
+  antd est retire du loader ; le container le garde.
+
+  Par ailleurs `assets/index.html` referencait deja le bundle et les preloads
+  le reinjectaient sur DOMContentLoaded : 1,9 Mo de JS etaient parses et
+  executes DEUX fois a chaque demarrage, cote container comme cote loader.
+  Reliquat de l'epoque webpack/dev-server.
+
+- fix(loader): la progression ne ment plus, et les erreurs s'affichent enfin.
+
+  Trois defauts de fond. Le composant rendait depuis un `useRef` : trois
+  handlers sur cinq ne declenchaient aucun rendu, donc la barre de
+  telechargement d'une mise a jour ne bougeait jamais. Le canal `error` etait
+  whitelaste dans le preload mais AUCUN emetteur ne l'utilisait — le handler
+  React etait du code mort, et toute erreur de bootstrap passait par une
+  dialog Windows en anglais a bouton unique qui tuait l'application. Enfin le
+  total etait code en dur a 10 alors que le nombre d'etapes depend de la
+  config : la barre plafonnait a 90 % puis sautait.
+
+  Desormais : reducteur pur teste, plan calcule depuis la config reelle, et
+  ecran d'echec DANS le loader avec Reessayer / Voir les journaux / Quitter.
+  Un WPT muet au boot ne laisse plus la caisse morte.
+
+- fix(wpt): connexion HTTPS reparee sur Electron 42.
+
+  Node >= 22 — donc Electron 42, qui embarque Node 24 — expose un `WebSocket`
+  GLOBAL, celui d'undici, et engine.io-client le prefere au module `ws`. Or
+  undici n'accepte AUCUNE option TLS : le `rejectUnauthorized: false` deja
+  present etait ignore, et tout WPT en HTTPS a certificat auto-signe echouait
+  en « websocket error » puis timeout. `forceNode: true` ramene le chemin
+  `ws`. Regression apportee par la montee en Electron 42.
+
+  Le launcher ecoute aussi `infos.error` / `plugins.error` / `version.error`,
+  pour remonter le refus de WPT au lieu d'attendre l'expiration du delai.
+
+- feat(pkg): paquets Linux `.deb` et `.rpm`, valides sur Rocky Linux 10.2.
+
+  `libXScrnSaver` est retire : zero occurrence dans le binaire et les .so
+  livrees, et il n'existe QUE dans EPEL sur Rocky 10 — il imposait un depot
+  tiers pour rien. `alsa-lib` et `mesa-libgbm` sont ajoutes : le binaire les
+  charge reellement, mais fpm desactive la generation automatique des
+  `Requires` et la liste ecrite a la main ne les couvrait pas.
+
+  Installation verifiee avec `dnf --disablerepo=epel` : un seul paquet, aucune
+  dependance tierce.
+
+- feat(ui): pinpad tactile, liaison centrale visible, signalement d'anomalie.
+
+  Le pinpad ne permettait aucune correction (le « C » effacait tout et
+  verrouillait les touches des la longueur atteinte), ignorait le clavier
+  physique de la caisse, et offrait des cibles de ~40 px la ou le tactile en
+  demande 56. Grille 4x3 avec retour arriere, touches de 72 px, clavier
+  accepte, libelles en francais.
+
+  Le panneau lateral affiche l'etat de la liaison avec le dashboard central —
+  le heartbeat existait deja dans le poll screen-session, il n'etait jamais
+  remonte a l'ecran. Et un caissier peut signaler une anomalie : le launcher y
+  joint journaux, etat des peripheriques et version, via la meme chaine
+  d'upload que les traces.
+
+- ci: garde-fous qualite et builds a la demande.
+
+  Nouveau stage `quality` (eslint + 206 tests), bloquant sur `develop` et sur
+  les tags. Job `smoke:linux` qui installe le `.deb` produit et LANCE le
+  binaire sous xvfb : electron-builder omet silencieusement des transitives de
+  l'arbre pnpm, et le symptome n'apparait qu'au lancement du paquet — trois
+  plantages en production avaient deja ete decouverts ainsi.
+
+  Les builds Windows et Linux deviennent declenchables a la main sur
+  n'importe quelle branche. Toute la chaine passe sur Node 24, celui
+  qu'embarque reellement Electron 42.
+
 ## [2.8.X]
 
 ### [2.8.8]
