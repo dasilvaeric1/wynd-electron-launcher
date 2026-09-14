@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
 
-import { TNextAction } from '../store/actions'
 import { ICustomWindow } from '../../helpers/interface'
 
 declare let window: ICustomWindow
@@ -8,9 +7,9 @@ declare let window: ICustomWindow
 /** Cadence de rafraichissement tant que le panneau est ouvert. */
 const REFRESH_MS = 30000
 
-type TEtat = 'running' | 'failed' | 'ok'
+export type TEtat = 'running' | 'failed' | 'ok'
 
-interface ITache {
+export interface ITache {
 	name: string
 	description: string
 	etat: TEtat
@@ -18,53 +17,32 @@ interface ITache {
 	nextRunUtc: string | null
 }
 
-interface IRunResult {
+export interface IRunResult {
 	name: string
 	ok: boolean
 	reason?: string
 	message?: string
 }
 
-export interface ISchedulerTasksProps {
-	onRun: (action: TNextAction, ...data: any) => void
-}
+/** Sante globale, dans l'ordre de gravite decroissante. */
+export type TSante = 'bad' | 'warn' | 'ok'
 
-const RAISONS: Record<string, string> = {
+export const RAISONS: Record<string, string> = {
 	NOT_ENROLLED: 'Caisse non rattachée',
 	UNAUTHORIZED: 'Refusé par le planificateur',
 	UNREACHABLE: 'Planificateur injoignable',
 	FAILED: 'La tâche a échoué',
 }
 
-/** « il y a 12 min », « à 23:05 » — rien de plus verbeux sur une caisse. */
-function quand(tache: ITache): string {
-	if (tache.etat === 'running') {
-		return 'en cours…'
-	}
-	if (tache.etat === 'failed' && tache.lastRunUtc) {
-		const minutes = Math.max(0, Math.round((Date.now() - Date.parse(tache.lastRunUtc)) / 60000))
-		if (minutes < 60) {
-			return `échec il y a ${minutes} min`
-		}
-		return `échec il y a ${Math.floor(minutes / 60)} h`
-	}
-	if (tache.nextRunUtc) {
-		const d = new Date(tache.nextRunUtc)
-		return `prochaine à ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-	}
-	return ''
-}
-
-const GLYPHE: Record<TEtat, string> = { running: '⟳', failed: '✗', ok: '✓' }
-
 /**
- * Taches planifiees du RetailScheduler, vue caissier.
+ * Abonnement unique aux evenements du planificateur.
  *
- * Volontairement pauvre : ce qui tourne, ce qui vient d'echouer, la prochaine
- * echeance. Ni historique, ni compteurs, ni cron — le service a deja une UI
- * complete pour ca. Rien ne s'affiche si le service est absent.
+ * Monte une SEULE fois, au niveau de l'App : la ligne du panneau et la modale
+ * de detail lisent la meme source. Deux montages concurrents se marcheraient
+ * dessus — le demontage de l'un appelle `removeAllListeners` et couperait
+ * l'autre.
  */
-const SchedulerTasks = ({ onRun }: ISchedulerTasksProps) => {
+export function useSchedulerTasks() {
 	const [taches, setTaches] = useState<ITache[] | null>(null)
 	const [resultat, setResultat] = useState<IRunResult | null>(null)
 	const timer = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -86,52 +64,72 @@ const SchedulerTasks = ({ onRun }: ISchedulerTasksProps) => {
 		}
 	}, [])
 
-	// Service absent ou rien a montrer : on n'occupe pas le panneau pour rien.
+	return { taches, resultat, setResultat }
+}
+
+/** Rouge des qu'une tache est en echec, orange si quelque chose tourne. */
+export function sante(taches: ITache[]): TSante {
+	if (taches.some((t) => t.etat === 'failed')) {
+		return 'bad'
+	}
+	if (taches.some((t) => t.etat === 'running')) {
+		return 'warn'
+	}
+	return 'ok'
+}
+
+/** Le libelle doit tenir sur une ligne etroite : pas de phrase. */
+function resume(taches: ITache[], etat: TSante): string {
+	if (etat === 'bad') {
+		const n = taches.filter((t) => t.etat === 'failed').length
+		return n > 1 ? `${n} échecs` : '1 échec'
+	}
+	if (etat === 'warn') {
+		const n = taches.filter((t) => t.etat === 'running').length
+		return n > 1 ? `${n} en cours` : '1 en cours'
+	}
+	return 'à jour'
+}
+
+export interface ISchedulerTasksProps {
+	taches: ITache[] | null
+	onOpenDetail: () => void
+}
+
+/**
+ * Taches planifiees — ligne de synthese du panneau lateral.
+ *
+ * Une seule ligne, une seule couleur : le caissier n'a pas a lire une liste
+ * pour savoir si quelque chose va mal. La version precedente listait chaque
+ * tache avec son bouton « Lancer » ; sur un panneau de 340 px les libelles du
+ * planificateur debordaient et provoquaient un scroll horizontal.
+ *
+ * Le detail et le rejeu vivent desormais derriere le pinpad (cf
+ * SchedulerDetail) : ce sont des actions d'exploitation, pas de caisse.
+ *
+ * Rien ne s'affiche si le service est absent.
+ */
+const SchedulerTasks = ({ taches, onOpenDetail }: ISchedulerTasksProps) => {
 	if (!taches || taches.length === 0) {
 		return null
 	}
 
-	const enCours = taches.filter((t) => t.etat === 'running').length
+	const etat = sante(taches)
 
 	return (
-		<div className="e-launcher-scheduler">
-			<div className="sched-head">
-				<span className="lbl">Tâches planifiées</span>
-				{enCours > 0 ? <span className="val">{enCours} en cours</span> : null}
-			</div>
-
-			<ul className="sched-list">
-				{taches.map((tache) => (
-					<li key={tache.name} className={`sched-row ${tache.etat}`}>
-						<span className="ico" aria-hidden="true">
-							{GLYPHE[tache.etat]}
-						</span>
-						<span className="nom" title={tache.description || tache.name}>
-							{tache.description || tache.name}
-						</span>
-						<span className="quand">{quand(tache)}</span>
-						{tache.etat !== 'running' ? (
-							<button
-								type="button"
-								className="sched-run"
-								onClick={() => {
-									setResultat(null)
-									onRun(TNextAction.SCHEDULER_RUN, tache.name)
-								}}
-							>
-								Lancer
-							</button>
-						) : null}
-					</li>
-				))}
-			</ul>
-
-			{resultat && !resultat.ok ? (
-				<div className="sched-error" role="alert">
-					{RAISONS[resultat.reason || ''] || resultat.message || 'Lancement impossible.'}
-				</div>
-			) : null}
-		</div>
+		<button
+			type="button"
+			className={`e-launcher-scheduler ${etat}`}
+			onClick={onOpenDetail}
+			title="Voir le détail des tâches planifiées"
+		>
+			<span className="led" aria-hidden="true" />
+			<span className="lbl">Tâches planifiées</span>
+			<span className="val">{resume(taches, etat)}</span>
+			<span className="chev" aria-hidden="true">
+				›
+			</span>
+		</button>
 	)
 }
 

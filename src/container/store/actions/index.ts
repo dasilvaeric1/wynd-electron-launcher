@@ -48,6 +48,7 @@ export enum TNextAction {
   "REPORT" = "REPORT",
   "OPEN_DEV_TOOLS" = "OPEN_DEV_TOOLS",
   "SCHEDULER_RUN" = "SCHEDULER_RUN",
+  "SCHEDULER_DETAIL" = "SCHEDULER_DETAIL",
 }
 
 export function setWPTPluginsAction(

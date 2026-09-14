@@ -17,7 +17,7 @@ import { MenuInfo } from "rc-menu/lib/interface";
 import LogoMenu from "./Logo";
 import Device from "./Device";
 import CentralPresence from "./CentralPresence";
-import SchedulerTasks from "./SchedulerTasks";
+import SchedulerTasks, { ITache } from "./SchedulerTasks";
 import IncidentReport from "./IncidentReport";
 
 import { IRootState, IScreen } from "../interface";
@@ -31,6 +31,8 @@ declare let window: ICustomWindow;
 
 export interface IMenuProps {
   onMenuClick: (action: TNextAction, ...data: any) => void;
+  /** Etat des taches planifiees — l'abonnement IPC vit dans App. */
+  taches: ITache[] | null;
 }
 
 const { info } = Modal;
@@ -187,7 +189,10 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
     <React.Fragment>
       <LogoMenu />
       <CentralPresence />
-      <SchedulerTasks onRun={props.onMenuClick} />
+      <SchedulerTasks
+        taches={props.taches}
+        onOpenDetail={() => props.onMenuClick(TNextAction.SCHEDULER_DETAIL)}
+      />
       <Menu id="e-launcher-menu" items={generateItems()} />
       <IncidentReport open={incidentOpen} onClose={() => setIncidentOpen(false)} />
       <div className="e-launcher-menu-footer">

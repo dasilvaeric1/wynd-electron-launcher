@@ -25,6 +25,8 @@ import Title from "./components/Title";
 import DiagnosticsDashboard, {
   DIAGNOSTIC_EVENTS,
 } from "./components/DiagnosticsDashboard";
+import SchedulerDetail from "./components/SchedulerDetail";
+import { useSchedulerTasks } from "./components/SchedulerTasks";
 // import { ICustomWindow } from '../helpers/interface'
 
 export interface IAppProps {
@@ -56,6 +58,11 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
     (state: IRootState) => state.loader
   );
   const dispatch = useDispatch();
+
+  // Abonnement unique aux taches planifiees : la ligne du panneau et la modale
+  // de detail lisent la meme source (cf useSchedulerTasks).
+  const { taches, resultat, setResultat } = useSchedulerTasks();
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const displayPluginState = useMemo(() => {
     return conf ? conf.display_plugin_state.enable : false;
@@ -272,6 +279,18 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
     dispatch(setToggleMenu(true));
   };
 
+  // Le detail des taches s'ouvre dans la fenetre courante ; tout le reste part
+  // vers le main. Un seul point de passage, utilise aussi bien quand il n'y a
+  // pas de code superviseur configure qu'apres un pinpad accepte.
+  const executerAction = (action: TNextAction, ...data: any) => {
+    if (action === TNextAction.SCHEDULER_DETAIL) {
+      setResultat(null);
+      setDetailOpen(true);
+      return;
+    }
+    props.onCallback(action, ...data);
+  };
+
   const onMenuClick = (action: TNextAction, ...data: any) => {
     switch (action) {
       case TNextAction.RELOAD:
@@ -282,6 +301,9 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
       // Le declenchement manuel d'une tache planifiee passe par le meme
       // garde-fou que les autres actions sensibles du menu.
       case TNextAction.SCHEDULER_RUN:
+      // Voir le detail des taches, et donc pouvoir les rejouer, est une action
+      // d'exploitation : meme code superviseur que le reste du menu.
+      case TNextAction.SCHEDULER_DETAIL:
         if (
           conf &&
           conf.menu &&
@@ -296,12 +318,12 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
         ) {
           dispatch(openPinpadAction(action, conf?.wpt.password, ...data));
         } else {
-          props.onCallback(action, ...data);
+          executerAction(action, ...data);
         }
         break;
 
       default:
-        props.onCallback(action, ...data);
+        executerAction(action, ...data);
         break;
     }
   };
@@ -312,7 +334,7 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
 
   const onPinpadSuccess = () => {
     if (pinpad.nextAction) {
-      props.onCallback(pinpad.nextAction, ...pinpad.datas);
+      executerAction(pinpad.nextAction, ...pinpad.datas);
     }
   };
 
@@ -347,7 +369,7 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
           // le dashboard "Périphériques" (pas de voile sombre par-dessus).
           mask={!conf?.wpt?.enable}
         >
-          <Menu onMenuClick={onMenuClick} />
+          <Menu onMenuClick={onMenuClick} taches={taches} />
           {loader.active && <LoaderComponent />}
           {conf && conf.title && !conf.frame && <Title title={conf.title} />}
         </Drawer>
@@ -414,6 +436,18 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
         <Emergency visible={menu.open} onClick={onClickEmergency} />
       )}
       {pinpad.code && <PinPad code={pinpad.code} onSuccess={onPinpadSuccess} />}
+      <SchedulerDetail
+        open={detailOpen}
+        taches={taches}
+        resultat={resultat}
+        onClose={() => setDetailOpen(false)}
+        // Le pinpad a deja ete franchi pour ouvrir cette modale : on part
+        // directement vers le main, sans le redemander a chaque rejeu.
+        onRun={(name) => {
+          setResultat(null);
+          props.onCallback(TNextAction.SCHEDULER_RUN, name);
+        }}
+      />
       {displayPluginState && menu.open && <PluginState />}
     </Layout>
   );
