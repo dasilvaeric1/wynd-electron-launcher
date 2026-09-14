@@ -155,6 +155,25 @@ build:win:
   variables:
     ELECTRON_CACHE: "$CI_PROJECT_DIR/.cache/electron"
     ELECTRON_BUILDER_CACHE: "$CI_PROJECT_DIR/.cache/electron-builder"
+    # 7za etait tue par un signal (exit code null) pendant la compression du
+    # payload NSIS. Mesure sur une charge comparable (294 Mo) :
+    #
+    #   niveau   duree   memoire de pointe   archive   decompression
+    #   -mx=1     1,9 s          41 Mo        101 Mo       5,8 s
+    #   -mx=5      27 s         971 Mo         80 Mo       4,5 s
+    #   -mx=9      72 s         966 Mo         74 Mo       3,2 s
+    #
+    # -mx=9 est le defaut d'electron-builder pour le format 7z, quel que soit
+    # `compression` (seul "store" donne -mx=0). Un pic a ~1 Go pour une etape
+    # de compression, sur un runner conteneurise, c'est le profil d'un OOM.
+    #
+    # -mx=5 ne gagne RIEN en memoire : il n'existe pas de compromis
+    # intermediaire, seul -mx=1 sort du regime gourmand.
+    #
+    # Contrepartie assumee : le .exe grossit d'environ un tiers et se
+    # decompresse un peu plus lentement (archive plus grosse a lire). Si le
+    # runner peut disposer de 2 Go, retirer cette ligne rend les 74 Mo.
+    ELECTRON_BUILDER_COMPRESSION_LEVEL: "1"
   cache:
     key: wine-electron-cache
     paths:
@@ -212,7 +231,9 @@ smoke:linux:
       allow_failure: true
   before_script:
     - apt-get update -qq
-    - apt-get install -y -qq --no-install-recommends xvfb
+    # xvfb-run appelle xauth pour fabriquer son cookie : sans lui il sort
+    # « xvfb-run: error: xauth command not found ». Le paquet xvfb ne le tire pas.
+    - apt-get install -y -qq --no-install-recommends xvfb xauth
   script:
     - apt-get install -y -qq ./dist/*.deb
     - export SMOKE_BIN=/opt/electron-launcher/wynd-electron-launcher
