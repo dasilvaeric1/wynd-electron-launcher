@@ -120,6 +120,17 @@ tags, c'est le canal que le control-center consomme).
     `display-removed`, `display-metrics-changed`). Un écran déjà branché au
     lancement n'émet aucun événement : c'est à ça que sert « Rechercher les
     écrans » dans le panneau.
+  - ⚠️ **Wayland** : un client n'a pas le droit de positionner ses fenêtres.
+    Sans forcer X11, la fenêtre client atterrit sur l'écran de la caisse alors
+    que les logs annoncent le bon écran. Le `.desktop` du paquet passe donc
+    `--ozone-platform=x11` (sous XWayland les deux écrans forment un seul
+    espace X, le placement redevient possible).
+    **Le poser dans `[commandline]` de `config.ini` ne marche PAS** : Chromium
+    lit ce drapeau avant notre JS, il est accepté, journalisé… et sans effet.
+    Mesuré sur Rocky 10 — le process GPU démarrait en `ozone-platform=wayland`.
+    Seules voies valides : argv, ou `ELECTRON_OZONE_PLATFORM_HINT`.
+    Au démarrage le launcher compare la position obtenue à celle demandée et
+    journalise `[CUSTOMER] PLACEMENT IGNORE` si le compositeur l'a ignorée.
 - Section `[log]` (niveaux `main`/`renderer`/`app` = `info|debug|error|warn`) +
   capture des logs JS du SCO/POS (voir « Logs & capture SCO » plus bas) :
   - `persist_app=1` — écrit les logs SCO dans `logs/app/` (interrupteur maître fichier).

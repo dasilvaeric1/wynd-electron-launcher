@@ -50,6 +50,7 @@
       "description": "Affiche le point de vente Octipas en plein ecran sur les caisses.",
       "desktop": {
         "entry": {
+          "Exec": "/opt/electron-launcher/wynd-electron-launcher --ozone-platform=x11 %U",
           "Name": "Caisse Octipas",
           "GenericName": "Point de vente",
           "Comment": "Ouvre la caisse Octipas",

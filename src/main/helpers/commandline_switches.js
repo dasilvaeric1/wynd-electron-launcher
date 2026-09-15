@@ -22,6 +22,19 @@ function removeUnsafeSwitches(commandLine, log, argv = process.argv) {
   }
 }
 
+/**
+ * Drapeaux que Chromium lit AVANT que notre JS puisse s'executer : les poser
+ * avec appendSwitch les accepte sans erreur et ne change rien. Le piege est
+ * qu'on les voyait alors journalises comme appliques.
+ *
+ * `ozone-platform` en est le cas typique : il decide du backend graphique et
+ * doit arriver par argv (`--ozone-platform=x11`, ce que fait le .desktop) ou
+ * par l'environnement (`ELECTRON_OZONE_PLATFORM_HINT`). Mesure sur une caisse
+ * Rocky 10 : pose par config.ini, le process GPU demarrait malgre tout en
+ * `ozone-platform=wayland`.
+ */
+const TOO_LATE_SWITCHES = new Set(["ozone-platform", "ozone-platform-hint"]);
+
 function applyConfiguredSwitches(commandLine, switches, log) {
   if (!switches || typeof switches !== "object") return;
 
@@ -31,9 +44,22 @@ function applyConfiguredSwitches(commandLine, switches, log) {
       continue;
     }
 
+    if (TOO_LATE_SWITCHES.has(normalizeSwitchName(commandName))) {
+      log.warn(
+        `[COMMANDLINE] > ${commandName} SANS EFFET depuis config.ini : ` +
+          `Chromium l'a deja lu. Passer par argv (.desktop) ou par ` +
+          `ELECTRON_OZONE_PLATFORM_HINT.`,
+      );
+      continue;
+    }
+
     commandLine.appendSwitch(commandName, value);
     log.info(`[COMMANDLINE] > ${commandName}, ${value}`);
   }
 }
 
-module.exports = { applyConfiguredSwitches, removeUnsafeSwitches };
+module.exports = {
+  applyConfiguredSwitches,
+  removeUnsafeSwitches,
+  TOO_LATE_SWITCHES,
+};

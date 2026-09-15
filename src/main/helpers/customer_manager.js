@@ -174,9 +174,19 @@ function choisirEcran(store, index) {
  * imposait un redemarrage.
  */
 function init(store) {
+  // Les evenements arrivent en rafale : passer la container en plein ecran
+  // modifie la zone de travail, ce qui emet display-metrics-changed, mesure
+  // sur la caisse de test a 4 fois dans la meme seconde. `appliquer` est
+  // idempotent donc rien ne cassait, mais on re-enumerait les ecrans quatre
+  // fois pour rien. Un anti-rebond court replie la rafale en un seul passage.
+  let attente = null;
   const surChangement = (quoi) => () => {
     log.info(`[CUSTOMER] ${quoi}`);
-    rafraichir(store);
+    if (attente) clearTimeout(attente);
+    attente = setTimeout(() => {
+      attente = null;
+      rafraichir(store);
+    }, 400);
   };
   screen.on("display-added", surChangement("ecran branche"));
   screen.on("display-removed", surChangement("ecran debranche"));

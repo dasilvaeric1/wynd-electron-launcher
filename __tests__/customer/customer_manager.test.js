@@ -216,14 +216,33 @@ describe("branchement a chaud", () => {
   it("ouvre la fenetre au branchement d un second ecran", () => {
     // Le cas qui imposait un redemarrage avant : le launcher demarre sur un
     // seul ecran, le technicien branche l'ecran client ensuite.
+    jest.useFakeTimers();
     const store = makeStore({ enable: true, url: "http://c" }, 1);
     manager.init(store);
     expect(fabriqueFenetre).not.toHaveBeenCalled();
 
     mockEcrans.liste = [display(), display({ x: 1920 })];
     mockAbonnements["display-added"]();
+    jest.advanceTimersByTime(500);
 
     expect(fabriqueFenetre).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
+  });
+
+  it("replie une rafale d evenements en un seul rafraichissement", () => {
+    // Mesure sur la caisse : passer la container en plein ecran emet
+    // display-metrics-changed 4 fois dans la meme seconde.
+    jest.useFakeTimers();
+    const store = makeStore({ enable: true, url: "http://c" }, 1);
+    manager.init(store);
+    fabriqueFenetre.mockClear();
+
+    mockEcrans.liste = [display(), display({ x: 1920 })];
+    for (let i = 0; i < 4; i += 1) mockAbonnements["display-metrics-changed"]();
+    jest.advanceTimersByTime(500);
+
+    expect(fabriqueFenetre).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
   });
 });
 

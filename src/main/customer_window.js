@@ -66,10 +66,39 @@ module.exports = function generateCustomerWindow(store, ecran) {
   customerWindow.once("ready-to-show", () => {
     log.debug("[CUSTOMER] fenetre prete");
     customerWindow.show();
-    // setFullScreen apres show : sur Linux/Wayland, appele avant, le plein
-    // ecran atterrit sur l'ecran courant du compositeur et pas sur celui
-    // qu'on vient de cibler par x/y.
+    // setFullScreen apres show : appele avant, le plein ecran atterrit sur
+    // l'ecran courant du compositeur et pas sur celui qu'on vient de cibler.
     customerWindow.setFullScreen(true);
+
+    // Verification du placement REEL, et pas seulement de ce qu'on a demande.
+    //
+    // Sous Wayland, un client n'a PAS le droit de positionner ses fenetres :
+    // les x/y passes au constructeur sont ignores par le compositeur, et le
+    // plein ecran s'applique a l'ecran ou il a decide de la poser. La fenetre
+    // se retrouve alors sur l'ecran de la caisse, par-dessus le POS, alors que
+    // les logs annoncent l'ecran client. Sans ce controle, l'ecart est
+    // invisible a distance — il faut quelqu'un devant la caisse pour le voir.
+    //
+    // Sous X11/XWayland les deux ecrans forment un seul espace et le
+    // positionnement fonctionne.
+    setTimeout(() => {
+      if (customerWindow.isDestroyed()) return;
+      const reel = customerWindow.getBounds();
+      const ecartX = Math.abs(reel.x - ecran.x);
+      const ecartY = Math.abs(reel.y - ecran.y);
+      if (ecartX > 8 || ecartY > 8) {
+        log.warn(
+          `[CUSTOMER] PLACEMENT IGNORE : demande ${ecran.x},${ecran.y} ` +
+            `-> obtenu ${reel.x},${reel.y}. Typique de Wayland, qui interdit a ` +
+            `un client de se positionner. Relancer avec --ozone-platform=x11.`,
+        );
+      } else {
+        log.info(
+          `[CUSTOMER] placement confirme a ${reel.x},${reel.y} ` +
+            `(${reel.width}x${reel.height})`,
+        );
+      }
+    }, 1200);
   });
 
   customerWindow.webContents.on(

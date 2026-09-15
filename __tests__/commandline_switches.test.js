@@ -104,3 +104,22 @@ test("production scaffold does not disable TLS certificate validation", () => {
 
   expect(scaffold).not.toMatch(/ignore-(certificate|ssl)-errors/i);
 });
+test("ozone-platform via config.ini est refuse et signale, pas applique en silence", () => {
+  // Mesure sur une caisse Rocky 10 : le drapeau etait journalise comme
+  // applique, et le process GPU demarrait quand meme en wayland. Un
+  // avertissement vaut mieux qu'une reussite apparente — c'est ce qui a coute
+  // le plus de temps a diagnostiquer.
+  const appendSwitch = jest.fn();
+  const warn = jest.fn();
+
+  applyConfiguredSwitches(
+    { appendSwitch },
+    { "ozone-platform": "x11", "disable-http-cache": "true" },
+    { info: jest.fn(), warn },
+  );
+
+  // Le drapeau utile passe, celui qui arrive trop tard est ecarte.
+  expect(appendSwitch).toHaveBeenCalledTimes(1);
+  expect(appendSwitch).toHaveBeenCalledWith("disable-http-cache", "true");
+  expect(warn).toHaveBeenCalledWith(expect.stringContaining("SANS EFFET"));
+});
