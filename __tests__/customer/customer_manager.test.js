@@ -54,6 +54,7 @@ jest.mock("../../src/main/customer_window", () => {
         win.bounds = b;
       }),
       setFullScreen: jest.fn(),
+      setBackgroundColor: jest.fn(),
       loadURL: jest.fn(() => Promise.resolve()),
     };
     mockFenetres.push(win);
@@ -126,15 +127,15 @@ describe("ouverture", () => {
     expect(fabriqueFenetre).toHaveBeenCalledTimes(1);
     // Bornes de l'ecran 1, pas de l'ecran 0 qui porte la caisse.
     expect(fabriqueFenetre.mock.calls[0][1].x).toBe(1920);
-    expect(mockFenetres[0].loadURL).toHaveBeenCalledWith("http://c");
+    // L'url part a la fabrique, qui l'enchaine APRES l'ecran d'attente : la
+    // charger depuis le gestionnaire la mettait en concurrence avec lui.
+    expect(fabriqueFenetre.mock.calls[0][2]).toBe("http://c");
   });
 
-  it("ouvre sans charger d url en mode attente", () => {
-    // La fenetre affiche deja l'ecran d'attente : un loadURL de plus le
-    // remplacerait par lui-meme et ferait clignoter l'ecran.
+  it("ouvre sans url en mode attente", () => {
     manager.appliquer(makeStore({ enable: true }));
     expect(fabriqueFenetre).toHaveBeenCalledTimes(1);
-    expect(mockFenetres[0].loadURL).not.toHaveBeenCalled();
+    expect(fabriqueFenetre.mock.calls[0][2]).toBeNull();
   });
 
   it("est idempotent : deux appels ne creent qu une fenetre", () => {
@@ -158,8 +159,9 @@ describe("deplacement et fermeture", () => {
     expect(fabriqueFenetre).toHaveBeenCalledTimes(1);
     expect(win.setBounds).toHaveBeenCalled();
     expect(win.bounds.x).toBe(0);
-    // Recharger la page ferait clignoter un ecran face client pour rien.
-    expect(win.loadURL).toHaveBeenCalledTimes(1);
+    // Une seule construction : on deplace, on ne recharge pas. Recharger
+    // ferait clignoter un ecran face client pour rien.
+    expect(fabriqueFenetre).toHaveBeenCalledTimes(1);
   });
 
   it("ferme la fenetre quand le second ecran disparait", () => {

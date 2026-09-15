@@ -68,7 +68,8 @@ module.exports =  function defaultConfig(config, log) {
 		config.customer = {
 			enable: false,
 			url: null,
-			screen: null
+			screen: null,
+			background: null
 		}
 	}
 

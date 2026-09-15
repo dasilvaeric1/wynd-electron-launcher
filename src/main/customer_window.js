@@ -6,6 +6,22 @@ const log = require("./helpers/electron_log");
 const getAssetPath = require("./helpers/get_asset");
 
 /**
+ * Fond par defaut sous une page distante.
+ *
+ * Le fond de la fenetre ne se voit que la ou la page ne peint pas. L'ecran
+ * d'attente peint tout, donc son fond sombre n'a d'effet qu'avant le premier
+ * rendu — c'est pour ca que la fenetre nait sombre, sans flash. Une page
+ * distante, elle, peut tres bien ne rien peindre : /customer-display du POS
+ * est dans ce cas, et le sombre de la fenetre transparaissait. Le blanc est
+ * ce que tout navigateur met sous une page sans fond ; c'est donc ce qu'une
+ * telle page suppose.
+ */
+const FOND_PAGE_DEFAUT = "#ffffff";
+
+/** Fond de la fenetre au demarrage : celui de l'ecran d'attente. */
+const FOND_ATTENTE = "#18211e";
+
+/**
  * Ecran d'attente Octipas. Page locale et autonome : elle s'affiche meme sans
  * reseau, et des la premiere frame.
  */
@@ -25,13 +41,13 @@ const IDLE_URL = url.format({
  * La container, elle, reste la seule fenetre pilotable et la seule capturee par
  * la visu distante.
  */
-module.exports = function generateCustomerWindow(store, ecran) {
+module.exports = function generateCustomerWindow(store, ecran, urlClient, fondPage) {
   const customerWindow = new BrowserWindow({
     show: false,
     frame: false,
     // Sans fond explicite, Chromium peint en BLANC avant le premier rendu.
     // Face client, sur un ecran de magasin, le flash blanc est tres visible.
-    backgroundColor: "#11141E",
+    backgroundColor: FOND_ATTENTE,
     x: ecran.x,
     y: ecran.y,
     width: ecran.width,
@@ -118,13 +134,31 @@ module.exports = function generateCustomerWindow(store, ecran) {
     },
   );
 
-  // L'attente s'affiche AVANT toute page distante : la fenetre n'est donc
-  // jamais ni noire ni blanche, y compris pendant un chargement lent.
-  customerWindow.loadURL(IDLE_URL).catch((err) => {
-    log.error(`[CUSTOMER] ecran d'attente KO: ${err.message}`);
-  });
+  // Sequence, et PAS deux chargements concurrents : l'ecran d'attente d'abord,
+  // affiche des qu'il est pret, la page client ensuite. Lances en parallele,
+  // les deux se couraient apres et `ready-to-show` partait pour celui qui
+  // gagnait — l'attente n'apparaissait alors jamais, ce qui vide de son sens
+  // le fait de l'avoir.
+  customerWindow
+    .loadURL(IDLE_URL)
+    .then(() => {
+      if (!urlClient || customerWindow.isDestroyed()) return;
+      // Le fond bascule AVANT le chargement : la page distante s'affichera
+      // donc sur le fond qu'elle attend, et pas sur celui de l'attente.
+      const fond = fondPage || FOND_PAGE_DEFAUT;
+      customerWindow.setBackgroundColor(fond);
+      log.debug(`[CUSTOMER] chargement de la page client (fond ${fond})`);
+      return customerWindow.loadURL(urlClient).catch((err) => {
+        // Le repli est deja gere par did-fail-load : l'attente reste affichee.
+        log.warn(`[CUSTOMER] page client KO: ${err.message}`);
+      });
+    })
+    .catch((err) => {
+      log.error(`[CUSTOMER] ecran d'attente KO: ${err.message}`);
+    });
 
   return customerWindow;
 };
 
 module.exports.IDLE_URL = IDLE_URL;
+module.exports.FOND_PAGE_DEFAUT = FOND_PAGE_DEFAUT;

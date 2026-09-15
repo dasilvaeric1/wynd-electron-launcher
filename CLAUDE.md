@@ -120,6 +120,10 @@ tags, c'est le canal que le control-center consomme).
     `display-removed`, `display-metrics-changed`). Un écran déjà branché au
     lancement n'émet aucun événement : c'est à ça que sert « Rechercher les
     écrans » dans le panneau.
+  - `background=` — fond de la fenêtre, visible **là où la page ne peint
+    pas**. Défaut : blanc sous une page distante (ce que met tout
+    navigateur), sombre en écran d'attente. Le `/customer-display` du POS
+    ne peint pas son fond : sans ce basculement, le sombre transparaissait.
   - ⚠️ **Wayland** : un client n'a pas le droit de positionner ses fenêtres.
     Sans forcer X11, la fenêtre client atterrit sur l'écran de la caisse alors
     que les logs annoncent le bon écran. Le `.desktop` du paquet passe donc

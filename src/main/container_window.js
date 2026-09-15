@@ -78,6 +78,15 @@ module.exports = function generatecontainerWindow(store) {
       pm2.delete(package.pm2.process[0].name);
     }
     store.windows.container.current = null;
+    // L'ecran client est volontairement `closable: false` — un client ne doit
+    // pas pouvoir le fermer. Consequence : il survit a la fermeture de la
+    // caisse, `window-all-closed` ne se declenche jamais, et le launcher reste
+    // vivant sans fenetre visible. Il faut donc le detruire explicitement.
+    try {
+      require("./helpers/customer_manager").fermer(store);
+    } catch (err) {
+      log.error(`[CUSTOMER] fermeture a la sortie: ${err.message}`);
+    }
   });
   containerWindow.removeMenu();
   containerWindow.on("show", () => {

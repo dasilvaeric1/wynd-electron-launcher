@@ -198,6 +198,13 @@ app.commandLine.appendSwitch("disable-http-cache");
 
 app.on("will-quit", async (e) => {
   globalShortcut.unregisterAll();
+  // Filet : si la container n'est pas passee par son handler `closed`, la
+  // fenetre client empecherait le process de se terminer.
+  try {
+    require("./helpers/customer_manager").fermer(store);
+  } catch (err) {
+    log.error(`[CUSTOMER] fermeture a la sortie: ${err.message}`);
+  }
   teardownScreenSessions();
   // Ferme le chunk de trace en cours : il finira d'être uploadé au prochain
   // démarrage (récupération du partiel) si le quit coupe l'envoi.

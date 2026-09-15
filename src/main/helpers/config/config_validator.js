@@ -848,6 +848,12 @@ const schema = {
         screen: {
           type: ["integer", "null"],
         },
+        // Fond de la fenetre, visible la ou la page ne peint pas. Defaut
+        // blanc sous une page distante (cf customer_window), sombre en
+        // ecran d'attente.
+        background: {
+          type: ["string", "null"],
+        },
       },
       additionalProperties: false,
     },

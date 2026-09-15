@@ -132,16 +132,17 @@ function appliquer(store) {
       resolu.mode === MODE.PAGE ? conf.url : "ecran d'attente"
     }`,
   );
-  const win = generateCustomerWindow(store, ecran);
+  // L'url est passee a la fabrique, qui l'enchaine APRES l'ecran d'attente.
+  // La charger ici la mettait en concurrence avec l'attente, et l'abandon de
+  // celle-ci remontait en erreur alors qu'il etait voulu.
+  const win = generateCustomerWindow(
+    store,
+    ecran,
+    resolu.mode === MODE.PAGE ? conf.url : null,
+    conf.background || null,
+  );
   store.windows.customer.current = win;
   store.windows.customer.screenIndex = index;
-  // La fenetre affiche deja l'ecran d'attente : la page client ne fait que le
-  // remplacer une fois chargee. Rien a faire en mode attente.
-  if (resolu.mode === MODE.PAGE) {
-    win.loadURL(conf.url).catch((err) => {
-      log.warn(`[CUSTOMER] loadURL KO: ${err.message}`);
-    });
-  }
   pousserEtat(store);
 }
 
