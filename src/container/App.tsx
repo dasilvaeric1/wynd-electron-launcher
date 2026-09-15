@@ -27,6 +27,8 @@ import DiagnosticsDashboard, {
 } from "./components/DiagnosticsDashboard";
 import SchedulerDetail from "./components/SchedulerDetail";
 import { useSchedulerTasks } from "./components/SchedulerTasks";
+import CustomerDisplayDetail from "./components/CustomerDisplayDetail";
+import { useCustomerDisplay } from "./components/CustomerDisplay";
 // import { ICustomWindow } from '../helpers/interface'
 
 export interface IAppProps {
@@ -63,6 +65,10 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
   // de detail lisent la meme source (cf useSchedulerTasks).
   const { taches, resultat, setResultat } = useSchedulerTasks();
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // Ecran client : le main pousse l'etat de lui-meme a chaque branchement.
+  const ecranClient = useCustomerDisplay();
+  const [ecransOpen, setEcransOpen] = useState(false);
 
   const displayPluginState = useMemo(() => {
     return conf ? conf.display_plugin_state.enable : false;
@@ -288,6 +294,10 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
       setDetailOpen(true);
       return;
     }
+    if (action === TNextAction.CUSTOMER_SCREENS) {
+      setEcransOpen(true);
+      return;
+    }
     props.onCallback(action, ...data);
   };
 
@@ -304,6 +314,8 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
       // Voir le detail des taches, et donc pouvoir les rejouer, est une action
       // d'exploitation : meme code superviseur que le reste du menu.
       case TNextAction.SCHEDULER_DETAIL:
+      // Deplacer la page client change ce que voit le public : meme garde-fou.
+      case TNextAction.CUSTOMER_SCREENS:
         if (
           conf &&
           conf.menu &&
@@ -369,7 +381,11 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
           // le dashboard "Périphériques" (pas de voile sombre par-dessus).
           mask={!conf?.wpt?.enable}
         >
-          <Menu onMenuClick={onMenuClick} taches={taches} />
+          <Menu
+            onMenuClick={onMenuClick}
+            taches={taches}
+            ecranClient={ecranClient}
+          />
           {loader.active && <LoaderComponent />}
           {conf && conf.title && !conf.frame && <Title title={conf.title} />}
         </Drawer>
@@ -436,6 +452,11 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
         <Emergency visible={menu.open} onClick={onClickEmergency} />
       )}
       {pinpad.code && <PinPad code={pinpad.code} onSuccess={onPinpadSuccess} />}
+      <CustomerDisplayDetail
+        open={ecransOpen}
+        etat={ecranClient}
+        onClose={() => setEcransOpen(false)}
+      />
       <SchedulerDetail
         open={detailOpen}
         taches={taches}

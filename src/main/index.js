@@ -116,6 +116,13 @@ const store = {
       width: 420,
       height: 260,
     },
+    // Ecran client (face public d'une caisse a deux ecrans). Absent tant que
+    // la section [customer] n'est pas configuree ou qu'aucun ecran libre
+    // n'existe — cf helpers/customer_manager.
+    customer: {
+      current: null,
+      screenIndex: null,
+    },
   },
   pm2: {
     connected: false,

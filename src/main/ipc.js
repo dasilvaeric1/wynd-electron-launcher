@@ -26,6 +26,7 @@ const { buildBootPlan } = require("../helpers/boot_plan");
 const { getCentralPresence, getCentralConfig } = require("./screen_session");
 const { sendIncident } = require("./helpers/incident_report");
 const schedulerTasks = require("./helpers/scheduler_tasks");
+const customerManager = require("./helpers/customer_manager");
 const { reportBootFailure } = require("./helpers/boot_failure");
 
 module.exports = function generateIpc(store, initCallback) {
@@ -233,6 +234,30 @@ module.exports = function generateIpc(store, initCallback) {
       const tasks = await schedulerTasks.fetchTasks();
       store.windows.container.current.webContents.send("scheduler.tasks", tasks);
     }
+  });
+
+  // --- Ecran client ---
+  //
+  // Le panneau demande l'etat a l'ouverture, puis le main le repousse tout seul
+  // a chaque branchement d'ecran (cf customer_manager.init) : c'est justement
+  // au moment ou un technicien branche l'ecran que la liste doit bouger sans
+  // qu'il ait a rafraichir.
+
+  ipcMain.on("customer.ask", () => {
+    customerManager.pousserEtat(store);
+  });
+
+  // « Rechercher les ecrans » : re-enumere a l'instant t. Sert quand l'ecran a
+  // ete branche avant le lancement du launcher, cas ou aucun evenement Electron
+  // ne se declenche.
+  ipcMain.on("customer.refresh", () => {
+    log.info("[CUSTOMER] recherche des ecrans demandee depuis le panneau");
+    customerManager.rafraichir(store);
+  });
+
+  // Choix manuel. `null` rend la main a config.ini.
+  ipcMain.on("customer.set", (event, index) => {
+    customerManager.choisirEcran(store, index);
   });
 
   ipcMain.on("container.response", (event, action, data) => {

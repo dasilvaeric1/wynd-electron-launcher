@@ -36,6 +36,9 @@ src/local/*
 # le zip electron-builder via "files: [src/local/]"
 !src/local/screen_consent.html
 !src/local/screen_consent.js
+# Idem pour l'ecran d'attente client : sans cette exception, la CI livrerait
+# un launcher dont la fenetre client pointe sur un fichier absent.
+!src/local/customer_idle.html
 config.ini
 app-update.yml
 test/*

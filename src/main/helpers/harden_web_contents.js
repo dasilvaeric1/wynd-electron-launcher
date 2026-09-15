@@ -38,6 +38,17 @@ function hardenWebContents(store) {
       // URL de conf non parsable → elle n'entre pas dans les origines permises.
       log.debug(`[NAV] url de conf non parsable: ${err.message}`);
     }
+    // L'ecran client vit sur sa propre origine : sans ca, EL_STRICT_NAV=1
+    // bloquerait la page face public alors qu'elle est explicitement
+    // configuree par l'exploitant.
+    try {
+      const custUrl = store?.conf?.customer?.url;
+      if (custUrl && /^https?:/i.test(String(custUrl))) {
+        origins.add(new URL(String(custUrl)).origin);
+      }
+    } catch (err) {
+      log.debug(`[NAV] url ecran client non parsable: ${err.message}`);
+    }
     return origins;
   };
 

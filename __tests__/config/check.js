@@ -38,6 +38,8 @@ describe("Validation config", () => {
       view: 'iframe',
       emergency: { enable: false },
       clear_cache_on_start: false,
+      // Ecran client : inactif tant qu'aucune page n'est configuree.
+      customer: { enable: false, url: null, screen: null },
       display_plugin_state: { enable: false },
       wpt: {
         enable: false,
@@ -160,6 +162,8 @@ describe("Validation config", () => {
       view: 'iframe',
       emergency: { enable: false },
       clear_cache_on_start: false,
+      // Ecran client : inactif tant qu'aucune page n'est configuree.
+      customer: { enable: false, url: null, screen: null },
       display_plugin_state: { enable: false },
       central: { enable: false, mode: 'AUTO' },
       report: { enable: false },

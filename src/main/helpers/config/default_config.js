@@ -61,6 +61,17 @@ module.exports =  function defaultConfig(config, log) {
 		}
 	}
 
+	// Ecran client : desactive tant que l'exploitant n'a pas pose une url.
+	// `enable: true` sans url resterait inactif de toute facon (cf
+	// resolveCustomerScreen), mais le dire ici evite d'avoir a le deduire.
+	if (!config.customer) {
+		config.customer = {
+			enable: false,
+			url: null,
+			screen: null
+		}
+	}
+
 	if (!config.wpt) {
 		config.wpt = {
 			enable: false,

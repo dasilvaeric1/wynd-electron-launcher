@@ -49,6 +49,7 @@ export enum TNextAction {
   "OPEN_DEV_TOOLS" = "OPEN_DEV_TOOLS",
   "SCHEDULER_RUN" = "SCHEDULER_RUN",
   "SCHEDULER_DETAIL" = "SCHEDULER_DETAIL",
+  "CUSTOMER_SCREENS" = "CUSTOMER_SCREENS",
 }
 
 export function setWPTPluginsAction(

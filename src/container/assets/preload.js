@@ -20,6 +20,9 @@ const SEND_CHANNELS = [
   "main.action",
   "scheduler.refresh",
   "scheduler.run",
+  "customer.ask",
+  "customer.refresh",
+  "customer.set",
   "request_wpt",
   "child.action",
   "container.response",
@@ -46,6 +49,7 @@ const RECEIVE_CHANNELS = [
   "incident.result",
   "scheduler.tasks",
   "scheduler.run.result",
+  "customer.state",
 ];
 
 // --- Logger (initialise a l'arrivee de l'IPC user_path) ---

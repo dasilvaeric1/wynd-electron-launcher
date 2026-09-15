@@ -826,6 +826,31 @@ const schema = {
       required: ["enable"],
       additionalProperties: false,
     },
+    // Ecran client : page face public d'une caisse a deux ecrans.
+    // Aucune valeur par defaut pour `url` — on n'invente pas une page a
+    // montrer a un client. Sans url, l'ecran client reste simplement inactif.
+    customer: {
+      type: "object",
+      properties: {
+        enable: {
+          allOf: [
+            {
+              coerce_boolean: true,
+            },
+          ],
+        },
+        url: {
+          type: ["string", "null"],
+        },
+        // Index d'ecran, comme la cle `screen` racine. Absent = premier ecran
+        // qui n'est pas celui de la caisse, ce qui couvre le cas courant a
+        // deux ecrans sans rien avoir a regler.
+        screen: {
+          type: ["integer", "null"],
+        },
+      },
+      additionalProperties: false,
+    },
     menu: {
       type: "object",
       properties: {

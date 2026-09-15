@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Octipas POS</title>
+		<style>
+			/*
+			 * Ecran client au repos.
+			 *
+			 * Page AUTONOME : aucune ressource externe, aucune police a telecharger.
+			 * Elle est chargee en file:// et doit s'afficher des la premiere frame,
+			 * y compris sur une caisse sans reseau.
+			 *
+			 * Palette alignee sur le loader (src/loader/App.less) et sur le panneau
+			 * lateral : le client et le caissier regardent deux ecrans de la meme
+			 * machine, ils doivent appartenir au meme produit.
+			 *
+			 * Contrainte de fond : cette page tourne des heures d'affilee sur du
+			 * materiel ancien. Seules `transform` et `opacity` sont animees — elles
+			 * sont composees par le GPU et ne declenchent ni layout ni repaint. Pas
+			 * de canvas, pas de requestAnimationFrame, pas de JS du tout.
+			 */
+			:root {
+				--bg1: #1c2234;
+				--bg2: #11141e;
+				--accent: #425176;
+				--accent-clair: #94a4cb;
+				--text: #f2f4f9;
+				--dim: #a7b0c8;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			html,
+			body {
+				width: 100%;
+				height: 100%;
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+				background: var(--bg2);
+			}
+
+			body {
+				display: grid;
+				place-items: center;
+				font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+				color: var(--text);
+				/* Un ecran face public n'a aucune raison d'etre selectionnable. */
+				user-select: none;
+				cursor: none;
+				background:
+					radial-gradient(120% 85% at 100% 0%, var(--accent) 0%, transparent 58%),
+					linear-gradient(158deg, var(--bg1) 0%, var(--bg2) 100%);
+			}
+
+			.scene {
+				position: relative;
+				display: grid;
+				place-items: center;
+				/* Les ecrans clients vont du 1024x768 au bandeau tres large :
+				   on dimensionne au plus petit cote pour rester centre et lisible
+				   sur les deux, sans media query. */
+				width: min(70vw, 70vh);
+				height: min(70vw, 70vh);
+			}
+
+			/* Halo qui respire. Seule couche animee de la page. */
+			.halo {
+				position: absolute;
+				width: 100%;
+				height: 100%;
+				background: radial-gradient(
+					circle at 50% 50%,
+					var(--accent) 0%,
+					color-mix(in srgb, var(--accent) 45%, transparent) 38%,
+					transparent 68%
+				);
+				border-radius: 50%;
+				opacity: 0.35;
+				filter: blur(6px);
+				/* Promue sur sa propre couche : le compositeur l'anime sans
+				   retoucher au reste de la page. */
+				will-change: transform, opacity;
+				animation: respiration 6s ease-in-out infinite;
+			}
+
+			@keyframes respiration {
+				0%,
+				100% {
+					transform: scale(1);
+					opacity: 0.35;
+				}
+				50% {
+					transform: scale(1.18);
+					opacity: 0.6;
+				}
+			}
+
+			.contenu {
+				position: relative;
+				display: grid;
+				gap: 14px;
+				justify-items: center;
+				text-align: center;
+			}
+
+			/* Meme pastille que l'en-tete du loader. */
+			.marque {
+				display: grid;
+				place-items: center;
+				width: clamp(44px, 7vmin, 72px);
+				height: clamp(44px, 7vmin, 72px);
+				font-size: clamp(20px, 3.2vmin, 32px);
+				font-weight: 700;
+				color: #fff;
+				background: linear-gradient(145deg, #5c6e9e, var(--accent));
+				border-radius: clamp(10px, 1.6vmin, 16px);
+				box-shadow: inset 0 1px 0 #ffffff33;
+			}
+
+			.titre {
+				font-size: clamp(26px, 5.2vmin, 62px);
+				font-weight: 650;
+				/* L'interlettrage tient le mot ensemble aux grandes tailles. */
+				letter-spacing: 0.06em;
+				line-height: 1.05;
+			}
+
+			.editeur {
+				font-size: clamp(11px, 1.7vmin, 19px);
+				font-weight: 500;
+				color: var(--dim);
+				letter-spacing: 0.34em;
+				text-transform: uppercase;
+				/* L'interlettrage ajoute une avance a droite du dernier caractere :
+				   sans compensation, le mot n'est pas optiquement centre. */
+				text-indent: 0.34em;
+			}
+
+			/*
+			 * Accessibilite et confort : certains systemes de caisse sont configures
+			 * pour limiter les animations, et un mouvement permanent dans le champ de
+			 * vision peut gener. Le halo reste alors fixe, a son opacite moyenne.
+			 */
+			@media (prefers-reduced-motion: reduce) {
+				.halo {
+					animation: none;
+					opacity: 0.48;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="scene">
+			<div class="halo" aria-hidden="true"></div>
+			<div class="contenu">
+				<div class="marque" aria-hidden="true">O</div>
+				<div class="titre">Octipas POS</div>
+				<div class="editeur">ChapsVision</div>
+			</div>
+		</div>
+	</body>
+</html>

@@ -18,6 +18,7 @@ import LogoMenu from "./Logo";
 import Device from "./Device";
 import CentralPresence from "./CentralPresence";
 import SchedulerTasks, { ITache } from "./SchedulerTasks";
+import CustomerDisplay, { ICustomerState } from "./CustomerDisplay";
 import IncidentReport from "./IncidentReport";
 
 import { IRootState, IScreen } from "../interface";
@@ -33,6 +34,8 @@ export interface IMenuProps {
   onMenuClick: (action: TNextAction, ...data: any) => void;
   /** Etat des taches planifiees — l'abonnement IPC vit dans App. */
   taches: ITache[] | null;
+  /** Etat de l'ecran client — meme raison. */
+  ecranClient: ICustomerState | null;
 }
 
 const { info } = Modal;
@@ -192,6 +195,10 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
       <SchedulerTasks
         taches={props.taches}
         onOpenDetail={() => props.onMenuClick(TNextAction.SCHEDULER_DETAIL)}
+      />
+      <CustomerDisplay
+        etat={props.ecranClient}
+        onOpenDetail={() => props.onMenuClick(TNextAction.CUSTOMER_SCREENS)}
       />
       <Menu id="e-launcher-menu" items={generateItems()} />
       <IncidentReport open={incidentOpen} onClose={() => setIncidentOpen(false)} />

@@ -1076,7 +1076,8 @@
 .emergency-modal,
 .pinpad,
 .incident-report,
-.scheduler-detail {
+.scheduler-detail,
+.customer-detail {
 	.ant-modal-content,
 	.ant-modal-confirm-body-wrapper {
 		color: var(--el-text);
@@ -1199,12 +1200,13 @@
 // ---- Tâches planifiées (RetailScheduler) ----
 // Vue caissier : ce qui tourne, ce qui vient d'échouer, la prochaine échéance.
 // Sur fond sombre comme le reste du panneau.
-// ---- Taches planifiees : ligne de synthese du panneau ----
+// ---- Lignes de synthese du panneau (taches, ecran client) ----
 // Une ligne, une couleur. La version precedente listait chaque tache avec son
 // bouton ; les libelles du planificateur (« Etat de l unit vu par systemd… »)
 // depassaient les 340 px du panneau et provoquaient un scroll horizontal.
 // Tout ce qui se lit ou s'actionne est passe dans .scheduler-detail.
-.e-launcher-scheduler {
+.e-launcher-scheduler,
+.e-launcher-customer {
 	display: flex;
 	gap: 9px;
 	align-items: center;
@@ -1419,6 +1421,195 @@
 
 	.sd-error { color: var(--el-bad); }
 	.sd-ok { color: var(--el-ok); }
+}
+
+// ---- Choix de l'ecran client ----
+.customer-detail {
+	max-width: 94vw;
+
+	.cd-head {
+		display: flex;
+		gap: 12px;
+		align-items: center;
+		margin-bottom: 10px;
+	}
+
+	.cd-etat {
+		display: inline-flex;
+		gap: 7px;
+		align-items: center;
+		font-size: 12.5px;
+
+		.dot {
+			width: 8px;
+			height: 8px;
+			border-radius: 999px;
+		}
+
+		&.ok {
+			color: var(--el-ok);
+			.dot { background: var(--el-ok); }
+		}
+
+		&.warn {
+			color: var(--el-warn);
+			.dot { background: var(--el-warn); }
+		}
+	}
+
+	.cd-rescan {
+		margin-left: auto;
+		flex: none;
+		padding: 7px 12px;
+		font-family: inherit;
+		font-size: 11.5px;
+		font-weight: 600;
+		color: var(--el-text);
+		cursor: pointer;
+		background: #ffffff0f;
+		border: 1px solid var(--el-line);
+		border-radius: 6px;
+
+		&:hover { border-color: @antd-primary-color-hover; }
+
+		&:focus-visible {
+			outline: 2px solid @antd-primary-color-hover;
+			outline-offset: 2px;
+		}
+	}
+
+	.cd-url {
+		margin: 0 0 13px;
+		overflow: hidden;
+		font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+		font-size: 10.5px;
+		color: var(--el-faint);
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.cd-list {
+		display: grid;
+		gap: 8px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.cd-row {
+		display: flex;
+		gap: 10px;
+		align-items: center;
+		min-width: 0;
+		padding: 9px 11px;
+		background: #ffffff08;
+		border: 1px solid var(--el-line);
+		border-radius: 8px;
+
+		.ico {
+			flex: none;
+			width: 15px;
+			text-align: center;
+			color: var(--el-faint);
+		}
+
+		.txt {
+			display: flex;
+			flex: 1 1 auto;
+			flex-direction: column;
+			gap: 2px;
+			min-width: 0;
+		}
+
+		.nom {
+			overflow: hidden;
+			font-size: 12.5px;
+			color: var(--el-text);
+			white-space: nowrap;
+			text-overflow: ellipsis;
+		}
+
+		.meta {
+			font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+			font-size: 10px;
+			color: var(--el-faint);
+		}
+
+		&.pos {
+			border-color: color-mix(in srgb, var(--el-warn) 35%, transparent);
+			.ico { color: var(--el-warn); }
+		}
+
+		&.client {
+			border-color: color-mix(in srgb, var(--el-ok) 45%, transparent);
+			.ico { color: var(--el-ok); }
+		}
+	}
+
+	.cd-pick {
+		flex: none;
+		padding: 8px 13px;
+		font-family: inherit;
+		font-size: 11.5px;
+		font-weight: 600;
+		color: var(--el-text);
+		cursor: pointer;
+		background: #ffffff0f;
+		border: 1px solid var(--el-line);
+		border-radius: 6px;
+
+		&:hover { border-color: @antd-primary-color-hover; }
+
+		&:focus-visible {
+			outline: 2px solid @antd-primary-color-hover;
+			outline-offset: 2px;
+		}
+	}
+
+	.cd-actuel,
+	.cd-bloque {
+		flex: none;
+		padding: 0 8px;
+		font-size: 11px;
+	}
+
+	.cd-actuel { color: var(--el-ok); }
+	.cd-bloque { color: var(--el-faint); }
+
+	.cd-vide {
+		margin: 13px 0 0;
+		font-size: 12.5px;
+		color: var(--el-dim);
+	}
+
+	.cd-foot {
+		display: flex;
+		gap: 12px;
+		align-items: center;
+		margin-top: 15px;
+		padding-top: 12px;
+		border-top: 1px solid var(--el-line);
+	}
+
+	.cd-mode {
+		font-size: 11.5px;
+		color: var(--el-faint);
+	}
+
+	.cd-auto {
+		margin-left: auto;
+		flex: none;
+		padding: 0;
+		font-family: inherit;
+		font-size: 11.5px;
+		color: var(--el-dim);
+		cursor: pointer;
+		background: none;
+		border: 0;
+		text-decoration: underline;
+
+		&:hover { color: var(--el-text); }
+	}
 }
 
 @keyframes el-sched-spin {

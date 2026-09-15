@@ -10,6 +10,7 @@ const sendOnReady = require("./helpers/send_on_ready")
 const clearCache = require('./helpers/clear_cache')
 const getCentralRegister = require('./helpers/get_central_register')
 const { buildBootPlan } = require('../helpers/boot_plan')
+const customerManager = require('./helpers/customer_manager')
 
 module.exports = function generataInitCallback(store) {
 
@@ -275,6 +276,16 @@ module.exports = function generataInitCallback(store) {
 					!!store.windows.container.current && store.windows.container.current.maximize()
 				}
 				!!store.windows.loader.current && store.windows.loader.current.isVisible() && store.windows.loader.current.hide()
+
+				// Ecran client : ouvert APRES la caisse, pour que le POS garde le
+				// focus. `init` s'abonne aussi au branchement d'ecrans — sans ca
+				// un ecran client branche apres le demarrage n'etait jamais vu.
+				try {
+					customerManager.init(store)
+				} catch (err) {
+					// Un ecran client en echec ne doit jamais empecher d'encaisser.
+					log.error(`[CUSTOMER] initialisation KO: ${err.message}`)
+				}
 
 				break;
 			case 'action.notification':
