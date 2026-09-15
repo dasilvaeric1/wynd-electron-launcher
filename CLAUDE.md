@@ -102,6 +102,24 @@ tags, c'est le canal que le control-center consomme).
   `X-Frame-Options: sameorigin` (sinon l'iframe est bloquée). Le webview a son
   propre process.
 - `kiosk`, `full_screen`, `frame`, `menu.enable`, etc.
+- Section `[customer]` — **écran client** (face public d'une caisse à deux
+  écrans). `enable=1` pour l'activer, `url=` la page à afficher (facultative),
+  `screen=` l'index de l'écran (facultatif).
+  - Sans `screen`, le premier écran qui **n'est pas** celui de la caisse.
+  - Sans `url`, la fenêtre affiche l'écran d'attente Octipas
+    (`src/local/customer_idle.html`), qui sert aussi de fond pendant le
+    chargement et de repli si la page devient injoignable.
+  - ⚠️ Contrairement à la clé `screen=` racine, un index introuvable ne
+    **retombe pas** sur l'écran 0 : la fenêtre ne s'ouvre pas, et la raison
+    s'affiche dans le panneau latéral. Un repli poserait la page client
+    par-dessus le POS.
+  - Le choix fait depuis le panneau est persisté dans
+    `<userData>/customer_display.json` et **gagne sur `config.ini`** — une
+    poussée BO réécrit `config.ini` en entier et l'effacerait.
+  - Les écrans sont ré-énumérés au branchement à chaud (`display-added`,
+    `display-removed`, `display-metrics-changed`). Un écran déjà branché au
+    lancement n'émet aucun événement : c'est à ça que sert « Rechercher les
+    écrans » dans le panneau.
 - Section `[log]` (niveaux `main`/`renderer`/`app` = `info|debug|error|warn`) +
   capture des logs JS du SCO/POS (voir « Logs & capture SCO » plus bas) :
   - `persist_app=1` — écrit les logs SCO dans `logs/app/` (interrupteur maître fichier).
