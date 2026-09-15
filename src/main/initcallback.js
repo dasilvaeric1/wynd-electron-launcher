@@ -280,6 +280,14 @@ module.exports = function generataInitCallback(store) {
 				// Ecran client : ouvert APRES la caisse, pour que le POS garde le
 				// focus. `init` s'abonne aussi au branchement d'ecrans — sans ca
 				// un ecran client branche apres le demarrage n'etait jamais vu.
+				// Capture de diagnostic, sur demande explicite. Laisse le temps a
+				// la caisse et a l'ecran client de se poser avant de photographier.
+				if (process.env.EL_DEBUG_SHOT) {
+					setTimeout(() => {
+						require('./helpers/debug_shot')(process.env.EL_DEBUG_SHOT)
+					}, 12000)
+				}
+
 				try {
 					customerManager.init(store)
 				} catch (err) {
