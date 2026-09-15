@@ -113,14 +113,12 @@ function appliquer(store) {
     // un ecran face client pour rien.
     if (store.windows.customer.screenIndex !== index) {
       log.info(`[CUSTOMER] deplacement vers l'ecran ${index}`);
-      existante.setFullScreen(false);
       existante.setBounds({
         x: ecran.x,
         y: ecran.y,
         width: ecran.width,
         height: ecran.height,
       });
-      existante.setFullScreen(true);
       store.windows.customer.screenIndex = index;
     }
     pousserEtat(store);

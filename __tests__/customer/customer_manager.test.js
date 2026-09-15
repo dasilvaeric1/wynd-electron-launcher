@@ -54,6 +54,9 @@ jest.mock("../../src/main/customer_window", () => {
         win.bounds = b;
       }),
       setFullScreen: jest.fn(),
+      isFullScreen: () => true,
+      setAlwaysOnTop: jest.fn(),
+      moveTop: jest.fn(),
       setBackgroundColor: jest.fn(),
       loadURL: jest.fn(() => Promise.resolve()),
     };

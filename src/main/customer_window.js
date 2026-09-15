@@ -59,6 +59,16 @@ module.exports = function generateCustomerWindow(store, ecran, urlClient, fondPa
     minimizable: false,
     maximizable: false,
     closable: false,
+    // Deux fenetres plein ecran sur le meme espace X : c'est l'empilement qui
+    // tranche, et le focus va a la caisse — qui recouvrait donc l'ecran
+    // client. Mesure sur la caisse de test :
+    //   "Octipas POS"        FULLSCREEN            <- dessous
+    //   "electron-launcher"  FULLSCREEN, FOCUSED   <- dessus
+    // Les deux fenetres appartiennent a la meme application et occupent des
+    // moniteurs differents : il n'y a aucun conflit reel a la poser au-dessus.
+    // Le garde-fou contre un mauvais moniteur reste le controle de placement
+    // ci-dessous, qui verifie la position REELLE a chaque demarrage.
+    alwaysOnTop: true,
     skipTaskbar: true,
     title: "Écran client",
     webPreferences: {
@@ -82,9 +92,24 @@ module.exports = function generateCustomerWindow(store, ecran, urlClient, fondPa
   customerWindow.once("ready-to-show", () => {
     log.debug("[CUSTOMER] fenetre prete");
     customerWindow.show();
-    // setFullScreen apres show : appele avant, le plein ecran atterrit sur
-    // l'ecran courant du compositeur et pas sur celui qu'on vient de cibler.
-    customerWindow.setFullScreen(true);
+    // PAS de setFullScreen. Mesure sur la caisse de test : avec des bornes
+    // explicites la fenetre s'affiche bien sur le second ecran ; des qu'on
+    // demande le plein ecran, le gestionnaire reprend la main sur le choix du
+    // moniteur et la fenetre disparait derriere la caisse — elle-meme en
+    // plein ecran sur un espace X qui couvre les deux moniteurs.
+    //
+    // Les bornes suffisent : elles valent deja exactement la taille de
+    // l'ecran vise, et sans cadre le rendu est identique a un plein ecran,
+    // sans laisser au gestionnaire une decision qu'il prend mal ici.
+    customerWindow.setBounds({
+      x: ecran.x,
+      y: ecran.y,
+      width: ecran.width,
+      height: ecran.height,
+    });
+    // Le passage en plein ecran redistribue l'empilement : on remonte apres.
+    customerWindow.setAlwaysOnTop(true, "screen-saver");
+    customerWindow.moveTop();
 
     // Verification du placement REEL, et pas seulement de ce qu'on a demande.
     //
@@ -107,6 +132,12 @@ module.exports = function generateCustomerWindow(store, ecran, urlClient, fondPa
           `[CUSTOMER] PLACEMENT IGNORE : demande ${ecran.x},${ecran.y} ` +
             `-> obtenu ${reel.x},${reel.y}. Typique de Wayland, qui interdit a ` +
             `un client de se positionner. Relancer avec --ozone-platform=x11.`,
+        );
+      } else if (reel.width !== ecran.width || reel.height !== ecran.height) {
+        log.warn(
+          `[CUSTOMER] place a ${reel.x},${reel.y} mais taille ` +
+            `${reel.width}x${reel.height} au lieu de ` +
+            `${ecran.width}x${ecran.height} — bandes vides a l'ecran.`,
         );
       } else {
         log.info(
