@@ -31,6 +31,11 @@ jest.mock("electron", () => ({
   app: { getPath: () => mockUserData },
   screen: {
     getAllDisplays: () => mockEcrans.liste,
+    // `get_screens` s'en sert pour placer l'ecran principal en tete d'une liste
+    // dont l'ordre systeme n'est pas garanti. Les doublures ci-dessous n'ont pas
+    // d'`id` : le helper retombe alors sur un tri par position, qui preserve
+    // l'ordre attendu par ces tests.
+    getPrimaryDisplay: () => mockEcrans.liste[0],
     on: (ev, cb) => {
       mockAbonnements[ev] = cb;
     },
