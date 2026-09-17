@@ -15,6 +15,7 @@ const requestWPT = require("./helpers/request_wpt");
 const reinitialize = require("./helpers/reinitialize");
 const checkWptPlugin = require("./helpers/check_wpt_plugin");
 const openLoaderDevTools = require("./helpers/open_loader_dev_tools");
+const { ouvrir: ouvrirDevTools } = require("./helpers/open_dev_tools");
 const sendOnReady = require("./helpers/send_on_ready");
 const handleScoLog = require("./helpers/handle_sco_log");
 const log = require("./helpers/electron_log");
@@ -624,22 +625,19 @@ module.exports = function generateIpc(store, initCallback) {
         }
         break;
       case "open_dev_tools":
-        if (
-          store.windows.container.current &&
-          store.windows.container.current.isVisible() &&
-          !store.windows.container.current.isDestroyed()
-        ) {
-          store.windows.container.current.webContents.openDevTools({
-            mode: "right",
-          });
-        } else if (
-          store.windows.loader.current &&
-          store.windows.loader.current.isVisible() &&
-          !store.windows.loader.current.isDestroyed()
-        ) {
-          store.windows.loader.current.webContents.openDevTools({
-            mode: "undocked",
-          });
+        // Chemin de retour du pinpad. Il n'ouvrait QUE la fenetre conteneur :
+        // sur une caisse avec mot de passe, la console de la page POS etait
+        // donc inaccessible, quelle que soit la manoeuvre.
+        if (0 === ouvrirDevTools(store).length) {
+          if (
+            store.windows.loader.current &&
+            store.windows.loader.current.isVisible() &&
+            !store.windows.loader.current.isDestroyed()
+          ) {
+            store.windows.loader.current.webContents.openDevTools({
+              mode: "undocked",
+            });
+          }
         }
         break;
 

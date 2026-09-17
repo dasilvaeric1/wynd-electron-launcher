@@ -20,6 +20,7 @@ const configureProtocol = require("./helpers/register_file_protocol");
 const hardenWebContents = require("./helpers/harden_web_contents");
 const captureJsErrors = require("./helpers/capture_js_errors");
 const trustWptCertificate = require("./helpers/trust_wpt_certificate");
+const { surveiller: surveillerDevTools } = require("./helpers/open_dev_tools");
 const {
   applyConfiguredSwitches,
   removeUnsafeSwitches,
@@ -298,6 +299,10 @@ getConfig(store.path.conf, undefined, argv.url)
         // par `ignore-certificate-errors` qui désarmait tout le processus.
         // À enregistrer avant createWindows.
         trustWptCertificate(store);
+        // Les DevTools de la <webview> POS, ouvertes dès son attachement quand
+        // la caisse est en debug ou qu'on les a demandées avant qu'elle existe.
+        // À enregistrer avant createWindows.
+        surveillerDevTools(store);
         // Capture des erreurs JS non catchées du POS en webview (opt-in
         // config.log.capture_errors). À enregistrer avant createWindows.
         captureJsErrors(store);
