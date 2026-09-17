@@ -7,10 +7,16 @@
 // et c'est ce drapeau qui permettait a Chromium de l'accepter cote webview.
 // Aucun remplacant cible n'avait ete pose en contrepartie.
 //
-// La bonne facon de refermer cette tolerance sans casser la caisse serait un
-// gestionnaire `certificate-error` restreint a l'hote de WPT, plutot qu'une
-// desactivation globale de la validation TLS. Tant qu'il n'existe pas, bloquer
-// le drapeau revient a couper la liaison POS <-> materiel.
+// Ce remplacant existe depuis 2.9.2 : `helpers/trust_wpt_certificate.js`
+// accepte le certificat auto-signe du seul hote declare dans `wpt.url`, sans
+// rien desarmer d'autre. Une caisse a jour n'a donc plus besoin du drapeau
+// pour joindre WPT.
+//
+// La liste reste vide malgre tout, et c'est delibere : certains sites servent
+// aussi leur POS avec un certificat interne, et le drapeau est ce qui les fait
+// tourner aujourd'hui. Le rebloquer ne se decide qu'une fois le parc passe en
+// >= 2.9.2 ET ces cas-la traites — sans quoi on rejoue exactement la panne de
+// 2.8.2. C'est une ligne a ajouter ici le jour ou ce sera vrai.
 const BLOCKED_SWITCHES = new Set([]);
 
 function normalizeSwitchName(name) {
