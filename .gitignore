@@ -47,3 +47,6 @@ src/main/build_info.json
 # fichiers buildés injectés dans le scaffold (ne pas committer le binaire)
 deploy/scaffold/Electron-Launcher/portable/*.exe
 deploy/out/
+
+# Repertoire de travail du scanner SonarQube, jamais versionne.
+.scannerwork/
