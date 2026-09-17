@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## [2.9.X]
 
+### [2.9.3]
+
+- fix(quit): WyndPOSTools survivait au launcher apres un dialogue d'erreur.
+
+  Pour ecrire le store dans le journal, `dialog_err.js` remplacait les handles
+  vivants par la chaine `'...'` — dans le store lui-meme, partage avec tout le
+  processus principal — puis appelait `app.quit()`. `before-quit` faisait alors
+  `killWPT` sur cette chaine, echouait en « child.once is not a function », et
+  le catch avalait l'erreur. Le processus WPT n'etait donc jamais tue : le port
+  9963 restait pris, et le demarrage suivant devait le force-killer via netstat.
+  Le socket, mis a `null` au passage, n'etait pas ferme non plus.
+
+  Une COPIE serialisable part desormais au journal, le store vivant n'est plus
+  touche. La projection couvre aussi l'ecran client, ajoute bien apres cet
+  assainissement manuel et jamais repris : c'est lui qui rendait le store
+  non serialisable, donc l'etat illisible dans le journal au moment ou on en a
+  le plus besoin.
+
 ### [2.9.2]
 
 - fix(ssl): le certificat auto-signe de WPT accepte pour son seul hote.
