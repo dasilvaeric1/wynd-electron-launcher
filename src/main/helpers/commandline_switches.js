@@ -1,7 +1,17 @@
-const BLOCKED_SWITCHES = new Set([
-  "ignore-certificate-errors",
-  "ignore-ssl-errors",
-]);
+// Liste volontairement VIDE, et le mecanisme conserve pour qu'un reblocage
+// reste une ligne a ajouter.
+//
+// `ignore-certificate-errors` y figurait depuis 2.8.2. Le bloquer a casse le
+// seul usage legitime du drapeau sur une caisse : WyndPOSTools sert en HTTPS
+// avec un certificat AUTO-SIGNE (genere par node-forge au premier demarrage),
+// et c'est ce drapeau qui permettait a Chromium de l'accepter cote webview.
+// Aucun remplacant cible n'avait ete pose en contrepartie.
+//
+// La bonne facon de refermer cette tolerance sans casser la caisse serait un
+// gestionnaire `certificate-error` restreint a l'hote de WPT, plutot qu'une
+// desactivation globale de la validation TLS. Tant qu'il n'existe pas, bloquer
+// le drapeau revient a couper la liaison POS <-> materiel.
+const BLOCKED_SWITCHES = new Set([]);
 
 function normalizeSwitchName(name) {
   return String(name).replace(/^-+/, "").toLowerCase();

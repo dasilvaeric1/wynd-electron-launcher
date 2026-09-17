@@ -5,7 +5,12 @@ const {
 const fs = require("fs");
 const path = require("path");
 
-test("blocks switches that disable TLS certificate validation", () => {
+// `ignore-certificate-errors` a ete bloque de 2.8.2 a 2.9.0. Sur une caisse,
+// c'est le drapeau qui permet a Chromium d'accepter le certificat AUTO-SIGNE de
+// WyndPOSTools : le bloquer coupait la liaison POS <-> materiel cote webview,
+// sans qu'aucun remplacant cible ait ete pose. Ce test verrouille le retour en
+// arriere, pour qu'un reblocage soit un choix explicite et non une regression.
+test("laisse passer ignore-certificate-errors, requis par le certificat auto-signe de WPT", () => {
   const appendSwitch = jest.fn();
   const warn = jest.fn();
 
@@ -18,52 +23,31 @@ test("blocks switches that disable TLS certificate validation", () => {
     { info: jest.fn(), warn },
   );
 
-  expect(appendSwitch).toHaveBeenCalledTimes(1);
+  expect(appendSwitch).toHaveBeenCalledWith("ignore-certificate-errors", "true");
   expect(appendSwitch).toHaveBeenCalledWith("disable-gpu", "true");
-  expect(warn).toHaveBeenCalledWith(
-    "[COMMANDLINE] > blocked unsafe switch ignore-certificate-errors",
-  );
+  expect(warn).not.toHaveBeenCalled();
 });
 
+// La liste des drapeaux bloques est vide : le mecanisme reste en place, mais il
+// ne retire plus rien. Ces deux tests documentent ce contrat, pour qu'un
+// reblocage se fasse en connaissance de cause plutot que par inadvertance.
 test.each([
   "ignore-certificate-errors",
   "ignore-ssl-errors",
-])("removes unsafe CLI switch %s before startup", (switchName) => {
+])("ne retire plus %s de la ligne de commande", (switchName) => {
   const commandLine = {
     hasSwitch: jest.fn((name) => name === switchName),
     removeSwitch: jest.fn(),
   };
   const warn = jest.fn();
 
-  removeUnsafeSwitches(commandLine, { warn });
+  removeUnsafeSwitches(commandLine, { warn }, ["electron", ".", `--${switchName}=true`]);
 
-  expect(commandLine.removeSwitch).toHaveBeenCalledWith(switchName);
-  expect(warn).toHaveBeenCalledWith(
-    `[COMMANDLINE] > removed unsafe switch ${switchName}`,
-  );
+  expect(commandLine.removeSwitch).not.toHaveBeenCalled();
+  expect(warn).not.toHaveBeenCalled();
 });
 
-test("removes case-variant CLI switches with inline values", () => {
-  const commandLine = {
-    hasSwitch: jest.fn(() => false),
-    removeSwitch: jest.fn(),
-  };
-
-  removeUnsafeSwitches(
-    commandLine,
-    { warn: jest.fn() },
-    ["electron", ".", "--IGNORE-CERTIFICATE-ERRORS=true"],
-  );
-
-  expect(commandLine.removeSwitch).toHaveBeenCalledWith(
-    "IGNORE-CERTIFICATE-ERRORS",
-  );
-  expect(commandLine.removeSwitch).toHaveBeenCalledWith(
-    "ignore-certificate-errors",
-  );
-});
-
-test("normalizes case and leading dashes in configured switch names", () => {
+test("applique un nom de drapeau quelles que soient sa casse et ses tirets", () => {
   const appendSwitch = jest.fn();
 
   applyConfiguredSwitches(
@@ -72,7 +56,7 @@ test("normalizes case and leading dashes in configured switch names", () => {
     { info: jest.fn(), warn: jest.fn() },
   );
 
-  expect(appendSwitch).not.toHaveBeenCalled();
+  expect(appendSwitch).toHaveBeenCalledWith("--IGNORE-CERTIFICATE-ERRORS", "true");
 });
 
 test("ignores inherited properties from parsed configuration", () => {
