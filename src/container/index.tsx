@@ -36,6 +36,7 @@ import {
   wptPluginsStateAction,
   wptPluginsStateUpdateAction,
   setDiagnosticAction,
+  setDiagnosticErrorAction,
 } from "./store/actions";
 
 import Plugins from "./components/Plugins";
@@ -58,8 +59,29 @@ window.store = store;
 window.theme = new Theme<TThemeColorTypes>(undefined, computeTheme(store));
 window.theme.set("primary-color", window.theme.get("menu-background"), true);
 
+// Diagnostics "Périphériques" : events dont on stocke la réponse brute (ou
+// l'échec) dans le slice diagnostics, pour le dashboard.
+//
+// Au niveau module, et pas dans le handler de réponse : le handler d'ERREUR
+// ci-dessous s'en sert aussi, et une requête qui échoue doit alimenter le
+// dashboard au même titre qu'une requête qui aboutit.
+const DIAGNOSTIC_EVENTS = [
+  "fastprinter.defaultprinterdata",
+  "fastprinter.printers",
+  "fastprinter.printerdata",
+  "universalterminal.plugin",
+  "universalterminal.isinitialized",
+  "lights.devices",
+  "lights.test",
+];
+
 window.electronAPI.on("request_wpt.error", (action: string, err: any) => {
   store.dispatch(setAskAction(false));
+  // Un échec sur une requête de diagnostic est une DONNÉE, pas seulement une
+  // notification : sans ça le dashboard conservait la dernière réponse valide.
+  if (DIAGNOSTIC_EVENTS.includes(action)) {
+    store.dispatch(setDiagnosticErrorAction(action, err));
+  }
   // Pas de notif pour les erreurs génériques sans info actionnable (ex. WPT non
   // connecté → message par défaut "Something went INVALID") : c'était du bruit
   // qui s'empilait en haut à droite.
@@ -132,18 +154,6 @@ window.electronAPI.on("request_wpt.done", (action: string, data: any) => {
       break;
   }
 
-  // Diagnostics "Périphériques" : on stocke la réponse brute de chaque requête
-  // device dans le slice diagnostics (indexé par event) pour le dashboard.
-  const DIAGNOSTIC_EVENTS = [
-    "fastprinter.defaultprinterdata",
-    "fastprinter.printers",
-    "fastprinter.printerdata",
-    "universalterminal.plugin",
-    "universalterminal.isinitialized",
-    "central.applications",
-    "lights.devices",
-    "lights.test",
-  ];
   if (DIAGNOSTIC_EVENTS.includes(action)) {
     store.dispatch(setDiagnosticAction(action, data));
   }

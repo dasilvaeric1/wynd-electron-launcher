@@ -785,6 +785,7 @@
 		&.online { border-left-color: #22c55e; }
 		&.offline { border-left-color: #ef4444; }
 		&.initializing { border-left-color: #f59e0b; }
+		&.degraded { border-left-color: #f97316; }
 
 		// En-tête horizontal compact : pastille + nom/catégorie + pill statut.
 		.diag-card-head {
@@ -806,6 +807,7 @@
 			&.online { background: rgba(34, 197, 94, 0.14); color: #15803d; }
 			&.offline { background: rgba(239, 68, 68, 0.14); color: #b91c1c; }
 			&.initializing { background: rgba(245, 158, 11, 0.16); color: #b45309; }
+			&.degraded { background: rgba(249, 115, 22, 0.16); color: #c2410c; }
 		}
 		.diag-card-headtext {
 			flex: 1;
@@ -849,6 +851,7 @@
 			&.online { color: #15803d; background: rgba(34, 197, 94, 0.12); .dot { background: #22c55e; } }
 			&.offline { color: #b91c1c; background: rgba(239, 68, 68, 0.12); .dot { background: #ef4444; } }
 			&.initializing { color: #b45309; background: rgba(245, 158, 11, 0.14); .dot { background: #f59e0b; } }
+			&.degraded { color: #c2410c; background: rgba(249, 115, 22, 0.14); .dot { background: #f97316; } }
 			&.unknown { color: #6b7280; background: rgba(148, 163, 184, 0.16); .dot { background: #9ca3af; } }
 		}
 

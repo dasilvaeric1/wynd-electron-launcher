@@ -55,6 +55,12 @@ export interface IDisplay {
 // reload.
 export interface IDiagnostics {
   byEvent: { [event: string]: any };
+  // Échecs des requêtes de diagnostic, indexés par event. Une requête qui
+  // n'aboutit pas EST une information : capot ouvert, l'imprimante cesse de
+  // répondre à la requête d'état (`no_response` côté ESC/POS) et le plugin
+  // n'émet aucun `.error`. Sans cette trace, le dashboard gardait la dernière
+  // réponse valide et affichait « Connecté » indéfiniment.
+  byError: { [event: string]: { code?: string; message?: string } };
   lastUpdate: number | null;
 }
 

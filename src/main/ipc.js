@@ -333,6 +333,10 @@ module.exports = function generateIpc(store, initCallback) {
   });
 
   ipcMain.on("request_wpt", async (event, action, ...datas) => {
+    // Sans cette trace, les requetes du panneau de diagnostic sont invisibles
+    // cote main : impossible de distinguer « le panneau n'a rien demande » de
+    // « WPT n'a pas repondu » en lisant les journaux d'une caisse a distance.
+    log.debug(`[WPT] > ${action}`);
     if (store.wpt.socket) {
       let err = null;
       if (action.indexOf("fastprinter") === 0) {
@@ -442,7 +446,6 @@ module.exports = function generateIpc(store, initCallback) {
         "fastprinter.printerdata",
         "universalterminal.plugin",
         "universalterminal.isinitialized",
-        "central.applications",
         "linedisplay.print",
       ];
       const isDeviceQuery = action.indexOf("fastprinter") === 0;

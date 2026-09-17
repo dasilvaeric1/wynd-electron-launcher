@@ -39,6 +39,7 @@ export const initialState: IRootState = {
   pluginState: null,
   diagnostics: {
     byEvent: {},
+    byError: {},
     lastUpdate: null,
   },
   pinpad: {

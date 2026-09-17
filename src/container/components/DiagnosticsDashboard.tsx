@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import {
   PrinterOutlined,
   CreditCardOutlined,
-  CloudServerOutlined,
   ScanOutlined,
   WalletOutlined,
   InboxOutlined,
@@ -29,7 +28,6 @@ export const DIAGNOSTIC_EVENTS = [
   "fastprinter.printers",
   "universalterminal.plugin",
   "universalterminal.isinitialized",
-  "central.applications",
   "lights.devices",
 ];
 
@@ -42,7 +40,15 @@ export interface IDiagnosticsDashboardProps {
   onAction: (event: string, ...datas: any[]) => void;
 }
 
-type TStatus = "online" | "offline" | "initializing" | "unknown";
+// `degraded` : le périphérique répond, mais il ne peut pas rendre son
+// service (imprimante avec capot ouvert ou sans papier). Ni vert ni rouge —
+// l'opérateur doit voir qu'il y a une action à faire sur la machine.
+type TStatus =
+  | "online"
+  | "offline"
+  | "initializing"
+  | "degraded"
+  | "unknown";
 type TRowState = "ok" | "warn" | "bad" | "muted";
 
 interface IRow {
@@ -62,10 +68,33 @@ interface ICard {
   action?: { label: string; onClick: () => void };
 }
 
+// Ligne de test de l'afficheur client.
+//
+// Le plugin WPT REFUSE toute ligne plus longue que l'afficheur
+// (`LINE_TOO_LONG`) : il ne tronque pas. L'ancienne valeur
+// « *** TEST AFFICHEUR *** » faisait 22 caractères et échouait donc sur un
+// afficheur 20 colonnes, qui est la géométrie par défaut du plugin.
+//
+// 16 caractères, et pas 20 : les afficheurs 2x16 sont courants en caisse, et
+// le launcher ne connaît pas la géométrie réelle — le plugin l'expose bien
+// (`linedisplay.geometry`) mais l'émet en push à la connexion socket, or le
+// launcher n'écoute que des événements nommés par plugin. Tant que ce
+// câblage n'existe pas, tenir dans le plus étroit est ce qui marche partout.
+const TEST_LINE1 = "*** TEST ***";
+
+// HH:MM:SS explicite plutôt que toLocaleTimeString() : selon la locale du
+// poste, ce dernier peut rendre « 3:24:07 PM » (10 car.) et déborder d'un
+// afficheur étroit.
+const hhmmss = (d: Date): string =>
+  [d.getHours(), d.getMinutes(), d.getSeconds()]
+    .map((v) => String(v).padStart(2, "0"))
+    .join(":");
+
 const STATUS_META: Record<TStatus, { label: string; cls: string }> = {
   online: { label: "Connecté", cls: "online" },
   offline: { label: "Déconnecté", cls: "offline" },
   initializing: { label: "Initialisation", cls: "initializing" },
+  degraded: { label: "Intervention", cls: "degraded" },
   unknown: { label: "Inconnu", cls: "unknown" },
 };
 
@@ -88,11 +117,6 @@ const PLUGIN_META: Record<
     label: "TPE / Paiement",
     icon: <CreditCardOutlined />,
     category: "Paiement",
-  },
-  central: {
-    label: "Central",
-    icon: <CloudServerOutlined />,
-    category: "Système",
   },
   rfidupos: {
     label: "Lecteur RFID",
@@ -166,14 +190,23 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
   }, []);
 
   // Reload à l'ouverture + auto-refresh périodique (données fraîches).
+  // `reloadTick` marque chaque cycle : c'est lui qui redéclenche la sonde
+  // imprimante plus bas. On ne peut pas se caler sur `diagnostics.lastUpdate`,
+  // que la réponse de la sonde met justement à jour — ça boucle.
+  const [reloadTick, setReloadTick] = useState(0);
   useEffect(() => {
-    onReload();
-    const i = window.setInterval(() => onReload(), 30000);
+    const run = () => {
+      onReload();
+      setReloadTick((t) => t + 1);
+    };
+    run();
+    const i = window.setInterval(run, 30000);
     return () => window.clearInterval(i);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const byEvent = diagnostics.byEvent || {};
+  const byError = diagnostics.byError || {};
 
   // Imprimante par défaut : la `registered` de la liste, sinon la 1ère
   // détectée, sinon la config defaultprinterdata.
@@ -196,25 +229,47 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
   // sinon les champs éventuellement présents dans la liste.
   const printerLive = byEvent["fastprinter.printerdata"] || defaultPrinter;
 
-  // Si l'imprimante par défaut est connue mais que ses champs live (online/
-  // cover/paper) manquent, interroge directement le device. Garde-fou : une
-  // seule requête par cycle de refresh (lastUpdate).
-  const printerProbeRef = useRef<number | null>(null);
+  // Interroge le device à CHAQUE cycle de refresh, et pas seulement quand les
+  // champs live manquent.
+  //
+  // L'ancienne version sortait dès que online/cover_opened étaient connus :
+  // le premier relevé était donc figé pour toute la session. Ouvrir le capot
+  // ne changeait rien, « Actualiser » non plus — `fastprinter.printerdata`
+  // n'est pas dans DIAGNOSTIC_EVENTS (il exige type/address/name, il ne peut
+  // pas être une requête sans argument). Or FastPrinter ne pousse AUCUN
+  // événement sur changement d'état : re-sonder est la seule façon de voir
+  // capot, papier et liaison bouger.
   useEffect(() => {
-    if (!defaultPrinter || !defaultPrinter.type) return;
-    const hasLive =
-      typeof printerLive?.online === "boolean" &&
-      typeof printerLive?.cover_opened === "boolean";
-    if (hasLive) return;
-    if (printerProbeRef.current === diagnostics.lastUpdate) return;
-    printerProbeRef.current = diagnostics.lastUpdate;
+    // `name` EST obligatoire, en plus de type/address.
+    //
+    // Mesuré sur la caisse, dans le journal de WPT : sondée sans nom, la
+    // requête revient `registered: false` et sans état exploitable — WPT ne
+    // sait pas à quelle imprimante configurée la rattacher.
+    //
+    //   => printerdata({type, address, name})   <= registered:true,  online:true, cover_opened:false
+    //   => printerdata({address, encoding, …})  <= registered:false  (inexploitable)
+    //
+    // Or `defaultPrinter` se rabat sur la réponse de `defaultprinterdata`,
+    // qui ne porte PAS de nom, tant que `fastprinter.printers` n'a pas
+    // répondu — les deux partent au même cycle. Les deux sondes partaient
+    // donc, et la mauvaise réponse écrasait la bonne dans `byEvent`.
+    // Sans nom : on attend la liste plutôt que de sonder pour rien.
+    if (!defaultPrinter || !defaultPrinter.type || !defaultPrinter.name) return;
     onAction("fastprinter.printerdata", {
       type: defaultPrinter.type,
       address: defaultPrinter.address,
       name: defaultPrinter.name,
     });
+    // Dépendances : le cycle de refresh, et l'IDENTITÉ de l'imprimante en
+    // primitives — `defaultPrinter` est un objet re-créé à chaque réponse
+    // WPT, s'en servir relancerait la sonde sur sa propre réponse.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultPrinter, diagnostics.lastUpdate]);
+  }, [
+    reloadTick,
+    defaultPrinter?.type,
+    defaultPrinter?.address,
+    defaultPrinter?.name,
+  ]);
 
   // Sous-titre : poste · serial (depuis wpt.infos).
   const subtitle = useMemo(() => {
@@ -235,18 +290,38 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
     // présent côté WPT.
     const keyByNorm = new Map<string, string>();
     Object.keys(pluginState || {}).forEach((k) => keyByNorm.set(norm(k), k));
-    ["fastprinter", "universalterminal", "central"].forEach((k) => {
+    ["fastprinter", "universalterminal"].forEach((k) => {
       if (!keyByNorm.has(k)) keyByNorm.set(k, k);
     });
     OPTIONAL_PLUGIN_KEYS.forEach((k) => {
       if (!keyByNorm.has(k) && findPlugin(k)) keyByNorm.set(k, k);
     });
 
+    // Cartes pour lesquelles « plugin chargé » ne vaut PAS « périphérique en
+    // ordre de marche » : on exige des données du device, sinon "unknown".
+    //
+    // Uniquement l'imprimante, et c'est délibéré. Le repli « plugin activé =>
+    // vert » lui faisait afficher « Connectée » capot ouvert, alors que
+    // `fastprinter.printerdata` sait dire l'inverse.
+    //
+    // L'afficheur client en est EXCLU : le launcher n'a aucune source d'état
+    // pour lui (le plugin pousse `linedisplay.geometry` / `.list` à la
+    // connexion socket, que le launcher n'écoute pas). L'y mettre le figeait
+    // en gris pour toujours — moins informatif que l'imparfait « plugin
+    // chargé », alors que le test d'affichage, lui, prouve qu'il fonctionne.
+    //
+    // Les lights n'en ont pas besoin : leur branche calcule déjà le statut à
+    // partir des devices réels (`lights.devices`).
+    const DEVICE_KEYS = ["fastprinter"];
+
     const statusOf = (key: string): TStatus => {
       const s = pluginState?.[key]?.status;
       if (s === "online" || s === "offline" || s === "initializing") return s;
       const pl = findPlugin(key);
-      if (pl) return pl.enabled ? "online" : "offline";
+      if (pl) {
+        if (!pl.enabled) return "offline";
+        return DEVICE_KEYS.includes(key) ? "unknown" : "online";
+      }
       return "unknown";
     };
 
@@ -261,16 +336,31 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
 
       if (nk === "fastprinter") {
         const d = printerLive;
-        if (d && status === "unknown") status = "online";
+        // L'imprimante a cessé de répondre à la requête d'état.
+        //
+        // Mesuré sur la caisse : capot ouvert, le plugin part en
+        // `Error: no_response` (timeout ESC/POS) et n'émet AUCUN
+        // `printerdata.error` vers le client. La requête expire côté
+        // launcher, et sans cette prise en compte le dashboard gardait la
+        // dernière réponse valide — « Connecté », en vert, capot ouvert.
+        //
+        // La CAUSE du silence (capot, papier, câble) n'est pas discernable
+        // d'ici — d'où le rappel en pied de carte plutôt qu'un diagnostic
+        // inventé. Mais le fait, lui, est certain : elle est hors ligne.
+        const muette = byError["fastprinter.printerdata"];
 
         // Bool helpers → row {value, state}. undefined → "—" (muted) : les
         // rangées vitales (en ligne/papier/capot/tiroir) sont TOUJOURS
         // affichées pour que l'opérateur voie ce qui manque.
+        // Un timeout DIT que l'imprimante n'est plus en ligne : c'est une
+        // réponse, pas une absence de réponse. Un tiret serait un aveu
+        // d'ignorance alors qu'on sait. Les modèles qui répondent, eux,
+        // donnent leur état précis (capot, papier) et il est affiché tel quel.
         const onlineKnown = typeof d?.online === "boolean";
         rows.push({
           label: "En ligne",
-          value: onlineKnown ? (d.online ? "Oui" : "Non") : "—",
-          state: onlineKnown ? (d.online ? "ok" : "bad") : "muted",
+          value: muette ? "Non" : onlineKnown ? (d.online ? "Oui" : "Non") : "—",
+          state: muette ? "bad" : onlineKnown ? (d.online ? "ok" : "bad") : "muted",
         });
         const paperKnown = typeof d?.paper?.end === "boolean";
         rows.push({
@@ -311,12 +401,40 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
         if (d?.name) footer = [d.name, footer].filter(Boolean).join("  ·  ");
 
         // Statut card : reflète le device réel quand on le connaît.
-        if (onlineKnown)
-          status = d.online
-            ? "online"
-            : d.detected
-            ? "initializing"
-            : "offline";
+        //
+        // Capot ouvert ou papier épuisé => PAS vert. L'imprimante répond
+        // encore (`online: true`), mais elle n'imprimera pas : afficher
+        // « Connecté » en vert pendant que WPT la donne hors service est un
+        // mensonge, et c'est précisément ce qu'on voyait en ouvrant le capot.
+        if (muette) {
+          rows.push({
+            label: "État",
+            value: "Ne répond plus",
+            state: "bad",
+          });
+          footer = [
+            "Vérifier le capot, le papier et le câble.",
+            footer,
+          ]
+            .filter(Boolean)
+            .join("  ·  ");
+        }
+
+        // Sans réponse `printerdata`, le statut reste "unknown" : on ne sait
+        // pas, et on le dit. Le device n'est jamais présumé en ligne.
+        if (muette) {
+          status = "offline";
+        } else if (onlineKnown) {
+          const empeche =
+            (coverKnown && d.cover_opened) || (paperKnown && d.paper.end);
+          status = !d.online
+            ? d.detected
+              ? "initializing"
+              : "offline"
+            : empeche
+            ? "degraded"
+            : "online";
+        }
 
         action = {
           label: "Test impression",
@@ -342,19 +460,17 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
         });
         if (initKnown && status === "unknown")
           status = init ? "online" : "offline";
-      } else if (nk === "central") {
-        const apps = byEvent["central.applications"];
-        if (Array.isArray(apps))
-          rows.push({ label: "Applications", value: String(apps.length) });
       } else if (nk === "linedisplay") {
         // Test visuel : affiche 2 lignes sur l'afficheur client. Pas de
         // réponse socket en succès → vérification sur le device physique.
+        // Les deux lignes DOIVENT tenir dans la géométrie de l'afficheur,
+        // sinon WPT rejette avec LINE_TOO_LONG (cf TEST_LINE1).
         action = {
           label: "Test affichage",
           onClick: () =>
             onAction("linedisplay.print", {
-              line1: "*** TEST AFFICHEUR ***",
-              line2: new Date().toLocaleTimeString(),
+              line1: TEST_LINE1,
+              line2: hhmmss(new Date()),
             }),
         };
       } else if (nk === "lights") {

@@ -36,6 +36,7 @@ export enum TAppActionTypeKeys {
   "SET_LOADER" = "SET_LOADER",
   "TOGGLE_MENU" = "TOGGLE_MENU",
   "SET_DIAGNOSTIC" = "SET_DIAGNOSTIC",
+  "SET_DIAGNOSTIC_ERROR" = "SET_DIAGNOSTIC_ERROR",
 }
 
 export enum TNextAction {
@@ -78,6 +79,24 @@ export function setDiagnosticAction(
   return {
     type: TAppActionTypeKeys.SET_DIAGNOSTIC,
     payload: { event, data },
+  };
+}
+
+// Stocke l'ÉCHEC d'une requête WPT de diagnostic. Le succès suivant l'efface.
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+export function setDiagnosticErrorAction(
+  event: string,
+  error: any
+): IAppAction<TAppActionTypeKeys> {
+  return {
+    type: TAppActionTypeKeys.SET_DIAGNOSTIC_ERROR,
+    payload: {
+      event,
+      data: {
+        code: error?.api_code || error?.code,
+        message: error?.message,
+      },
+    },
   };
 }
 
