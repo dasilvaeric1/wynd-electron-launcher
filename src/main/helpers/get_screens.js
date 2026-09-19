@@ -30,7 +30,7 @@ module.exports =  function getScreens() {
 	// principal, et le comparateur devient incoherent — il affirmerait a la fois
 	// a<b et b<a, ce dont `sort` ne garantit rien. A defaut d'ecran principal
 	// identifiable, le tri par position suffit et reste deterministe.
-	const idPrimaire = undefined !== primaire?.id ? primaire.id : null
+	const idPrimaire = primaire?.id ?? null
 
 	// Copie avant tri : `sort` trie en place, et le tableau rendu par Electron ne
 	// nous appartient pas.

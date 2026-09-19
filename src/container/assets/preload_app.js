@@ -111,6 +111,10 @@ const __elReduxStatus = {
   method: null,
   err: null,
 };
+// Le `try` n'est PAS redondant avec le `.catch()` : `executeJavaScript` peut
+// lever SYNCHRONIQUEMENT (frame pas encore prete, contexte detruit), et un
+// `.catch()` ne couvre que le rejet de la promesse. Sans lui, l'exception
+// remonte non capturee et le preload s'interrompt avant d'exposer son statut.
 try {
   if (__elReduxStatus.hasWebFrame) {
     webFrame
