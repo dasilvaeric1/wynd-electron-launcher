@@ -715,13 +715,20 @@ async function startCaptureLoop(cfg, session) {
           clearInterval(overlayRefresher);
           return;
         }
+        // Le `try` n'entoure QUE l'acces synchrone : `w.webContents` leve si la
+        // fenetre a ete detruite entre le garde ci-dessus et cette ligne. Le
+        // rejet de la promesse, lui, se traite en dehors — aucun des deux ne
+        // couvre l'autre.
+        let rafraichi;
         try {
-          refreshWebviewBounds(w.webContents).catch(() => {});
+          rafraichi = refreshWebviewBounds(w.webContents);
         } catch (err) {
           // Window détruite entre le check et l'accès → le garde en tête de
           // callback coupera l'interval au tick suivant.
           log.debug(`[SCREEN] overlay refresh sauté: ${err.message}`);
+          return;
         }
+        rafraichi.catch(() => {});
       }, 1_500);
       activeSession.resizeHandler = { win: w, fn: onResize };
       activeSession.overlayRefresher = overlayRefresher;

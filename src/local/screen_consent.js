@@ -9,7 +9,7 @@
 
 const params = new URLSearchParams(location.search)
 const sessionId = params.get('sessionId') || '?'
-const ttl = parseInt(params.get('ttlSeconds') || '900', 10)
+const ttl = Number.parseInt(params.get('ttlSeconds') || '900', 10)
 const requestedBy = params.get('requestedBy') || ''
 document.getElementById('meta').textContent =
   `Session ${sessionId.substring(0, 12)}… · durée max ${Math.round(ttl / 60)} min` +

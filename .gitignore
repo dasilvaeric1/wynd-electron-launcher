@@ -36,6 +36,10 @@ src/local/*
 # le zip electron-builder via "files: [src/local/]"
 !src/local/screen_consent.html
 !src/local/screen_consent.js
+# Sa feuille de style, extraite du <style> en ligne pour retirer
+# 'unsafe-inline' du CSP : sans cette exception, la page serait livree
+# sans aucun style.
+!src/local/screen_consent.css
 # Idem pour l'ecran d'attente client : sans cette exception, la CI livrerait
 # un launcher dont la fenetre client pointe sur un fichier absent.
 !src/local/customer_idle.html

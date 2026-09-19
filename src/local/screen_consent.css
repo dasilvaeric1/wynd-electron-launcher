@@ -1,0 +1,63 @@
+/* Extrait du <style> en ligne de screen_consent.html.
+   Motif : le CSP de la page autorisait 'unsafe-inline' sur style-src,
+   uniquement pour ce bloc. La page chargeant deja ./screen_consent.js
+   sous script-src 'self' en file://, 'self' y est honore — externaliser
+   permet donc de retirer 'unsafe-inline' sans empreinte a maintenir. */
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+body {
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 18px 22px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+h1 {
+  font-size: 17px;
+  margin: 0 0 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.icon { font-size: 22px; }
+p { font-size: 13px; line-height: 1.45; margin: 6px 0; color: #334155; }
+.session { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; color: #64748b; }
+.warn {
+  background: #fef3c7;
+  border-left: 3px solid #f59e0b;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #78350f;
+  margin: 10px 0;
+  border-radius: 2px;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+button {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 100ms;
+}
+button.accept {
+  background: #2563eb;
+  color: white;
+}
+button.accept:hover { background: #1d4ed8; }
+button.decline {
+  background: white;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+button.decline:hover { background: #f1f5f9; }
+.countdown { font-size: 11px; color: #64748b; text-align: center; margin-top: 6px; }

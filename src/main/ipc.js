@@ -12,6 +12,7 @@ const showDialogError = require("./dialog_err");
 
 const initialize = require("./helpers/initialize");
 const requestWPT = require("./helpers/request_wpt");
+const wptBaseUrl = require("./helpers/wpt_base_url");
 const reinitialize = require("./helpers/reinitialize");
 const checkWptPlugin = require("./helpers/check_wpt_plugin");
 const openLoaderDevTools = require("./helpers/open_loader_dev_tools");
@@ -369,9 +370,9 @@ module.exports = function generateIpc(store, initCallback) {
       // expose une API REST. fetch natif Node 22, réponse sur le canal
       // request_wpt.done habituel.
       if (action === "lights.devices") {
-        const base = (
-          store.conf?.wpt?.url?.href || "http://localhost:9963"
-        ).replace(/\/+$/, "");
+        // Repli historique conserve : "localhost" et pas "127.0.0.1", pour
+        // ne pas changer le comportement en factorisant.
+        const base = wptBaseUrl(store, "http://localhost:9963");
         try {
           const devRes = await fetch(`${base}/lights/api/devices`);
           if (!devRes.ok) throw new Error(`GET devices: HTTP ${devRes.status}`);
@@ -395,9 +396,9 @@ module.exports = function generateIpc(store, initCallback) {
         return;
       }
       if (action === "lights.test") {
-        const base = (
-          store.conf?.wpt?.url?.href || "http://localhost:9963"
-        ).replace(/\/+$/, "");
+        // Repli historique conserve : "localhost" et pas "127.0.0.1", pour
+        // ne pas changer le comportement en factorisant.
+        const base = wptBaseUrl(store, "http://localhost:9963");
         try {
           const devRes = await fetch(`${base}/lights/api/devices`);
           if (!devRes.ok) throw new Error(`GET devices: HTTP ${devRes.status}`);

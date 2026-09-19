@@ -1,6 +1,7 @@
 const http = require("node:http");
 const https = require("node:https");
 const log = require("./electron_log");
+const wptBaseUrl = require("./wpt_base_url");
 
 /**
  * Tunnel d'accès distant à l'UI WyndPosTools (127.0.0.1:9963).
@@ -27,15 +28,7 @@ let ws = null;
 let connecting = false;
 
 function wptBase(store) {
-  try {
-    const href =
-      store?.conf?.wpt?.url?.href;
-    if (href) return href.replace(/\/+$/, "");
-  } catch (err) {
-    // Conf illisible → on retombe sur l'adresse WPT par défaut.
-    log.debug(`[WPT] URL WPT illisible dans la conf: ${err.message}`);
-  }
-  return "http://127.0.0.1:9963";
+  return wptBaseUrl(store);
 }
 
 function methodAllowed(m) {

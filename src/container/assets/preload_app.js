@@ -111,27 +111,30 @@ const __elReduxStatus = {
   method: null,
   err: null,
 };
-// Le `try` n'est PAS redondant avec le `.catch()` : `executeJavaScript` peut
-// lever SYNCHRONIQUEMENT (frame pas encore prete, contexte detruit), et un
-// `.catch()` ne couvre que le rejet de la promesse. Sans lui, l'exception
-// remonte non capturee et le preload s'interrompt avant d'exposer son statut.
-try {
-  if (__elReduxStatus.hasWebFrame) {
-    webFrame
-      .executeJavaScript(REDUX_TAP_SRC)
-      .catch((e) => {
-        // Le statut a déjà été cloné vers le MAIN world à ce stade : le muter
-        // ne se voit plus côté page, la console du preload est le seul canal.
-        __elReduxStatus.err = "exec KO: " + (e?.message);
-        reportTapError("exec KO: " + (e?.message));
-      });
+// Deux modes d'echec DISTINCTS, traites separement.
+//
+// `executeJavaScript` peut lever SYNCHRONIQUEMENT (frame pas encore prete,
+// contexte detruit) : c'est ce que garde le `try`, qui n'entoure donc que
+// l'appel. Il peut aussi rendre une promesse rejetee : c'est le `.catch()`,
+// pose en dehors. Les melanger laissait croire a un `try` redondant alors
+// qu'aucun des deux ne couvre l'autre.
+let execTap;
+if (__elReduxStatus.hasWebFrame) {
+  try {
+    execTap = webFrame.executeJavaScript(REDUX_TAP_SRC);
     __elReduxStatus.method = "webFrame.called";
-  } else {
-    __elReduxStatus.err = "webFrame indisponible";
+  } catch (e) {
+    __elReduxStatus.err = String(e?.message);
   }
-} catch (e) {
-  __elReduxStatus.err = String(e?.message);
+} else {
+  __elReduxStatus.err = "webFrame indisponible";
 }
+execTap?.catch((e) => {
+  // Le statut a déjà été cloné vers le MAIN world à ce stade : le muter ne se
+  // voit plus côté page, la console du preload est le seul canal.
+  __elReduxStatus.err = "exec KO: " + (e?.message);
+  reportTapError("exec KO: " + (e?.message));
+});
 try {
   contextBridge.exposeInMainWorld("__elReduxPreloadStatus", __elReduxStatus);
 } catch (e) {

@@ -25,22 +25,28 @@ const { screen } = require('electron')
 module.exports =  function getScreens() {
 	const primaire = screen.getPrimaryDisplay()
 
-	// Un Display Electron porte toujours un `id`. On exige quand meme qu'il soit
-	// defini : sans cette garde, deux `undefined` se valent, TOUT ecran se declare
-	// principal, et le comparateur devient incoherent — il affirmerait a la fois
-	// a<b et b<a, ce dont `sort` ne garantit rien. A defaut d'ecran principal
-	// identifiable, le tri par position suffit et reste deterministe.
 	const idPrimaire = primaire?.id ?? null
+
+	// Rang, plutot qu'une garde sur `idPrimaire`.
+	//
+	// L'ancienne version testait `idPrimaire !== null` avant de comparer, pour
+	// eviter qu'en l'absence d'ecran principal identifiable TOUS les ecrans se
+	// declarent principaux — le comparateur affirmait alors a la fois a<b et
+	// b<a, ce dont `sort` ne garantit rien.
+	//
+	// Exprime en rang, le probleme disparait par construction : si personne ne
+	// correspond, tout le monde vaut 1 ; si plusieurs correspondent, tous
+	// valent 0. Dans les deux cas on retombe sur le tri par position, qui est
+	// total et deterministe. Plus besoin de garde — et plus de comparaison que
+	// les types jugent morte.
+	const rang = (ecran) => (ecran.id === idPrimaire ? 0 : 1)
 
 	// Copie avant tri : `sort` trie en place, et le tableau rendu par Electron ne
 	// nous appartient pas.
 	const screens = [...screen.getAllDisplays()].sort((a, b) => {
-		if (null !== idPrimaire) {
-			if (a.id === idPrimaire) { return -1 }
-			if (b.id === idPrimaire) { return 1 }
-		}
-
-		return a.bounds.x - b.bounds.x || a.bounds.y - b.bounds.y
+		return rang(a) - rang(b)
+			|| a.bounds.x - b.bounds.x
+			|| a.bounds.y - b.bounds.y
 	})
 
 	return screens.map((aScreen) => {
