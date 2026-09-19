@@ -2,7 +2,7 @@ const checkUpdate = require("./check_update")
 const downloadUpdate = require("./download_update")
 const quitAndInstall = require("./quit_and_install")
 
-module.exports = downloadUpdateInstall = (params, callback) => {
+module.exports = (params, callback) => {
 
 	if(callback) {
 		callback("show_loader", 'update', 'start')

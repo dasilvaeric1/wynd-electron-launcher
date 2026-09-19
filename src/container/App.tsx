@@ -73,6 +73,25 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
   const displayPluginState = useMemo(() => {
     return conf ? conf.display_plugin_state.enable : false;
   }, [conf]);
+
+  // Origine attendue des messages postés par le POS : celle de la page
+  // réellement chargée dans l'iframe.
+  //
+  // Sans ce contrôle, `window.addEventListener("message")` accepte n'importe
+  // quel émetteur — une frame tierce, ou une page vers laquelle le POS aurait
+  // navigué — et le message est traité comme venant du POS. Or `receiveMessage`
+  // ne se contente pas de journaliser : il déclenche aussi `central.register`.
+  //
+  // Une page `file://` poste avec l'origine littérale "null", pas avec son URL.
+  const origineAttendue = useMemo(() => {
+    if (!urlApp) return null;
+    try {
+      const u = new URL(urlApp, window.location.href);
+      return u.protocol === "file:" ? "null" : u.origin;
+    } catch {
+      return null;
+    }
+  }, [urlApp]);
   useEffect(() => {
     if (conf) {
       let url = conf?.http.static
@@ -186,6 +205,21 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
   };
 
   const receiveMessage = (event: any) => {
+    // Les `ipc-message` viennent du webview que nous avons nous-mêmes créé :
+    // le canal est déjà clos. Seuls les `message` postés au window doivent
+    // prouver leur provenance.
+    //
+    // L'effet qui pose ce listener dépend de `urlApp`, donc l'origine capturée
+    // ici correspond toujours à l'url effectivement chargée.
+    if (event.type === "message" && origineAttendue !== null) {
+      if (event.origin !== origineAttendue) {
+        window.log?.debug(
+          `[WINDOW CONTAINER] message ignoré, origine inattendue: ${event.origin}`,
+        );
+        return;
+      }
+    }
+
     let data: any = null;
     if (
       event.type === "message" &&
@@ -447,7 +481,24 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
         display.switch === "REPORT" && (
           <ReportComponent onCallback={props.onCallback} />
         )}
-      <div id="el-menu-button" className={menuButtonCN} onClick={onClick} />
+      {/* Bouton d'ouverture du menu Wynd. `role`/`tabIndex`/`onKeyDown` ne
+          sont pas cosmétiques ici : le support distant pilote la caisse en
+          injectant des événements clavier (cf screen_session), et un <div>
+          nu n'est atteignable qu'aux coordonnées. */}
+      <div
+        id="el-menu-button"
+        className={menuButtonCN}
+        role="button"
+        tabIndex={0}
+        aria-label="Ouvrir le menu Wynd"
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+      />
       {conf && conf.emergency.enable && menu.open && (
         <Emergency visible={menu.open} onClick={onClickEmergency} />
       )}

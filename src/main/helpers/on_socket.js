@@ -543,6 +543,11 @@ module.exports = function onSocket(store, socket, initCallback) {
 						}
 						sendMessage(message)
 					})
+					// Sans ce break, 'wpt/restart' tombait dans `default` : le BO
+					// recevait « event wpt/restart not found » en ERROR alors que le
+					// redemarrage etait bel et bien lance, et `ignored = true`
+					// supprimait l'acquittement de la requete.
+					break;
 				default:
 					const message = {
 						id: request.id,

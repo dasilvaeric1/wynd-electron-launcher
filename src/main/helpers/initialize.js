@@ -73,7 +73,7 @@ module.exports = async function initialize(params, callback, opts) {
 		let killWPT = false
 		// Case : WPT already opened and conf.wpt.path is set on app start
 		try {
-			request = await axios.options(conf.wpt.url.href, null, { timeout: 1000 })
+			await axios.options(conf.wpt.url.href, null, { timeout: 1000 })
 			log.warn("[WPT] > URL: wpt found,  wpt.path is set, need to force kill other WPT process")
 			killWPT = true
 		}

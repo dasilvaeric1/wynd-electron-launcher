@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Titre de repli. Le titre RÉEL de la fenêtre vient de
+         `conf.title` (cf container_window.js), et container_window
+         neutralise `page-title-updated` pour que celui-ci ne
+         l'écrase pas : il sert aussi de WM_NAME, dont dépend
+         l'association de fenêtres du gestionnaire. -->
+    <title>Wynd Electron Launcher</title>
   </head>
 	<body>
     <div id="electron-launcher-root"></div>

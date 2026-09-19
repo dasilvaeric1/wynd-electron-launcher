@@ -6,7 +6,7 @@ const {
   REACT_DEVELOPER_TOOLS,
 } = require("electron-extension-installer");
 
-const package = require("../../package.json");
+const pkg = require("../../package.json");
 
 const log = require("./helpers/electron_log");
 
@@ -73,9 +73,17 @@ module.exports = function generatecontainerWindow(store) {
     log.debug("[WINDOW] > container : ready-to-show");
   });
 
+  // La page porte desormais un <title> (exige par l'accessibilite). Sans ce
+  // garde, il remplacerait le titre de la fenetre des le chargement — or
+  // celui-ci vient de `conf.title` et sert aussi de WM_NAME, dont depend
+  // l'association de fenetres cote gestionnaire.
+  containerWindow.on("page-title-updated", (e) => {
+    e.preventDefault();
+  });
+
   containerWindow.on("closed", () => {
     if (pm2 && process.env.NODE_ENV === "development" && store.pm2.connected) {
-      pm2.delete(package.pm2.process[0].name);
+      pm2.delete(pkg.pm2.process[0].name);
     }
     store.windows.container.current = null;
     // L'ecran client est volontairement `closable: false` — un client ne doit

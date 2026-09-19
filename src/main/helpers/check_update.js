@@ -2,7 +2,7 @@ const { app } = require('electron')
 const autoUpdater = require('./auto_updater');
 const CustomError = require("../../helpers/custom_error")
 
-module.exports = checkUpdate = (params, callback) => {
+module.exports = (params, callback) => {
 	autoUpdater.forceDevUpdateConfig = !app.isPackaged
 	autoUpdater.allowPrerelease = Boolean(params.allowPrerelease)
 

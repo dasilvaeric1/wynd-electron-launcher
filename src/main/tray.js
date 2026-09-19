@@ -9,7 +9,13 @@ module.exports = (store) => {
       ? "../../../assets/icons/png/16x16.png"
       : "../../assets/icons/png/16x16.png"
   );
-  appIcon = new Tray(iconPath);
+  // `const` + dépôt dans le store, et PAS une simple locale : l'appelant
+  // (`generateTray(store)` dans index.js) jette la valeur de retour, si bien
+  // que le seul ancrage de cet objet était jusqu'ici une globale implicite.
+  // Une locale le rendrait collectable dès le retour de la fonction — et
+  // l'icône disparaîtrait du tray.
+  const appIcon = new Tray(iconPath);
+  store.tray = appIcon;
   const onClick = (e, focusedWindow, focusedWebContents) => {
     if (store.windows.container.current) {
       if (store && store.conf && store.conf.raw) {

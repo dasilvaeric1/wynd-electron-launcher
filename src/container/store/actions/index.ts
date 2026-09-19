@@ -146,7 +146,6 @@ export function setToggleMenu(toggle: boolean): IAppAction<TAppActionTypeKeys> {
     payload: toggle,
   };
 }
-setToggleMenu;
 
 export function closePinpadAction(): IAppAction<TAppActionTypeKeys> {
   return {

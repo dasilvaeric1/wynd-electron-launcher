@@ -1,6 +1,6 @@
 
 
-module.exports = getCentralRegister = (store) => {
+module.exports = (store) => {
 	return {
 		name: store.infos.name,
 		url: store.conf.http && store.conf.http.enable ? `http://localhost:${store.conf.http.port}` : null,

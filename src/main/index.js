@@ -6,7 +6,7 @@ const os = require("os");
 let pm2 = app.isPackaged ? null : require("pm2");
 
 
-const package = require("../../package.json");
+const pkg = require("../../package.json");
 
 const getScreens = require("./helpers/get_screens");
 const killWPT = require("./helpers/kill_wpt");
@@ -233,7 +233,7 @@ app.on("will-quit", async (e) => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     if (pm2 && process.env.NODE_ENV === "development" && store.pm2.connected) {
-      pm2.delete(package.pm2.process[0].name);
+      pm2.delete(pkg.pm2.process[0].name);
     }
     app.quit();
   }

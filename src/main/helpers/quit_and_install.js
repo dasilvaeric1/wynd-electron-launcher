@@ -2,7 +2,7 @@ const autoUpdater = require("./auto_updater")
 
 const wait = require("./wait")
 
-module.exports = downloadUpdate = (callback) => {
+module.exports = (callback) => {
 
 		if (callback) {
 			callback("update_quit")

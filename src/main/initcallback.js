@@ -198,7 +198,7 @@ module.exports = function generataInitCallback(store) {
 				}
 				break;
 			case 'wpt_kill':
-				store.central.status === 'DISCONNECTED'
+				store.central.status = 'DISCONNECTED'
 				store.central.registered = false
 				store.central.registering = false
 				break
@@ -215,7 +215,7 @@ module.exports = function generataInitCallback(store) {
 					store.infos.app_versions = {
 						wpt: store.wpt.version
 					}
-				} else if (!store.infos.app_versions.wpt || !store.infos.app_versions.wpt !== store.wpt.version) {
+				} else if (!store.infos.app_versions.wpt || store.infos.app_versions.wpt !== store.wpt.version) {
 					store.infos.app_versions.wpt = store.wpt.version
 				}
 				break

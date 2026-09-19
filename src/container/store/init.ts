@@ -19,7 +19,7 @@ export const initialState: IRootState = {
     title: "",
   },
   menu: {
-    open: false || !!debug,
+    open: !!debug,
   },
   modal: {
     open: false,

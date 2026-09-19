@@ -1,7 +1,7 @@
 const CustomError = require("../../helpers/custom_error")
 const autoUpdater = require('./auto_updater');
 
-module.exports = downloadUpdate = (token, callback) => {
+module.exports = (token, callback) => {
 
 	return new Promise((resolve, reject) => {
 		const onDownloadProgress = (progressObj) => {
