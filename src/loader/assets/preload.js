@@ -15,9 +15,9 @@ try {
 }
 
 // --- Channel whitelists ---
-const SEND_CHANNELS = ["ready", "boot.retry", "boot.open_logs", "boot.quit"];
+const SEND_CHANNELS = new Set(["ready", "boot.retry", "boot.open_logs", "boot.quit"]);
 
-const RECEIVE_CHANNELS = [
+const RECEIVE_CHANNELS = new Set([
   "current_status",
   "download_progress",
   "app_infos",
@@ -27,7 +27,7 @@ const RECEIVE_CHANNELS = [
   "error",
   "user_path",
   "conf",
-];
+]);
 
 // --- Logger (initialise a l'arrivee de l'IPC user_path) ---
 // Avant cet IPC il n'y a pas encore de logger fichier. Plutot que de deverser
@@ -60,22 +60,22 @@ ipcRenderer.once("user_path", (_event, userPath) => {
 // --- Expose secure APIs to renderer via contextBridge ---
 contextBridge.exposeInMainWorld("electronAPI", {
   send: (channel, ...args) => {
-    if (SEND_CHANNELS.includes(channel)) {
+    if (SEND_CHANNELS.has(channel)) {
       ipcRenderer.send(channel, ...args);
     }
   },
   on: (channel, callback) => {
-    if (RECEIVE_CHANNELS.includes(channel)) {
+    if (RECEIVE_CHANNELS.has(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => callback(...args));
     }
   },
   once: (channel, callback) => {
-    if (RECEIVE_CHANNELS.includes(channel)) {
+    if (RECEIVE_CHANNELS.has(channel)) {
       ipcRenderer.once(channel, (_event, ...args) => callback(...args));
     }
   },
   removeAllListeners: (channel) => {
-    if (RECEIVE_CHANNELS.includes(channel)) {
+    if (RECEIVE_CHANNELS.has(channel)) {
       ipcRenderer.removeAllListeners(channel);
     }
   },

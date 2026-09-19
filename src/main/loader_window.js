@@ -55,7 +55,7 @@ module.exports = function generateLoaderWindow(store) {
 
 	loaderWindow.loadURL(loaderFile)
 
-	if (process.env.DEV && process.env.DEV.toLowerCase().indexOf("loader") >= 0) {
+	if (process.env.DEV?.toLowerCase().includes("loader")) {
 		loaderWindow.webContents.openDevTools({mode: 'detach'})
 		loaderWindow.center()
 	}

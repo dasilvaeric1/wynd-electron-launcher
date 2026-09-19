@@ -63,7 +63,7 @@ const PHASE_KEYS = Object.keys(PHASES)
 
 // Evenements terminaux exclus du fil du loader par initcallback.js : les
 // compter ferait deriver la barre au-dela de 100 %.
-const NOT_COUNTED = ['get_wpt_pid_done', 'wpt_version_done']
+const NOT_COUNTED = new Set(['get_wpt_pid_done', 'wpt_version_done'])
 
 // Index inverse evenement -> phase, construit une fois.
 const EVENT_PHASE = {}
@@ -81,7 +81,7 @@ for (const key of PHASE_KEYS) {
  */
 function countsAsStep(action) {
 	if (typeof action !== 'string') return false
-	if (NOT_COUNTED.indexOf(action) >= 0) return false
+	if (NOT_COUNTED.has(action)) return false
 	return action === 'finish' || /_(done|skip)$/.test(action)
 }
 

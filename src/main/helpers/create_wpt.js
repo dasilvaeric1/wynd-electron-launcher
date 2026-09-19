@@ -130,7 +130,7 @@ module.exports = function launchWpt(wpt, callback) {
 					}
 				} else if (
 					typeof message === 'string' &&
-					message.toUpperCase().indexOf('READY') >= 0
+					message.toUpperCase().includes('READY')
 				) {
 					if (timeout) {
 						clearTimeout(timeout)
@@ -163,7 +163,7 @@ module.exports = function launchWpt(wpt, callback) {
 					messages.length = ""
 				}
 
-				if (!wpt.wait_on_ipc && data.indexOf('[pid] ') >= 0 || data.indexOf('pid') >= 0) {
+				if (!wpt.wait_on_ipc && data.includes('[pid] ') || data.includes('pid')) {
 					let pid = typeof data === "object" ? data.toString().split("\n") : data.split("\n")
 					// NB : la condition ci-dessous est conservee telle quelle — elle est
 					// fautive (le `>= 0` est a l'interieur de indexOf) et retourne donc
@@ -197,8 +197,8 @@ module.exports = function launchWpt(wpt, callback) {
 
 				if (
 					!wpt.wait_on_ipc &&
-					(data.indexOf('[HTTP Server] started on port') >= 0 ||
-						data.indexOf('[HTTPS Server] started on port') >= 0)
+					(data.includes('[HTTP Server] started on port') ||
+						data.includes('[HTTPS Server] started on port'))
 				) {
 
 					if (timeout) {

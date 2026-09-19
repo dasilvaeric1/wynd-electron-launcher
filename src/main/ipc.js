@@ -272,7 +272,7 @@ module.exports = function generateIpc(store, initCallback) {
         let level = "INFO";
         if (others.length >= 2) {
           level = others.shift();
-          if (["INFO", "DEBUG", "ERROR"].indexOf(level) < 0) {
+          if (!["INFO", "DEBUG", "ERROR"].includes(level)) {
             level = "INFO";
           }
         }

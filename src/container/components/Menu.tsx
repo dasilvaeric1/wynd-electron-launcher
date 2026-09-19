@@ -155,9 +155,7 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
       key: "menu-item-screens",
       icon: <InfoCircleOutlined style={{ fontSize: "20px" }} />,
       onClick: onClickScreeensInfo,
-    });
-
-    items.push({
+    }, {
       label: "Signaler une anomalie",
       key: "menu-item-incident",
       icon: <WarningOutlined style={{ fontSize: "20px" }} />,
@@ -165,9 +163,7 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
         window.log.info("[WINDOW CONTAINER] Click Signaler une anomalie");
         setIncidentOpen(true);
       },
-    });
-
-    items.push({
+    }, {
       label: "Quitter l’application",
       key: "menu-item-close",
       icon: <PoweroffOutlined style={{ fontSize: "20px" }} />,

@@ -33,7 +33,7 @@ module.exports =  function  checkConfig(config, userPath) {
 			throw errors[0].err
 		}
 		const params =  errors[0].params
-		const key = errors[0].instancePath ? errors[0].instancePath.substring(1).replace(/\//g, '.') : "config"
+		const key = errors[0].instancePath ? errors[0].instancePath.slice(1).replace(/\//g, '.') : "config"
 		let message = key + ': ' + (errors[0].keyword === 'enum' && params.allowedValues ?  errors[0].message + ' [' + params.allowedValues + ']' :  errors[0].message)
 
 		if (params.additionalProperty) {

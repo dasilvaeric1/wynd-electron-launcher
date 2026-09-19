@@ -1,6 +1,6 @@
 const hasLevel = require("./has_level");
 
-const LEVELS = ["INFO", "DEBUG", "WARN", "ERROR"];
+const LEVELS = new Set(["INFO", "DEBUG", "WARN", "ERROR"]);
 
 /**
  * Sink unique pour les logs émis par le SCO/POS.
@@ -21,7 +21,7 @@ const LEVELS = ["INFO", "DEBUG", "WARN", "ERROR"];
  *   raw = message brut (central). Si `raw` absent, `flat` est réutilisé.
  */
 module.exports = function handleScoLog(store, level, payload) {
-  const lvl = LEVELS.indexOf(level) >= 0 ? level : "INFO";
+  const lvl = LEVELS.has(level) ? level : "INFO";
   const flat = payload?.flat;
   const raw = payload && "raw" in payload ? payload.raw : flat;
 

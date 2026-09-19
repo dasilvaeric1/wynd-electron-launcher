@@ -312,7 +312,7 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
     //
     // Les lights n'en ont pas besoin : leur branche calcule déjà le statut à
     // partir des devices réels (`lights.devices`).
-    const DEVICE_KEYS = ["fastprinter"];
+    const DEVICE_KEYS = new Set(["fastprinter"]);
 
     const statusOf = (key: string): TStatus => {
       const s = pluginState?.[key]?.status;
@@ -320,7 +320,7 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
       const pl = findPlugin(key);
       if (pl) {
         if (!pl.enabled) return "offline";
-        return DEVICE_KEYS.includes(key) ? "unknown" : "online";
+        return DEVICE_KEYS.has(key) ? "unknown" : "online";
       }
       return "unknown";
     };

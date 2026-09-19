@@ -65,7 +65,7 @@ window.theme.set("primary-color", window.theme.get("menu-background"), true);
 // Au niveau module, et pas dans le handler de réponse : le handler d'ERREUR
 // ci-dessous s'en sert aussi, et une requête qui échoue doit alimenter le
 // dashboard au même titre qu'une requête qui aboutit.
-const DIAGNOSTIC_EVENTS = [
+const DIAGNOSTIC_EVENTS = new Set([
   "fastprinter.defaultprinterdata",
   "fastprinter.printers",
   "fastprinter.printerdata",
@@ -73,13 +73,13 @@ const DIAGNOSTIC_EVENTS = [
   "universalterminal.isinitialized",
   "lights.devices",
   "lights.test",
-];
+]);
 
 window.electronAPI.on("request_wpt.error", (action: string, err: any) => {
   store.dispatch(setAskAction(false));
   // Un échec sur une requête de diagnostic est une DONNÉE, pas seulement une
   // notification : sans ça le dashboard conservait la dernière réponse valide.
-  if (DIAGNOSTIC_EVENTS.includes(action)) {
+  if (DIAGNOSTIC_EVENTS.has(action)) {
     store.dispatch(setDiagnosticErrorAction(action, err));
   }
   // Pas de notif pour les erreurs génériques sans info actionnable (ex. WPT non
@@ -154,7 +154,7 @@ window.electronAPI.on("request_wpt.done", (action: string, data: any) => {
       break;
   }
 
-  if (DIAGNOSTIC_EVENTS.includes(action)) {
+  if (DIAGNOSTIC_EVENTS.has(action)) {
     store.dispatch(setDiagnosticAction(action, data));
   }
   if (state.wpt.ask) {
@@ -424,7 +424,7 @@ const onCallback = (action: TNextAction, ...data: any) => {
         if (Array.isArray(token)) {
           token = token[0];
         }
-        const urlParsed = api_key.substring("StorageCache_".length);
+        const urlParsed = api_key.slice("StorageCache_".length);
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const url = new URL(urlParsed);
 

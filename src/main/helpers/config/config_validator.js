@@ -42,7 +42,7 @@ const convertUrl = function checkUrl(url) {
 };
 
 function validExist(it, keyword, metaData) {
-  const ref = it.instancePath.substring(1).split("/");
+  const ref = it.instancePath.slice(1).split("/");
   ref.pop();
   const missingElements = checkExist(it.parentData, metaData, ref);
   const valid = missingElements.length === 0;
@@ -230,7 +230,7 @@ const addKeyWord = function (confPath) {
         if (process.env[result[1]] && it.parentData[it.parentDataProperty]) {
           it.parentData[it.parentDataProperty] = process.env[result[1]];
         } else {
-          const ref = it.instancePath.substring(1).replace(/\//, ".");
+          const ref = it.instancePath.slice(1).replace(/\//, ".");
           const params = {
             ref: ref,
             value: data,
@@ -331,7 +331,7 @@ const addKeyWord = function (confPath) {
       // if enable is false, dependance is not needed
       let valid = true;
       const errors = [];
-      const ref = it.instancePath.substring(1).replace(/\//, ".");
+      const ref = it.instancePath.slice(1).replace(/\//, ".");
       let parentKey = "";
       if (ref.includes(".")) {
         parentKey = ref.split(".")[0] + ".";
@@ -432,7 +432,7 @@ const addKeyWord = function (confPath) {
     validate: function validate(metaData, data, parentSchema, it) {
       const errors = [];
 
-      const ref = it.instancePath.substring(1).replace(/\//, ".");
+      const ref = it.instancePath.slice(1).replace(/\//, ".");
       if (data === true) {
         for (let i = 0; i < metaData.length; i++) {
           const key = metaData[i];
@@ -523,7 +523,7 @@ const addKeyWord = function (confPath) {
     keyword: "coerce_boolean",
     modifying: true,
     validate: function validate(metaData, data, parentSchema, it) {
-      const ref = it.instancePath.substring(1).replace(/\//, ".");
+      const ref = it.instancePath.slice(1).replace(/\//, ".");
       const params = {
         ref: ref,
         value: data,

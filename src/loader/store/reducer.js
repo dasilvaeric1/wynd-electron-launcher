@@ -233,7 +233,7 @@ function reduce(state, event) {
 				next.download = false
 				return next
 			}
-			if (phase && state.phases.indexOf(phase) >= 0) {
+			if (phase && state.phases.includes(phase)) {
 				next.phaseState = markPhases(state.phases, phase)
 			}
 			return next

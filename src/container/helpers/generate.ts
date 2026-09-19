@@ -205,20 +205,7 @@ export const generateXML = (data0: IReportZ, data1: IReportCA[], data2: IUserRep
 	<line><space size="${maxLineSize}"></space></line>
 '</block>`
 
-	xml.push(header)
-	xml.push(dotLine)
-	xml.push(globalCA)
-	xml.push(dotLine)
-	xml.push(teams)
-	xml.push(dotLine)
-	xml.push(payments)
-	xml.push(dotLine)
-	xml.push(statReport)
-	xml.push(dotLine)
-	xml.push(products)
-	xml.push(dotLine)
-	xml.push(footer)
-	xml.push('</ticket>')
+	xml.push(header, dotLine, globalCA, dotLine, teams, dotLine, payments, dotLine, statReport, dotLine, products, dotLine, footer, '</ticket>')
 
 	return xml.join('')
 

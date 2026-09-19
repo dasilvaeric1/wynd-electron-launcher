@@ -14,16 +14,16 @@ module.exports = function checkWptPlugin(socket, pluginName) {
 		(plugins) => {
 			const found = (plugins || []).find((p) => p && p.name === pluginName)
 			if (!found) {
-				return Promise.reject({
+				throw {
 					code: `NO_${pluginName}_PLUGIN_FOUND`,
 					message: `No ${pluginName.toLowerCase()} plugin found`,
-				})
+				};
 			}
 			if (!found.enabled) {
-				return Promise.reject({
+				throw {
 					code: `${pluginName}_PLUGIN_DISABLED`,
 					message: `${pluginName.toLowerCase()} plugin is disabled`,
-				})
+				};
 			}
 			return found
 		}

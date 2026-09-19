@@ -40,7 +40,7 @@ module.exports = function generataInitCallback(store) {
 		} else if (
 			store.windows.loader.current?.isVisible() &&
 			!store.windows.loader.current.isDestroyed() &&
-			['download_progress', "get_wpt_pid_done", "show_loader", "wpt_version_done", 'wpt_ipc_datas'].indexOf(action) < 0
+			!['download_progress', "get_wpt_pid_done", "show_loader", "wpt_version_done", 'wpt_ipc_datas'].includes(action)
 		) {
 			if (data && (data instanceof CustomError || data instanceof Error)) {
 				store.windows.loader.current.webContents.send("current_status", action, { api_code: data.api_code || data.code, status: data.status, message: data.message })
@@ -309,7 +309,7 @@ module.exports = function generataInitCallback(store) {
 			log.debug(`[INIT] > ${action} ${Boolean(data)}`)
 		} else if (action === 'create_http_done') {
 			log.debug(`[INIT] > ${action}`)
-		} else if (['get_conf', 'get_conf_done', 'check_conf', 'wpt_connect'].indexOf(action) < 0) {
+		} else if (!['get_conf', 'get_conf_done', 'check_conf', 'wpt_connect'].includes(action)) {
 			log.debug(`[INIT] > ${action} ${data && typeof data === "object" ? jsonOrMarker(data, action) : data}`)
 		}
 
