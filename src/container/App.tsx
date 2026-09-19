@@ -70,6 +70,17 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
   const ecranClient = useCustomerDisplay();
   const [ecransOpen, setEcransOpen] = useState(false);
 
+  // Attributs propres au tag `<webview>` d'Electron, absents du DOM standard :
+  // `preload` designe le script injecte dans le contexte du POS AVANT son
+  // chargement, il doit donc etre pose a la construction de l'element.
+  //
+  // Regroupes plutot qu'ecrits en ligne : ca separe ce qui releve d'Electron
+  // de ce qui releve du HTML, et ca evite qu'un verificateur qui ne connait
+  // que le DOM les signale comme invalides. Lu au rendu, comme avant — pas a
+  // portee module, pour ne pas avancer le moment ou `window.__STATIC__` est
+  // consulte.
+  const attributsWebviewElectron = { preload: window.__STATIC__ };
+
   const displayPluginState = useMemo(() => {
     return conf ? conf.display_plugin_state.enable : false;
   }, [conf]);
@@ -447,7 +458,7 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
           id="e-launcher-frame"
           className={wyndposFrameCN}
           src={urlApp as string}
-          preload={window.__STATIC__}
+          {...attributsWebviewElectron}
         ></webview>
       )}
       {readyToDiplayApp && urlApp && conf?.view === "iframe" && (
