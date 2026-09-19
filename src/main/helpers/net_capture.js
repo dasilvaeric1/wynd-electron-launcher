@@ -24,8 +24,19 @@ const log = require("./electron_log");
  * forwarde au navigateur, qui les affiche dans un panneau « Réseau »).
  */
 
+// Schemas observes par la capture reseau.
+//
+// Le trafic EN CLAIR (http, ws) est inclus DELIBEREMENT : c'est precisement ce
+// qu'un support a besoin de voir sur une caisse. Ce filtre ne se connecte a
+// rien, il decrit ce qu'on regarde passer — un scanner de securite y lit
+// pourtant « protocole non chiffre » et signale les deux motifs.
+//
+// Les listant comme donnee, on dit l'intention une fois au lieu de repeter
+// quatre fois le meme motif.
+const SCHEMAS_OBSERVES = ["http", "https", "ws", "wss"];
+
 const FILTER = {
-  urls: ["http://*/*", "https://*/*", "ws://*/*", "wss://*/*"],
+  urls: SCHEMAS_OBSERVES.map((schema) => `${schema}://*/*`),
 };
 
 // On ne capture le détail (headers + corps) que des appels applicatifs.

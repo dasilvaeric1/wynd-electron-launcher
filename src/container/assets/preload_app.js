@@ -118,23 +118,30 @@ const __elReduxStatus = {
 // l'appel. Il peut aussi rendre une promesse rejetee : c'est le `.catch()`,
 // pose en dehors. Les melanger laissait croire a un `try` redondant alors
 // qu'aucun des deux ne couvre l'autre.
-let execTap;
 if (__elReduxStatus.hasWebFrame) {
-  try {
-    execTap = webFrame.executeJavaScript(REDUX_TAP_SRC);
-    __elReduxStatus.method = "webFrame.called";
-  } catch (e) {
-    __elReduxStatus.err = String(e?.message);
-  }
+  // IIFE async : `executeJavaScript` peut echouer de DEUX facons — lever
+  // synchroniquement (frame pas prete, contexte detruit) ou rendre une
+  // promesse rejetee. Un seul `try` + `await` les couvre toutes les deux,
+  // la ou deux mecanismes separes laissaient croire a une redondance.
+  //
+  // Tout ce qui precede le premier `await` s'execute SYNCHRONIQUEMENT :
+  // `method` est donc pose avant que le statut ne soit clone vers le MAIN
+  // world, comme avant.
+  void (async () => {
+    try {
+      const exec = webFrame.executeJavaScript(REDUX_TAP_SRC);
+      __elReduxStatus.method = "webFrame.called";
+      await exec;
+    } catch (e) {
+      // Passe ce point, le statut est deja clone cote page : le muter ne s'y
+      // voit plus, la remontee IPC est le seul canal.
+      __elReduxStatus.err = "exec KO: " + (e?.message);
+      reportTapError("exec KO: " + (e?.message));
+    }
+  })();
 } else {
   __elReduxStatus.err = "webFrame indisponible";
 }
-execTap?.catch((e) => {
-  // Le statut a déjà été cloné vers le MAIN world à ce stade : le muter ne se
-  // voit plus côté page, la console du preload est le seul canal.
-  __elReduxStatus.err = "exec KO: " + (e?.message);
-  reportTapError("exec KO: " + (e?.message));
-});
 try {
   contextBridge.exposeInMainWorld("__elReduxPreloadStatus", __elReduxStatus);
 } catch (e) {
