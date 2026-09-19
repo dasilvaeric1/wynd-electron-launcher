@@ -15,7 +15,7 @@ const ButtonWithLog: React.FunctionComponent<IButtonWithLog> = (props) => {
     let action: string | undefined
     if (
       (action =
-        (e.currentTarget.dataset && e.currentTarget.dataset.action) ||
+        (e.currentTarget.dataset?.action) ||
         props.action)
     ) {
       window.log.info('[WINDOW CONTAINER] Click', action)

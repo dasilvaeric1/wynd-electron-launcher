@@ -14,8 +14,8 @@
  * qu'on veut pouvoir diagnostiquer, il ne doit pas être perdu.
  */
 
-const { join } = require("path");
-const { randomUUID } = require("crypto");
+const { join } = require("node:path");
+const { randomUUID } = require("node:crypto");
 const { app } = require("electron");
 
 const log = require("./helpers/electron_log");

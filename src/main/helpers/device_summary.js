@@ -47,7 +47,7 @@ async function refreshTpe(socket) {
     ]);
     cache.tpe = {
       initialized: typeof init === "boolean" ? init : null,
-      plugin: plugin && plugin.name ? plugin.name : null,
+      plugin: plugin?.name ? plugin.name : null,
     };
     cache.tpeAt = Date.now();
   } catch (err) {
@@ -65,7 +65,7 @@ async function refreshPrinter(socket) {
     const cfg = await requestWPT(socket, {
       emit: "fastprinter.defaultprinterdata",
     }).catch(() => null);
-    if (!cfg || !cfg.type) {
+    if (!cfg?.type) {
       cache.printer = null;
       cache.printerAt = Date.now();
       return;
@@ -80,10 +80,10 @@ async function refreshPrinter(socket) {
       12
     ).catch(() => null);
     cache.printer = {
-      name: (d && d.name) || cfg.name || null,
+      name: (d?.name) || cfg.name || null,
       online: d && typeof d.online === "boolean" ? d.online : null,
       paperOk:
-        d && d.paper && typeof d.paper.end === "boolean" ? !d.paper.end : null,
+        d?.paper && typeof d.paper.end === "boolean" ? !d.paper.end : null,
       coverClosed:
         d && typeof d.cover_opened === "boolean" ? !d.cover_opened : null,
     };
@@ -101,8 +101,8 @@ async function refreshPrinter(socket) {
  */
 function getDeviceSummary(store) {
   if (!store) return null;
-  const socket = store.wpt && store.wpt.socket;
-  const wptConnected = !!(store.wpt && store.wpt.connect);
+  const socket = store.wpt?.socket;
+  const wptConnected = !!(store.wpt?.connect);
 
   // Refreshs en arrière-plan si TTL expiré et WPT joignable.
   if (socket && wptConnected) {
@@ -125,11 +125,11 @@ function getDeviceSummary(store) {
   const states = store.wpt.plugins_state || {};
   const plugins = Array.isArray(store.wpt.plugins)
     ? store.wpt.plugins.map((p) => {
-        const st = states[normKey(p && p.name)];
+        const st = states[normKey(p?.name)];
         return {
-          name: p && p.name ? p.name : "?",
-          enabled: !!(p && p.enabled),
-          status: st && st.status ? st.status : null,
+          name: p?.name ? p.name : "?",
+          enabled: !!(p?.enabled),
+          status: st?.status ? st.status : null,
         };
       })
     : null;

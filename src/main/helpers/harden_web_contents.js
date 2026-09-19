@@ -1,5 +1,5 @@
 const { shell } = require("electron");
-const { URL } = require("url");
+const { URL } = require("node:url");
 const log = require("./electron_log");
 
 /**

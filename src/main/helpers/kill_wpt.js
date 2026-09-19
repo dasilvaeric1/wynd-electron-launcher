@@ -11,7 +11,7 @@ module.exports =  function killWPT(wpt, callback) {
 			return reject(new CustomError(500, "KILL_WPT_NO_PROCESS_FOUND", "No process found"))
 		}
 		let timeout = null
-		if (child && child.killed) {
+		if (child?.killed) {
 			child.removeAllListeners()
 			log.info("[WPT] > kill: already killed")
 			if (callback) {
@@ -47,7 +47,7 @@ module.exports =  function killWPT(wpt, callback) {
 				}
 				resolve()
 			})
-			if (socket && socket.connected) {
+			if (socket?.connected) {
 				log.debug("[WPT] > kill : socket.emit end " + socket.id)
 				socket.emit("end")
 			}

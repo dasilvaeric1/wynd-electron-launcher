@@ -150,7 +150,7 @@ async function runTask(name, apiKey) {
     const ok = champ(data, "success") !== false;
     return ok ? { ok: true } : { ok: false, reason: "FAILED", message: champ(data, "error") || "" };
   } catch (err) {
-    const status = err.response && err.response.status;
+    const status = err.response?.status;
     if (status === 401) return { ok: false, reason: "UNAUTHORIZED" };
     log.error(`[SCHEDULER] run ${name}: ${err.message}`);
     return { ok: false, reason: "UNREACHABLE", message: err.message };

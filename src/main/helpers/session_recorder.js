@@ -1,4 +1,4 @@
-const fs = require("fs");
+const fs = require("node:fs");
 const JSZip = require("jszip");
 const axios = require("axios");
 const log = require("./electron_log");

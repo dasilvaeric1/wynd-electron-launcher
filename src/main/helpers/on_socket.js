@@ -44,7 +44,7 @@ module.exports = function onSocket(store, socket, initCallback) {
 
 	}
 	const config = store.conf
-	if (config.display_plugin_state && config.display_plugin_state.enable) {
+	if (config.display_plugin_state?.enable) {
 
 		store.wpt.plugins_state = {}
 		for (const eventPrefix of Object.keys(config.display_plugin_state)) {
@@ -268,7 +268,7 @@ module.exports = function onSocket(store, socket, initCallback) {
 			switch (request.event) {
 				case 'notification':
 					initCallback('action.notification', request.data)
-					if (request.data && request.data.confirm) {
+					if (request.data?.confirm) {
 						store.current_request = request
 						const message = {
 							id: request.id,

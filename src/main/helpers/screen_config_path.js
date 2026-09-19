@@ -1,4 +1,4 @@
-const fs = require("fs");
+const fs = require("node:fs");
 
 const WINDOWS_APPSETTINGS_PATH =
   "C:\\Retail\\ANYCOMMERCE\\RetailScheduler\\appsettings.json";

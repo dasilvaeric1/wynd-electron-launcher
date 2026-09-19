@@ -163,7 +163,7 @@ window.electronAPI.on("request_wpt.done", (action: string, data: any) => {
 });
 
 window.electronAPI.on("conf", (conf: any) => {
-  if (conf && conf.log && conf.log.renderer) {
+  if (conf?.log?.renderer) {
     window.log.setLevel(conf.log.renderer);
   }
 

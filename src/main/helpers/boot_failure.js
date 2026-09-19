@@ -33,7 +33,7 @@ function serializeError(err) {
 }
 
 function loaderIsUsable(store) {
-	const loader = store && store.windows && store.windows.loader.current
+	const loader = store?.windows?.loader.current
 	return !!(
 		loader &&
 		typeof loader.isDestroyed === 'function' &&

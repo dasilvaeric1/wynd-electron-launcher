@@ -1,7 +1,7 @@
-const path = require('path')
+const path = require('node:path')
 const log = require('../helpers/electron_log')
 const { jsonOrMarker } = require('./safe_json')
-const fs = require('fs')
+const fs = require('node:fs')
 const CustomError = require('../../helpers/custom_error')
 
 module.exports = function launchWpt(wpt, callback) {
@@ -35,7 +35,7 @@ module.exports = function launchWpt(wpt, callback) {
 			)
 		}, 1000 * wpt.creation_timeout)
 		// cannot use fork same node version of nw used
-		const spawn = require('child_process').spawn
+		const spawn = require('node:child_process').spawn
 
 		// wpt.path est modifiable a distance (node_ipc.js, evenement 'wpt.restart') et part
 		// dans spawn avec options.shell a true par defaut. Un chemin d'installation legitime

@@ -2,7 +2,7 @@
 module.exports =  function defaultConfig(config, log) {
 
 	const logInfo = function (attribute, value) {
-			log && log.info(`[CONFIG] set default ${attribute} ${value}`)
+			log?.info(`[CONFIG] set default ${attribute} ${value}`)
 	}
 	if (!config.url) {
 		config.url = null

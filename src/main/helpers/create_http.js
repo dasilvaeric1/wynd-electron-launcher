@@ -1,9 +1,9 @@
-const path = require('path')
+const path = require('node:path')
 const fastify = require('fastify')
 
 const fastifyStatic = require('@fastify/static')
 const proxy = require('@fastify/http-proxy')
-const Http = require('http');
+const Http = require('node:http');
 
 const autoUpdater = require('./auto_updater')
 const log = require("../helpers/electron_log")
@@ -36,7 +36,7 @@ module.exports = function createHttp(httpConf, opt, callback) {
 			prefix: '/container/',
 			decorateReply: false // the reply decorator has been added by the first plugin registration
 		})
-		if (opt && opt.proxy && opt.url) {
+		if (opt?.proxy && opt.url) {
 			app.all("/*", async (req, res) => {
 				// res.writeHead(200, {
 				// 	'Content-Type': 'text/plain',
@@ -58,7 +58,7 @@ module.exports = function createHttp(httpConf, opt, callback) {
 				proxyRequest.end();
 
 			})
-		} else if (opt && opt.proxy) {
+		} else if (opt?.proxy) {
 			app.register(proxy, {
 				upstream: localPath,
 				prefix: '/', // optional
@@ -71,7 +71,7 @@ module.exports = function createHttp(httpConf, opt, callback) {
 			})
 		}
 
-		if (opt && opt.update) {
+		if (opt?.update) {
 			app.all("/update/:version", async (req, res) => {
 				res.send(autoUpdater.logger)
 

@@ -28,8 +28,8 @@
  * est absent (machine non Windows, dev local, etc.), il devient un no-op.
  */
 
-const path = require("path");
-const fs = require("fs");
+const path = require("node:path");
+const fs = require("node:fs");
 const {
   BrowserWindow,
   desktopCapturer,
@@ -75,7 +75,7 @@ const presence = require("./helpers/central_presence");
  */
 function pushPresence() {
   try {
-    const win = sharedStore && sharedStore.windows && sharedStore.windows.container.current;
+    const win = sharedStore?.windows?.container.current;
     if (win && !win.isDestroyed() && sharedStore.ready) {
       win.webContents.send("central.presence", presence.snapshot());
     }
@@ -169,7 +169,7 @@ async function readCentralConfig() {
     const raw = fs.readFileSync(APPSETTINGS_PATH, "utf8").replace(/^﻿/, "");
     const json = JSON.parse(raw);
     const c = json?.CentralApi;
-    if (!c || !c.BaseUrl || !c.ApiKey) {
+    if (!c?.BaseUrl || !c.ApiKey) {
       if (!warnedMissing) {
         log.warn(
           "[SCREEN] CentralApi incomplet dans appsettings (BaseUrl/ApiKey requis), screen-session désactivé",
@@ -462,13 +462,13 @@ async function pollOnce() {
     // re-declencher une session en cours.
     if (activeSession || activeConsentWindow) return;
 
-    if (r.body && r.body.wptTunnel && r.body.wptTunnel.open) {
+    if (r.body?.wptTunnel?.open) {
       wptProxyTunnel
         .open(cfg, sharedStore, httpRequest)
         .catch((e) => log.debug(`[WPT-TUNNEL] open: ${e.message}`));
     }
-    const session = r.body && r.body.session;
-    if (session && session.id) {
+    const session = r.body?.session;
+    if (session?.id) {
       log.info(
         `[SCREEN] session pending détectée: ${session.id} (requestedBy=${session.requestedBy})`,
       );
@@ -590,7 +590,7 @@ async function startCaptureLoop(cfg, session) {
       { "x-api-key": cfg.apiKey, "content-type": "application/json" },
       "{}",
     );
-    if (!r.ok || !r.body || !r.body.ticket) {
+    if (!r.ok || !r.body?.ticket) {
       log.error(`[SCREEN] ticket grant failed: ${r.status}`);
       return;
     }

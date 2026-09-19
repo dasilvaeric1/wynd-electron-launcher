@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const axios = require("axios");
 const JSZip = require("jszip");
@@ -47,9 +47,9 @@ function buildReportMeta(store, comment, now) {
     electron: infos.stack ? infos.stack.electron : null,
     title: conf.title || null,
     view: conf.view || null,
-    url: conf.url && conf.url.href ? conf.url.href : null,
+    url: conf.url?.href ? conf.url.href : null,
     wpt: {
-      enabled: !!(conf.wpt && conf.wpt.enable),
+      enabled: !!(conf.wpt?.enable),
       connected: !!wpt.connect,
       version: wpt.version || null,
       plugins: Array.isArray(wpt.plugins)
@@ -104,7 +104,7 @@ async function buildIncidentZip(store, comment, now) {
   const meta = buildReportMeta(store, comment, now);
   zip.file("report.json", JSON.stringify(meta, null, 2));
 
-  const logs = (store && store.logs) || {};
+  const logs = (store?.logs) || {};
   for (const [name, dir] of [["main", logs.main], ["app", logs.app]]) {
     if (!dir) continue;
     const file = latestLogFile(dir);

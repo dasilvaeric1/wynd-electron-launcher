@@ -1,6 +1,6 @@
 const { protocol, app, net } = require("electron");
-const path = require("path");
-const { pathToFileURL } = require("url");
+const path = require("node:path");
+const { pathToFileURL } = require("node:url");
 
 // Le scheme custom `assets://` (logo menu) doit être déclaré privilégié
 // AVANT app.ready — sinon protocol.handle ne peut pas l'intercepter.

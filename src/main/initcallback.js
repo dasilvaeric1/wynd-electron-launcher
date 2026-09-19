@@ -1,5 +1,5 @@
-const url = require('url')
-const path = require('path')
+const url = require('node:url')
+const path = require('node:path')
 const log = require("./helpers/electron_log")
 const { jsonOrMarker } = require("./helpers/safe_json")
 
@@ -32,16 +32,13 @@ module.exports = function generataInitCallback(store) {
 			store.windows.loader.current.show()
 			store.windows.loader.current.webContents.send("loader.action", buildBootPlan(store.conf, data))
 		} else if (
-			store.windows.loader.current &&
-			store.windows.loader.current.isVisible() &&
-			store.windows.container.current &&
-			store.windows.container.current.isVisible() &&
+			store.windows.loader.current?.isVisible() &&
+			store.windows.container.current?.isVisible() &&
 			action === 'show_loader' && data2 === "end"
 		) {
 			store.windows.loader.current.hide()
 		} else if (
-			store.windows.loader.current &&
-			store.windows.loader.current.isVisible() &&
+			store.windows.loader.current?.isVisible() &&
 			!store.windows.loader.current.isDestroyed() &&
 			['download_progress', "get_wpt_pid_done", "show_loader", "wpt_version_done", 'wpt_ipc_datas'].indexOf(action) < 0
 		) {
@@ -72,18 +69,18 @@ module.exports = function generataInitCallback(store) {
 				if (store.windows.loader.current && !store.windows.loader.current.isDestroyed()) {
 					store.windows.loader.current.webContents.send("loader.plan", buildBootPlan(data, 'initialize'))
 				}
-				if (store.conf.central && store.conf.central.enable && store.conf.central.mode === "AUTO") {
+				if (store.conf.central?.enable && store.conf.central.mode === "AUTO") {
 					if (store.central.status === 'READY' && !store.central.registered && !store.central.registering) {
 						const register = getCentralRegister(store)
 
 						store.wpt.socket.emit("central.register", register)
 					}
 					store.central.ready = true
-				} else if (store.conf.central && store.conf.central.enable && store.conf.central.mode !== "AUTO") {
+				} else if (store.conf.central?.enable && store.conf.central.mode !== "AUTO") {
 					store.central.ready = false
 				}
 
-				if (store.conf && store.conf.clear_cache_on_start) {
+				if (store.conf?.clear_cache_on_start) {
 					clearCache()
 				}
 				if (store.conf && !store.conf.http.enable) {
@@ -110,7 +107,7 @@ module.exports = function generataInitCallback(store) {
 					}
 				}
 
-				if (store.conf.log && store.conf.log.main) {
+				if (store.conf.log?.main) {
 					log.level = store.conf.log.main
 					// log.transports.console.level = store.conf.log.main
 				}
@@ -150,7 +147,7 @@ module.exports = function generataInitCallback(store) {
 			case 'create_wpt_done':
 				store.wpt.process = data
 
-				const wptVersion = store.wpt.ipc && store.wpt.ipc.version || store.wpt && store.wpt.version || null
+				const wptVersion = store.wpt.ipc?.version || store.wpt?.version || null
 				if (wptVersion) {
 					if (!store.infos.app_versions) {
 						store.infos.app_versions = {
@@ -160,7 +157,7 @@ module.exports = function generataInitCallback(store) {
 						store.infos.app_versions.wpt = wptVersion
 					}
 				}
-				if (store.conf && store.conf.wpt && store.conf.wpt.keep_listeners && data.stdout) {
+				if (store.conf?.wpt?.keep_listeners && data.stdout) {
 					data.stdout.on("data", () => {
 						//
 					})
@@ -168,7 +165,7 @@ module.exports = function generataInitCallback(store) {
 				data.once("exit", () => {
 					store.wpt.process = null
 					store.wpt.pid = null
-					if (store.infos.app_versions && store.infos.app_versions.wpt) {
+					if (store.infos.app_versions?.wpt) {
 						store.infos.app_versions.wpt = undefined
 					}
 				})
@@ -192,7 +189,7 @@ module.exports = function generataInitCallback(store) {
 					const innerCallback = (action, data, data2) => {
 						initCallback(action, data, data2)
 					}
-					if (store.conf && store.conf.central.enable) {
+					if (store.conf?.central.enable) {
 						onSocket(store, store.wpt.socket, innerCallback)
 					}
 				}
@@ -239,14 +236,14 @@ module.exports = function generataInitCallback(store) {
 				}
 				break;
 			case 'download_progress':
-				if (store.windows.loader.current && store.windows.loader.current.isVisible() && !store.windows.loader.current.isDestroyed()) {
+				if (store.windows.loader.current?.isVisible() && !store.windows.loader.current.isDestroyed()) {
 					store.windows.loader.current.webContents.send("download_progress", data.percent)
 				}
 				break
 
 				case 'create_http_done':
 				store.http = data
-				if (store.conf && store.conf.http.enable) {
+				if (store.conf?.http.enable) {
 					const containerFile = url.format({
 						pathname: store.conf.raw ? path.join(`localhost:${store.conf.http.port}`, 'index.html') : path.join(`localhost:${store.conf.http.port}`, 'container', 'index.html'),
 						protocol: 'http',

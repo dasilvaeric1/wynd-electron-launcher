@@ -118,22 +118,22 @@ try {
       .catch((e) => {
         // Le statut a déjà été cloné vers le MAIN world à ce stade : le muter
         // ne se voit plus côté page, la console du preload est le seul canal.
-        __elReduxStatus.err = "exec KO: " + (e && e.message);
-        reportTapError("exec KO: " + (e && e.message));
+        __elReduxStatus.err = "exec KO: " + (e?.message);
+        reportTapError("exec KO: " + (e?.message));
       });
     __elReduxStatus.method = "webFrame.called";
   } else {
     __elReduxStatus.err = "webFrame indisponible";
   }
 } catch (e) {
-  __elReduxStatus.err = String(e && e.message);
+  __elReduxStatus.err = String(e?.message);
 }
 try {
   contextBridge.exposeInMainWorld("__elReduxPreloadStatus", __elReduxStatus);
 } catch (e) {
   // Sans contextBridge, le statut d'injection n'est plus lisible depuis la
   // page : la remontee IPC est le seul canal restant.
-  reportTapError("exposeInMainWorld KO: " + (e && e.message));
+  reportTapError("exposeInMainWorld KO: " + (e?.message));
 }
 
 ipcRenderer.on("parent.action", (event, data) => {

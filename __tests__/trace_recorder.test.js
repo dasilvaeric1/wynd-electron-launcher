@@ -18,8 +18,12 @@ jest.mock("../src/main/helpers/get_asset", () => () => "/fake/rrweb.js");
 
 // On ne remplace QUE la lecture du bundle rrweb : mocker `fs` en entier casse
 // jest lui-meme, qui s'en sert pour resoudre les modules.
-jest.mock("fs", () => {
-  const real = jest.requireActual("fs");
+//
+// `node:fs` et PAS `fs` : le code sous test requiert le specifier prefixe, et
+// jest traite les deux comme des modules distincts — mocker `fs` ne
+// l'intercepterait pas.
+jest.mock("node:fs", () => {
+  const real = jest.requireActual("node:fs");
   return {
     ...real,
     readFileSync: (p, ...rest) =>

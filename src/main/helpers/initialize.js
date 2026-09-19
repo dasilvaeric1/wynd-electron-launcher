@@ -68,7 +68,7 @@ module.exports = async function initialize(params, callback, opts) {
 		callback('create_wpt')
 	}
 
-	if (conf.wpt && conf.wpt.enable && conf.wpt.path && !opts.keep_wpt) {
+	if (conf.wpt?.enable && conf.wpt.path && !opts.keep_wpt) {
 
 		let killWPT = false
 		// Case : WPT already opened and conf.wpt.path is set on app start
@@ -99,7 +99,7 @@ module.exports = async function initialize(params, callback, opts) {
 		callback('create_wpt_skip')
 	}
 
-	if (conf.http && conf.http.enable && !opts.keep_http) {
+	if (conf.http?.enable && !opts.keep_http) {
 
 		// let url = null
 		// if (conf.proxy.enable && conf.proxy.url) {
@@ -107,12 +107,12 @@ module.exports = async function initialize(params, callback, opts) {
 		// } else if (conf.url.protocol !== "file:") {
 		// 	url = conf.url
 		// }
-		await createHttp(conf.http, { update: !!(conf.update && conf.update.enable), proxy: conf.proxy.enable || conf.url.protocol !== "file", url: conf.proxy.url, publish: conf.publish }, callback)
+		await createHttp(conf.http, { update: !!(conf.update?.enable), proxy: conf.proxy.enable || conf.url.protocol !== "file", url: conf.proxy.url, publish: conf.publish }, callback)
 	} else if (callback) {
 		callback('create_http_skip')
 	}
 
-	if (conf.wpt && conf.wpt.enable && !opts.keep_socket_connection) {
+	if (conf.wpt?.enable && !opts.keep_socket_connection) {
 
 		await connectToWpt(conf, conf.wpt.url.href, callback)
 		if (callback) {

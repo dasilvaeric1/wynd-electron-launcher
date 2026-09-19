@@ -1,4 +1,4 @@
-const Stream = require("stream")
+const Stream = require("node:stream")
 const autoUpdater = require("./auto_updater")
 
 class StreamLogger extends Stream.Duplex {

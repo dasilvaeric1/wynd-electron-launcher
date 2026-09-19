@@ -122,7 +122,7 @@ module.exports = function connectToWpt(conf, wpt_url, callback) {
 				timeout = null
 			}
 
-			if (conf.central && conf.central.enable) {
+			if (conf.central?.enable) {
 				const centralPlugin = plugins.find((plugin) => {
 					return plugin.name.toLowerCase() === 'central'
 				})

@@ -20,7 +20,7 @@
 //   - mode 'window' : on cherche la container BrowserWindow par sa
 //     getMediaSourceId() (Electron expose ça depuis 14+)
 //   - mode 'screen' : on prend sources[screenIndex] des écrans détectés
-const path = require("path");
+const path = require("node:path");
 const { BrowserWindow, ipcMain, desktopCapturer } = require("electron");
 
 let captureWindow = null;
@@ -86,7 +86,7 @@ function destroyCaptureWindow() {
     captureWindow.webContents.send("webrtc:teardown");
   } catch (err) {
     // Renderer déjà parti : la window est fermée juste après de toute façon.
-    if (activeContext && activeContext.log) {
+    if (activeContext?.log) {
       activeContext.log.debug(`[WEBRTC] teardown non transmis: ${err.message}`);
     }
   }

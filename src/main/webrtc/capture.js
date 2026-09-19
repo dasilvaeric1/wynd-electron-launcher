@@ -234,7 +234,7 @@ function tearDownPeer(browserPeerId) {
 }
 
 window.webrtcBridge.onSignal(async (msg) => {
-  if (!msg || !msg.type) return;
+  if (!msg?.type) return;
   switch (msg.type) {
     case "want-webrtc":
       // Browser demande un flux ; si localStream n'est pas encore prêt

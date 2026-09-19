@@ -64,10 +64,10 @@ module.exports = function nodeIpcConnect(store, callback, logger) {
 									err: null
 								}
 							}
-							if (store.windows.loader.current && store.windows.loader.current.isVisible() && !store.windows.loader.current.isDestroyed()) {
+							if (store.windows.loader.current?.isVisible() && !store.windows.loader.current.isDestroyed()) {
 								store.windows.loader.current.close()
 							}
-							if (store.windows.container.current && store.windows.container.current.isVisible() && !store.windows.container.current.isDestroyed()) {
+							if (store.windows.container.current?.isVisible() && !store.windows.container.current.isDestroyed()) {
 								store.windows.container.current.close()
 							}
 							logger.info(`[IPC] > response id=${request.id}"`)
@@ -103,7 +103,7 @@ module.exports = function nodeIpcConnect(store, callback, logger) {
 							})
 							break;
 						case 'wpt.restart':
-							if (request.datas && request.datas.path) {
+							if (request.datas?.path) {
 								store.conf.wpt.path = request.datas.path
 							}
 							restartWpt(store.wpt, store.conf.wpt, callback).then((data) => {

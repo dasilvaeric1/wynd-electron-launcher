@@ -1,4 +1,4 @@
-const path = require('path')
+const path = require('node:path')
 const log = process.env.NODE_ENV !== "test" ? require("../electron_log") : null
 
 const CustomError = require("../../../helpers/custom_error")

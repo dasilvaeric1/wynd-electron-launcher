@@ -256,7 +256,7 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
       }
     }
 
-    if (data && data.type && typeof data.type === "string") {
+    if (data?.type && typeof data.type === "string") {
       switch (data.type.toUpperCase()) {
         case "LOG":
           if (
@@ -421,7 +421,7 @@ const App: React.FunctionComponent<IAppProps> = (props) => {
             ecranClient={ecranClient}
           />
           {loader.active && <LoaderComponent />}
-          {conf && conf.title && !conf.frame && <Title title={conf.title} />}
+          {conf?.title && !conf.frame && <Title title={conf.title} />}
         </Drawer>
       )}
       {/* Dashboard "Périphériques" : occupe le reste de l'écran (à droite du

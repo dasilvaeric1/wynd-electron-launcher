@@ -1,4 +1,4 @@
-const { join } = require('path')
+const { join } = require('node:path')
 const { transports, createLogger, format } = require('winston');
 require('winston-daily-rotate-file');
 

@@ -1,5 +1,5 @@
-const http = require("http");
-const https = require("https");
+const http = require("node:http");
+const https = require("node:https");
 const log = require("./electron_log");
 
 /**
@@ -29,11 +29,7 @@ let connecting = false;
 function wptBase(store) {
   try {
     const href =
-      store &&
-      store.conf &&
-      store.conf.wpt &&
-      store.conf.wpt.url &&
-      store.conf.wpt.url.href;
+      store?.conf?.wpt?.url?.href;
     if (href) return href.replace(/\/+$/, "");
   } catch (err) {
     // Conf illisible → on retombe sur l'adresse WPT par défaut.
@@ -196,7 +192,7 @@ async function open(cfg, store, httpRequest) {
       { "x-api-key": cfg.apiKey, "content-type": "application/json" },
       "{}"
     );
-    if (!r.ok || !r.body || !r.body.ticket) {
+    if (!r.ok || !r.body?.ticket) {
       log.warn(`[WPT-TUNNEL] ticket grant failed: ${r.status}`);
       connecting = false;
       return;

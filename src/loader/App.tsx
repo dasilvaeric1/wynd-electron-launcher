@@ -120,10 +120,10 @@ export default function App() {
     api.on('error', (error: IBootError) => dispatch({ type: 'error', error }))
 
     api.on('conf', (conf: { theme?: Record<string, string>; log?: { renderer?: string } }) => {
-      if (conf && conf.log && conf.log.renderer) {
+      if (conf?.log?.renderer) {
         window.log?.setLevel(conf.log.renderer)
       }
-      if (!conf || !conf.theme) {
+      if (!conf?.theme) {
         return
       }
       Object.keys(conf.theme).forEach((key) => {

@@ -110,7 +110,7 @@ function buildBootPlan(conf, action) {
 	const act = ACTION_PHASES[action] ? action : 'initialize'
 	const c = conf || {}
 
-	const updateOnStart = !!(c.update && c.update.enable && c.update.on_start)
+	const updateOnStart = !!(c.update?.enable && c.update.on_start)
 
 	const phases = ACTION_PHASES[act].filter((key) => {
 		// La phase de mise a jour n'existe que si le bootstrap va reellement la

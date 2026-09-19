@@ -1,4 +1,4 @@
-const { URL } = require("url");
+const { URL } = require("node:url");
 const log = require("./electron_log");
 const handleScoLog = require("./handle_sco_log");
 const netCapture = require("./net_capture");
@@ -124,7 +124,7 @@ function netFileSink(store) {
 // distant est file://).
 function matchesPos(store, url) {
   if (!url) return false;
-  const conf = store.conf && store.conf.url;
+  const conf = store.conf?.url;
   const href = conf && (conf.href || conf);
   if (!href) return false;
   const h = String(href);
@@ -159,7 +159,7 @@ function matchesPos(store, url) {
 module.exports = function captureJsErrors(store) {
   const { app, webFrameMain } = require("electron");
 
-  const logCfg = () => (store.conf && store.conf.log) || {};
+  const logCfg = () => (store.conf?.log) || {};
   const errEnabled = () => logCfg().capture_errors === true;
   const consoleEnabled = () => logCfg().capture_console === true;
   const netEnabled = () => logCfg().capture_network === true;
@@ -190,7 +190,7 @@ module.exports = function captureJsErrors(store) {
             con: consoleEnabled(),
           });
           Promise.resolve(frame.executeJavaScript(src, true)).catch((err) =>
-            log.debug(`[JS-ERR] injection hook KO: ${err && err.message}`),
+            log.debug(`[JS-ERR] injection hook KO: ${err?.message}`),
           );
         }
 

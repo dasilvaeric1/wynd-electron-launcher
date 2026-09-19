@@ -1,5 +1,5 @@
 
-const { join } = require('path')
+const { join } = require('node:path')
 const winston = require('winston');
 require('winston-daily-rotate-file');
 

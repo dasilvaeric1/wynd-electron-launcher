@@ -1,4 +1,4 @@
-const path = require("path");
+const path = require("node:path");
 const { ipcRenderer, contextBridge, webFrame } = require("electron");
 const createRenderLog = require("../../helpers/create_renderer_log");
 

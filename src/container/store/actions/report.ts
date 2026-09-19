@@ -50,7 +50,7 @@ export const fetchReportOperationsUponRequest = (fiscalDate: string, reportType:
     Authorization: `Bearer ${api.token}`,
   }
 
-	if (process.env.DEV && process.env.DEV.includes('REPORT')) {
+	if (process.env.DEV?.includes('REPORT')) {
 		return Promise.resolve(fakeProduct.products)
 	}
 
@@ -75,7 +75,7 @@ export const fetchReportProducts = (fiscalDate: string, reportType: TReportType)
     Authorization: `Bearer ${api.token}`,
   }
 
-	if (process.env.DEV && process.env.DEV.includes('REPORT')) {
+	if (process.env.DEV?.includes('REPORT')) {
 		return Promise.resolve(convertProduct(fakeProduct.products))
 	}
 
@@ -95,7 +95,7 @@ export const fetchReportStat = (fiscalDate: string, reportType: TReportType) => 
 	): Promise<IReportStat[]> => {
 		const { report, api } = getState()
 
-	if (process.env.DEV && process.env.DEV.includes('REPORT')) {
+	if (process.env.DEV?.includes('REPORT')) {
 		return Promise.resolve(convertReportStat(fakeReports[0]))
 	}
 
@@ -128,7 +128,7 @@ export const fetchReportDiscounts = (fiscalDate: string, reportType: TReportType
     Authorization: `Bearer ${api.token}`,
   }
 
-	if (process.env.DEV && process.env.DEV.includes('REPORT')) {
+	if (process.env.DEV?.includes('REPORT')) {
 		return Promise.resolve(fakeDiscount.discounts)
 	}
 
@@ -152,7 +152,7 @@ export const fetchReportPayments = (fiscalDate: string, reportType: TReportType)
     Authorization: `Bearer ${api.token}`,
   }
 
-	if (process.env.DEV && process.env.DEV.includes('REPORT')) {
+	if (process.env.DEV?.includes('REPORT')) {
 		return Promise.resolve(fakePayment.payments)
 	}
 
@@ -176,7 +176,7 @@ export const fetchReportUsers = (fiscalDate: string, reportType: TReportType) =>
     Authorization: `Bearer ${api.token}`,
   }
 
-	const promise = process.env.DEV && process.env.DEV.includes('REPORT') ?
+	const promise = process.env.DEV?.includes('REPORT') ?
 	  Promise.resolve(fakeTeamReport.users) :
 		axios.get<IReportTeam, AxiosResponse<IReportTeam>>(
 			`${report.env?.API_URL}/pos/reports/${reportType}/users/${report.env?.API_CENTRAL_ENTITY}?fiscal_date=${fiscalDate}`,
@@ -206,7 +206,7 @@ export const fetchGlobalCA = (fiscalDate: string, reportType: TReportType) => (
     Authorization: `Bearer ${api.token}`,
   }
 
-	if (process.env.DEV && process.env.DEV.includes('REPORT')) {
+	if (process.env.DEV?.includes('REPORT')) {
 		return Promise.resolve(fakeCA)
 	}
 

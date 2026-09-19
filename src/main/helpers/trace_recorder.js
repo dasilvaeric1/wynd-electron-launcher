@@ -30,7 +30,7 @@
  * qui a le plus de valeur pour comprendre ce que le caissier a fait.
  */
 
-const fs = require("fs");
+const fs = require("node:fs");
 const log = require("./electron_log");
 const getAssetPath = require("./get_asset");
 
@@ -197,7 +197,7 @@ function createRecorder({ cfg, getWebContents, onChunk, onPartial, onTarget }) {
       const out = await c.executeJavaScript(src, true);
       // Le hook tourne dans la page POS et n'a aucun canal de log : il remonte
       // sa derniere erreur dans la charge utile, on la trace ici.
-      if (out && out.lastErr) log.debug(`[TRACE] hook page: ${out.lastErr}`);
+      if (out?.lastErr) log.debug(`[TRACE] hook page: ${out.lastErr}`);
       return out;
     } catch (err) {
       log.debug(`[TRACE] executeJavaScript KO: ${err.message}`);

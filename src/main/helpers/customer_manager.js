@@ -1,5 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+const fs = require("node:fs");
+const path = require("node:path");
 const { app, screen } = require("electron");
 
 const log = require("./electron_log");
@@ -58,7 +58,7 @@ function ecrireChoix(index) {
 
 /** Section [customer] effective : config.ini surchargee par le choix manuel. */
 function confEffective(store) {
-  const base = (store.conf && store.conf.customer) || {};
+  const base = (store.conf?.customer) || {};
   const manuel = lireChoix();
   return manuel === null ? base : { ...base, screen: manuel };
 }

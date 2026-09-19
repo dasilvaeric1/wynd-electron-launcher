@@ -13,7 +13,7 @@ module.exports = function dialogErr(store, err) {
 		detail: message,
 	}
 
-	if (dialogOpts.message.startsWith('CONFIG_') && store.path && store.path.conf) {
+	if (dialogOpts.message.startsWith('CONFIG_') && store.path?.conf) {
 		try {
 			clipboard.writeText(store.path.conf)
 			dialogOpts.detail += '\r\r(saved in clipboard)'
@@ -22,32 +22,32 @@ module.exports = function dialogErr(store, err) {
 			log.error(err2)
 		}
 	}
-	if (err && err.messages && typeof err.messages === "string") {
+	if (err?.messages && typeof err.messages === "string") {
 		dialogOpts.detail = dialogOpts.detail + '\n' + err.messages
 	}
 
-	if ((!process.env.EL_DEBUG || process.env.EL_DEBUG !== "loader") && store.windows.loader.current && store.windows.loader.current.isVisible()) {
+	if ((!process.env.EL_DEBUG || process.env.EL_DEBUG !== "loader") && store.windows.loader.current?.isVisible()) {
 		store.windows.loader.current.hide()
 	}
 	dialog.showMessageBox(store.windows.container.current, dialogOpts).then((returnValue) => {
 		if (store.http) {
 			store.http = null
 		}
-		if (store.wpt && store.wpt.socket) {
+		if (store.wpt?.socket) {
 			store.wpt.socket = null
 		}
 
 		if (store.http) {
 			store.http = '...'
 		}
-		if (store.windows && store.windows.container.current) {
+		if (store.windows?.container.current) {
 			store.windows.container.current = '...'
 		}
-		if (store.windows && store.windows.loader.current) {
+		if (store.windows?.loader.current) {
 			store.windows.loader.current = '...'
 		}
 
-		if (store.wpt && store.wpt.process) {
+		if (store.wpt?.process) {
 			store.wpt.process = '...'
 		}
 

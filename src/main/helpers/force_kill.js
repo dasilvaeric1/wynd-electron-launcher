@@ -30,7 +30,7 @@ module.exports =  function forceKill(port) {
 				timeout = null
 				reject(new CustomError(500, CustomError.CODE.CANNOT_KILL_WPT, "The process does not respond"))
 			}, 1000 * 3)
-			const exec = require('child_process').exec
+			const exec = require('node:child_process').exec
 			const regexPID = /\d+/
 			log.warn("[WPT] > Force kill : Execute command:" + command)
 			exec(command, (error, stdout) => {

@@ -1,7 +1,7 @@
 const { app, globalShortcut } = require("electron");
 
-const path = require("path");
-const os = require("os");
+const path = require("node:path");
+const os = require("node:os");
 
 let pm2 = app.isPackaged ? null : require("pm2");
 

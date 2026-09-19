@@ -43,7 +43,7 @@ let state = emptyState()
  * @returns {TPresenceLevel}
  */
 function presenceLevel(current, now) {
-	if (!current || !current.configured) {
+	if (!current?.configured) {
 		return 'off'
 	}
 	if (current.consecutiveFailures >= DOWN_AFTER_FAILURES) {

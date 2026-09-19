@@ -74,7 +74,7 @@ const IncidentReport = ({ open, onClose }: IIncidentReportProps) => {
 			{sent ? (
 				<div className="incident-sent">
 					<p>Le support a reçu votre signalement.</p>
-					{result && result.traceId ? <code>{result.traceId}</code> : null}
+					{result?.traceId ? <code>{result.traceId}</code> : null}
 				</div>
 			) : (
 				<React.Fragment>

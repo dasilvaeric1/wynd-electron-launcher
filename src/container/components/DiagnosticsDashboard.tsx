@@ -254,7 +254,7 @@ const DiagnosticsDashboard: React.FunctionComponent<IDiagnosticsDashboardProps> 
     // répondu — les deux partent au même cycle. Les deux sondes partaient
     // donc, et la mauvaise réponse écrasait la bonne dans `byEvent`.
     // Sans nom : on attend la liste plutôt que de sonder pour rien.
-    if (!defaultPrinter || !defaultPrinter.type || !defaultPrinter.name) return;
+    if (!defaultPrinter?.type || !defaultPrinter.name) return;
     onAction("fastprinter.printerdata", {
       type: defaultPrinter.type,
       address: defaultPrinter.address,

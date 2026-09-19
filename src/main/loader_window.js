@@ -1,5 +1,5 @@
-const path = require('path')
-const url = require('url')
+const path = require('node:path')
+const url = require('node:url')
 const { BrowserWindow } = require('electron')
 
 const log = require("./helpers/electron_log")

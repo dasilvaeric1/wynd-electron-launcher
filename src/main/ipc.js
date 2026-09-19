@@ -6,7 +6,7 @@ const {
   Notification,
   ipcRenderer,
 } = require("electron");
-const path = require("path");
+const path = require("node:path");
 
 const showDialogError = require("./dialog_err");
 
@@ -42,7 +42,7 @@ module.exports = function generateIpc(store, initCallback) {
       );
 
       const name =
-        store.conf && store.conf.title ? store.conf.title : store.infos.name;
+        store.conf?.title ? store.conf.title : store.infos.name;
       store.windows.container.current.webContents.send("app_infos", {
         version: buildVersion(),
         name: name,
@@ -109,7 +109,7 @@ module.exports = function generateIpc(store, initCallback) {
           store.windows.loader.current.show();
 
           const title =
-            store.conf && store.conf.title
+            store.conf?.title
               ? store.conf.title
               : store.infos.name;
 
@@ -135,7 +135,7 @@ module.exports = function generateIpc(store, initCallback) {
           initCallback,
         );
 
-        if (store.conf && store.conf.extensions) {
+        if (store.conf?.extensions) {
           for (const name of Object.keys(store.conf.extensions)) {
             const extPath = path.resolve(store.conf.extensions[name]);
             await session.defaultSession.loadExtension(extPath, {
@@ -172,7 +172,7 @@ module.exports = function generateIpc(store, initCallback) {
   });
 
   ipcMain.on("boot.open_logs", () => {
-    const dir = (store.logs && store.logs.main) || null;
+    const dir = (store.logs?.main) || null;
     if (!dir) {
       log.warn("[BOOT] > dossier de logs inconnu");
       return;
@@ -216,7 +216,7 @@ module.exports = function generateIpc(store, initCallback) {
     let apiKey = null;
     try {
       const cfg = await getCentralConfig();
-      apiKey = cfg && cfg.apiKey;
+      apiKey = cfg?.apiKey;
     } catch (err) {
       log.debug(`[SCHEDULER] config centrale indisponible: ${err.message}`);
     }
@@ -315,9 +315,7 @@ module.exports = function generateIpc(store, initCallback) {
 
         if (
           store.wpt.socket &&
-          store.conf &&
-          store.conf.central &&
-          store.conf.central.enable &&
+          store.conf?.central?.enable &&
           store.conf.central.mode === "MANUAL" &&
           store.central.status === "READY" &&
           !store.central.registered &&
@@ -405,9 +403,9 @@ module.exports = function generateIpc(store, initCallback) {
           if (!devRes.ok) throw new Error(`GET devices: HTTP ${devRes.status}`);
           const devices = await devRes.json();
           const dev = Array.isArray(devices)
-            ? devices.find((d) => d && d.connected) || devices[0]
+            ? devices.find((d) => d?.connected) || devices[0]
             : null;
-          if (!dev || !dev.name) throw new Error("No lights device found");
+          if (!dev?.name) throw new Error("No lights device found");
           const testRes = await fetch(
             `${base}/lights/api/devices/${encodeURIComponent(dev.name)}/test`,
             { method: "POST" },
@@ -508,15 +506,13 @@ module.exports = function generateIpc(store, initCallback) {
         break;
       case "close":
         if (
-          store.windows.loader.current &&
-          store.windows.loader.current.isVisible() &&
+          store.windows.loader.current?.isVisible() &&
           !store.windows.loader.current.isDestroyed()
         ) {
           store.windows.loader.current.close();
         }
         if (
-          store.windows.container.current &&
-          store.windows.container.current.isVisible() &&
+          store.windows.container.current?.isVisible() &&
           !store.windows.container.current.isDestroyed()
         ) {
           store.windows.container.current.close();
@@ -558,7 +554,7 @@ module.exports = function generateIpc(store, initCallback) {
             return plugin.name.toLowerCase() === "cashdrawer";
           });
 
-          if (fastprinter && fastprinter.enabled) {
+          if (fastprinter?.enabled) {
             try {
               await requestWPT(
                 store.wpt.socket,
@@ -577,7 +573,7 @@ module.exports = function generateIpc(store, initCallback) {
           } else {
             log.debug(`[ACTION] > ${action} : fastprinter not found`);
           }
-          if (cashdrawer && cashdrawer.enabled) {
+          if (cashdrawer?.enabled) {
             try {
               await requestWPT(
                 store.wpt.socket,
@@ -617,7 +613,7 @@ module.exports = function generateIpc(store, initCallback) {
               type: other ? "END" : "ERROR",
             },
           };
-          if (store.wpt && store.wpt.socket) {
+          if (store.wpt?.socket) {
             store.wpt.socket.emit("central.message", messageContainer);
           }
           store.current_request = null;
@@ -625,16 +621,14 @@ module.exports = function generateIpc(store, initCallback) {
         break;
       case "open_dev_tools":
         if (
-          store.windows.container.current &&
-          store.windows.container.current.isVisible() &&
+          store.windows.container.current?.isVisible() &&
           !store.windows.container.current.isDestroyed()
         ) {
           store.windows.container.current.webContents.openDevTools({
             mode: "right",
           });
         } else if (
-          store.windows.loader.current &&
-          store.windows.loader.current.isVisible() &&
+          store.windows.loader.current?.isVisible() &&
           !store.windows.loader.current.isDestroyed()
         ) {
           store.windows.loader.current.webContents.openDevTools({

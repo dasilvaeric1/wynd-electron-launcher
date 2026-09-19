@@ -22,15 +22,14 @@ const LEVELS = ["INFO", "DEBUG", "WARN", "ERROR"];
  */
 module.exports = function handleScoLog(store, level, payload) {
   const lvl = LEVELS.indexOf(level) >= 0 ? level : "INFO";
-  const flat = payload && payload.flat;
+  const flat = payload?.flat;
   const raw = payload && "raw" in payload ? payload.raw : flat;
 
   // 1. Persistance fichier locale (opt-in, off par défaut si l'entrée manque).
   if (
     flat &&
     String(flat).length > 0 &&
-    store.conf &&
-    store.conf.log &&
+    store.conf?.log &&
     store.conf.log.persist_app === true &&
     store.appLog
   ) {
@@ -58,9 +57,7 @@ module.exports = function handleScoLog(store, level, payload) {
 
   // 2. Relais vers le BO central (comportement historique inchangé).
   if (
-    store.conf &&
-    store.conf.central &&
-    store.conf.central.log &&
+    store.conf?.central?.log &&
     hasLevel(store.conf.central.log, lvl)
   ) {
     const messageContainer = {
@@ -72,7 +69,7 @@ module.exports = function handleScoLog(store, level, payload) {
         message: raw,
       },
     };
-    if (store.wpt && store.wpt.socket) {
+    if (store.wpt?.socket) {
       store.wpt.socket.emit("central.message", messageContainer);
     }
   }

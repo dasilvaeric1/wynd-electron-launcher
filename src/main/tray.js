@@ -1,5 +1,5 @@
 const { Tray, Menu, ipcMain, app, shell, clipboard } = require("electron");
-const path = require("path");
+const path = require("node:path");
 const log = require("./helpers/electron_log");
 const buildVersion = require("./helpers/build_version");
 module.exports = (store) => {
@@ -18,7 +18,7 @@ module.exports = (store) => {
   store.tray = appIcon;
   const onClick = (e, focusedWindow, focusedWebContents) => {
     if (store.windows.container.current) {
-      if (store && store.conf && store.conf.raw) {
+      if (store?.conf?.raw) {
         ipcMain.emit("main.action", null, e.label.toLowerCase());
       } else if (store.windows.container.current.webContents) {
         store.windows.container.current.webContents.send(

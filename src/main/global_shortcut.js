@@ -8,9 +8,9 @@ module.exports = function (store, log) {
 	})
 
 	globalShortcut.register('Control+Shift+R', () => {
-		if (store.windows.container.current && store.windows.container.current.isVisible() && !store.ask.request) {
+		if (store.windows.container.current?.isVisible() && !store.ask.request) {
 
-			if (store.conf && store.conf.menu && store.conf.menu.password) {
+			if (store.conf?.menu?.password) {
 				log.info('[SHORTCUT] > Control+Shift+C ask_password reload')
 				store.windows.container.current.webContents.send("ask_password", "reload")
 				return true
@@ -23,7 +23,7 @@ module.exports = function (store, log) {
 	})
 
 	globalShortcut.register('Control+Shift+I', () => {
-		if (store.windows.container.current && store.windows.container.current.isVisible()) {
+		if (store.windows.container.current?.isVisible()) {
 
 			if (!store.conf.menu.password && store.conf.view !== "webview")  {
 				store.windows.container.current.webContents.openDevTools({ mode: "right" })
@@ -41,7 +41,7 @@ module.exports = function (store, log) {
 			return false
 		}
 
-		if (store.windows.loader.current && store.windows.loader.current.isVisible()) {
+		if (store.windows.loader.current?.isVisible()) {
 			openDevToolsForLoader(store)
 		}
 
@@ -49,7 +49,7 @@ module.exports = function (store, log) {
 	})
 
 	globalShortcut.register('Control+Shift+F', () => {
-		if (store.windows.loader.current && store.windows.loader.current.isVisible()) {
+		if (store.windows.loader.current?.isVisible()) {
 		  if (store.windows.loader.current.isFullScreen()) {
 				store.windows.loader.current.setFullScreen(false)
 				store.windows.loader.current.setSize(300, 120)
@@ -61,7 +61,7 @@ module.exports = function (store, log) {
 	})
 
 	globalShortcut.register('Control+Shift+O', () => {
-		if (store.windows.loader.current && store.windows.loader.current.isVisible()) {
+		if (store.windows.loader.current?.isVisible()) {
 			if (store.windows.loader.current.isFullScreen()) {
 				store.windows.loader.current.setFullScreen(false)
 				store.windows.loader.current.setSize(300, 120)
@@ -76,7 +76,7 @@ module.exports = function (store, log) {
 
 	globalShortcut.register('Control+M', () => {
 
-		if (store.windows.container.current && store.windows.container.current.isVisible()) {
+		if (store.windows.container.current?.isVisible()) {
 			store.windows.container.current.webContents.send("toggle_menu", true)
 		}
 		return true;

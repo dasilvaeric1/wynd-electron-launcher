@@ -375,7 +375,7 @@ function attachDebugger(wc) {
           event: "open",
           requestId: params.requestId,
           url: st.url,
-          status: params.response && params.response.status,
+          status: params.response?.status,
         });
       } else if (
         method === "Network.webSocketFrameSent" ||
@@ -383,7 +383,7 @@ function attachDebugger(wc) {
       ) {
         const outgoing = method === "Network.webSocketFrameSent";
         const st = wsState(params.requestId);
-        const payload = params.response && params.response.payloadData;
+        const payload = params.response?.payloadData;
         wsCountFrame(st, payload, outgoing);
         if (wsFrameCapture) {
           const { body, truncated } = clipFrame(payload);

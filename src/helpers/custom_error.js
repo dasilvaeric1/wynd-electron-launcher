@@ -24,7 +24,7 @@ class CustomError extends Error {
 		if (this.message && error_values) {
 			for (let i = 0; i < error_values.length; i++) {
 				this.message = this.message.replace(`$${i}`, function messageReplace(replace, ...others) {
-					if (replace === `$${i}` && others && others[2]) {
+					if (replace === `$${i}` && others?.[2]) {
 						return others[2]
 					}
 					return error_values[i]
@@ -71,7 +71,7 @@ class CustomError extends Error {
 			for (let i = 0; i < error_values.length; i++) {
 				message = message.replace(/(\$[0-9])(\[(.+)\])?/, function replaceMessage(replace, ...other) {
 					const k = Number.parseInt(replace[1], 10)
-					if (!error_values[k] && other && other[2]) {
+					if (!error_values[k] && other?.[2]) {
 						return other[2]
 					}
 					return error_values[k] ? error_values[k] : error_values[i]

@@ -20,8 +20,8 @@
  * `fsImpl` est injectable pour les tests.
  */
 
-const nodeFs = require("fs");
-const { join } = require("path");
+const nodeFs = require("node:fs");
+const { join } = require("node:path");
 
 const PARTIAL_EVENTS = "current.ndjson";
 const PARTIAL_META = "current.json";

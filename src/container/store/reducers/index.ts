@@ -38,7 +38,7 @@ const appReducer: Reducer<
       }
       break;
     case TAppActionTypeKeys.SET_DIAGNOSTIC:
-      if (data && data.event) {
+      if (data?.event) {
         // Un succès efface l'échec précédent du même event.
         const byError = { ...newState.diagnostics.byError };
         delete byError[data.event];
@@ -54,7 +54,7 @@ const appReducer: Reducer<
       }
       break;
     case TAppActionTypeKeys.SET_DIAGNOSTIC_ERROR:
-      if (data && data.event) {
+      if (data?.event) {
         // La réponse périmée est ÉVACUÉE : la garder afficherait un état que
         // plus rien ne confirme.
         const byEvent = { ...newState.diagnostics.byEvent };

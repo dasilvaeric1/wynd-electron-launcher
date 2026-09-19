@@ -50,7 +50,7 @@ const LIBELLE = {
  * rebranchement.
  */
 function cleEcran(ecran) {
-  return ecran && ecran.id !== undefined && ecran.id !== null
+  return ecran?.id !== undefined && ecran.id !== null
     ? String(ecran.id)
     : null;
 }
@@ -140,7 +140,7 @@ function buildCustomerState(conf, screens, posIndex) {
     mode: resolu.mode,
     raison: resolu.raison,
     libelle: resolu.libelle,
-    url: (conf && conf.url) || null,
+    url: (conf?.url) || null,
     posIndex: posIndex === undefined ? null : posIndex,
     clientIndex: resolu.index,
     screens: describeScreens(screens, posIndex, resolu.index),
