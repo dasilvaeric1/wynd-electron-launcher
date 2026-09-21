@@ -6,17 +6,21 @@ cd /d "C:\Retail\ANYCOMMERCE\local-stack-maintenance"
 if not "%wsl__version%0"=="0" (
 	@echo # WSL: %wsl__version%
 	Powershell -ExecutionPolicy Bypass -File control_center.ps1 -restart wsl
-	timeout /t 20 /nobreak > nul
+	timeout /t 20 /nobreak > $null
 ) else if not "%api__version%0"=="0" (
 	@echo # API: %api__version%
 )
 if not "%pos__version%0"=="0" (
 	@echo # POS: %pos__version%
-) else @echo # POS Lite
+) else (
+	if not "%sco__version%0"=="0" (
+		@echo # SCO: %sco__version%
+	) else @echo # POS Lite
+)
 @echo #
-TASKLIST | find /i "electron-launcher" > nul
-if not ERRORLEVEL 1 TASKKILL /IM Electron-Launcher.exe /T /F > nul
-timeout /t 2 /nobreak > nul
+TASKLIST | find /i "electron-launcher" > $null
+if not ERRORLEVEL 1 TASKKILL /IM Electron-Launcher.exe /T /F > $null
+timeout /t 2 /nobreak > $null
 Start "ELECTRON" "C:\Retail\ANYCOMMERCE\Electron-Launcher\Electron-Launcher.exe" -c "C:\Retail\ANYCOMMERCE\Electron-Launcher\cfg\config.ini"
 Powershell -ExecutionPolicy Bypass -File control_center.ps1 -restart apiupdater
-timeout /t 30 /nobreak > nul
+timeout /t 30 /nobreak > $null
