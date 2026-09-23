@@ -1,6 +1,7 @@
 const { app } = require('electron')
 
 const axios = require('axios')
+const https = require('node:https')
 
 const log = require("../helpers/electron_log")
 const getConfig = require("./config/get_config")
@@ -73,7 +74,17 @@ module.exports = async function initialize(params, callback, opts) {
 		let killWPT = false
 		// Case : WPT already opened and conf.wpt.path is set on app start
 		try {
-			await axios.options(conf.wpt.url.href, null, { timeout: 1000 })
+			// WPT sert en HTTPS avec un certificat AUTO-SIGNE : sans agent permissif,
+			// cette sonde echoue en UNABLE_TO_VERIFY_LEAF_SIGNATURE au lieu de repondre.
+			// Le `catch` ci-dessous tuait alors le WPT en place pour la mauvaise raison,
+			// et le journal montrait une erreur TLS la ou il fallait lire « une instance
+			// tourne deja ». L'agent n'est cree que pour https.
+			const probeOptions = { timeout: 1000 }
+			if ("https:" === conf.wpt.url.protocol) {
+				probeOptions.httpsAgent = new https.Agent({ rejectUnauthorized: false })
+			}
+
+			await axios.options(conf.wpt.url.href, null, probeOptions)
 			log.warn("[WPT] > URL: wpt found,  wpt.path is set, need to force kill other WPT process")
 			killWPT = true
 		}

@@ -4,6 +4,92 @@ All notable changes to this project will be documented in this file.
 
 ## [2.9.X]
 
+### [2.9.3]
+
+- ci(linux): les paquets Linux (.rpm, .deb, SHA256SUMS) sont publies sur
+  Nexus `product/electron_linux/<version>/` a chaque tag de release, apres
+  `smoke:linux`. Le dashboard les y lit pour provisionner les caisses Rocky.
+
+- chore(sonar): notes A en securite et fiabilite (lot de corrections et
+  modernisation de syntaxe : chainage optionnel, prefixe `node:`).
+
+- fix(quit): WyndPOSTools survivait au launcher apres un dialogue d'erreur.
+
+  Pour ecrire le store dans le journal, `dialog_err.js` remplacait les handles
+  vivants par la chaine `'...'` — dans le store lui-meme, partage avec tout le
+  processus principal — puis appelait `app.quit()`. `before-quit` faisait alors
+  `killWPT` sur cette chaine, echouait en « child.once is not a function », et
+  le catch avalait l'erreur. Le processus WPT n'etait donc jamais tue : le port
+  9963 restait pris, et le demarrage suivant devait le force-killer via netstat.
+  Le socket, mis a `null` au passage, n'etait pas ferme non plus.
+
+  Une COPIE serialisable part desormais au journal, le store vivant n'est plus
+  touche. La projection couvre aussi l'ecran client, ajoute bien apres cet
+  assainissement manuel et jamais repris : c'est lui qui rendait le store
+  non serialisable, donc l'etat illisible dans le journal au moment ou on en a
+  le plus besoin.
+
+### [2.9.2]
+
+- fix(ssl): le certificat auto-signe de WPT accepte pour son seul hote.
+
+  2.9.1 avait rendu `ignore-certificate-errors` a la caisse pour la depanner,
+  mais ce drapeau desarme la validation TLS du processus ENTIER — POS distant
+  compris. `helpers/trust_wpt_certificate.js` la remplace par une exception
+  ciblee : seul l'hote declare dans `wpt.url` voit son certificat accepte,
+  tout le reste reste verifie, et chaque refus est journalise.
+
+  Le drapeau n'est pas rebloque pour autant : des sites servent aussi leur POS
+  avec un certificat interne et en dependent aujourd'hui. Le rebloquer une
+  fois le parc en >= 2.9.2 reste une ligne a ajouter dans
+  `commandline_switches.js`.
+
+- fix(devtools): la console de la page POS s'ouvre enfin.
+
+  Ctrl+Shift+I n'ouvrait que les DevTools du conteneur React, ou le trafic de
+  la page POS n'apparait pas : la <webview> a son propre webContents. Le
+  support d'un magasin ne pouvait donc obtenir ni la console ni l'onglet
+  reseau du POS, qui est ce qu'on demande en premier sur un incident.
+
+  Trois defauts se combinaient : le raccourci envoyait un canal
+  (`open_dev_tools`) absent a la fois de la liste blanche du preload et des
+  ecouteurs du renderer ; dans `index.tsx`, `if (menu.password) … else if
+  (view === "webview")` rendait la branche webview inatteignable des qu'un mot
+  de passe etait configure, c'est-a-dire sur toute caisse de production ; et
+  le retour du pinpad n'ouvrait que la fenetre conteneur.
+
+  Tout passe desormais par le processus principal
+  (`helpers/open_dev_tools.js`), qui atteint le guest directement. Une demande
+  faite avant que la <webview> existe — elle n'est montee qu'une fois WPT
+  connecte — est retenue puis servie a son attachement, au lieu d'expirer au
+  bout de 5 s. En `debug=1`, les DevTools du POS s'ouvrent d'office, assez tot
+  pour capturer le trafic de chargement.
+
+### [2.9.1]
+
+- fix(ssl): rétablit `ignore-certificate-errors` et fiabilise la sonde WPT au
+  demarrage.
+
+  Le durcissement de 2.8.2 avait ajoute ce drapeau a la liste des switches
+  bloques sans rien poser en contrepartie. Or c'est lui qui permettait a
+  Chromium d'accepter le certificat auto-signe de WyndPOSTools cote webview :
+  la liaison POS <-> materiel etait coupee sur les caisses concernees.
+
+  La sonde `axios.options()` d'`initialize.js` verifiait de son cote le
+  certificat : quand un WPT tournait deja, elle echouait en
+  `UNABLE_TO_VERIFY_LEAF_SIGNATURE` et le launcher force-killait un processus
+  parfaitement sain. Elle utilise desormais un agent permissif.
+
+- fix(screens): ordre stable des ecrans, l'ecran principal d'abord.
+
+  `getAllDisplays()` ne garantit aucun ordre : sur une caisse Dell avec ecran
+  externe, il dependait de l'instant du branchement. « Ecran 0 » designait
+  donc la dalle un jour et l'ecran externe le lendemain, a configuration
+  identique — le POS partait sur le petit ecran, et l'afficheur client
+  subissait le symptome miroir. Aucune migration de configuration necessaire.
+
+- feat(diag): panneau de diagnostic remanie et type.
+
 ### [2.9.0]
 
 - perf(build): l'application packagee perd 40 % de son poids.

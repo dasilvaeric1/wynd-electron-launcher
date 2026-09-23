@@ -238,24 +238,17 @@ window.electronAPI.on("ask_password", (action: string, action2: string) => {
     store.dispatch(
       openPinpadAction(TNextAction.OPEN_DEV_TOOLS, state.conf?.menu.password),
     );
-  } else if (action === "open_dev_tools" && state.conf?.view === "webview") {
-    let count = 0;
-    let webview: any = document.getElementById("e-launcher-frame");
-    if (webview) {
-      webview.openDevTools();
-    } else {
-      const interval = setInterval(() => {
-        count++;
-        webview = document.getElementById("e-launcher-frame");
-        if (webview) {
-          clearInterval(interval);
-          webview.openDevTools();
-        }
-        if (count > 10) {
-          clearInterval(interval);
-        }
-      }, 500);
-    }
+  } else if (action === "open_dev_tools") {
+    // Sans mot de passe, il n'y a rien a demander : on delegue au processus
+    // principal, qui ouvre les DevTools du conteneur ET celles de la <webview>
+    // (cf main/helpers/open_dev_tools.js).
+    //
+    // La version precedente cherchait la <webview> dans le DOM et reessayait
+    // pendant 5 s. Deux raisons de ne pas la garder : elle abandonnait bien
+    // avant que la <webview> existe — elle n'est montee qu'une fois WPT
+    // connecte — et la branche entiere etait INATTEIGNABLE des qu'un mot de
+    // passe etait configure, c'est-a-dire sur toute caisse de production.
+    window.electronAPI.send("main.action", "open_dev_tools");
   }
 });
 
