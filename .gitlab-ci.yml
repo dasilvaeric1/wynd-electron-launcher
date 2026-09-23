@@ -8,6 +8,8 @@
 #                   (auto sur tag, MANUEL sur branche)
 #   smoke:linux   → installe le .deb produit et LANCE le binaire sous xvfb
 #   deploy:nexus  → upload du zip sur Nexus (sur tag uniquement)
+#   deploy:nexus:linux → upload .rpm/.deb + SHA256SUMS sur Nexus (sur tag uniquement),
+#                        consommés par le provisionnement des caisses Rocky
 #
 # Builds a la demande sur une branche : pousser la branche cree un pipeline qui
 # ne lance QUE `dist`. Les jobs de packaging apparaissent avec un bouton ▶ ;
@@ -275,3 +277,25 @@ deploy:nexus:
     #   fichier a chaque tentative, ce qui est acceptable sur le LAN.
     - 'curl --fail-with-body --retry 3 --retry-all-errors --retry-delay 5 -u "${NEXUS_USER}:${NEXUS_PASSWORD}" --upload-file "$ZIP" "$TARGET"'
     - 'echo "Upload OK -> $TARGET"'
+
+# ---------------------------------------------------------------------------
+# Paquets Linux sur Nexus — UNIQUEMENT sur tag (release).
+#   https://nexus.wynd.eu/repository/integration/product/electron_linux/<version>/
+# Le dashboard y lit SHA256SUMS, copie le .rpm dans son cache R2 et le sert
+# aux caisses Rocky (provision.sh launcher). <version> = celle du nom du .rpm,
+# égale à ELECTRONLAUNCHER_VERSION du .env Nexus.
+# La logique vit dans scripts/publish_linux_nexus.sh, testé hors CI.
+# ---------------------------------------------------------------------------
+deploy:nexus:linux:
+  stage: deploy
+  image: alpine:latest
+  tags:
+    - docker
+  needs:
+    - job: build:linux
+      artifacts: true
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - 'apk add --no-cache bash curl coreutils'
+    - 'bash scripts/publish_linux_nexus.sh dist'
