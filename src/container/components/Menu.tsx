@@ -155,15 +155,24 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
       key: "menu-item-screens",
       icon: <InfoCircleOutlined style={{ fontSize: "20px" }} />,
       onClick: onClickScreeensInfo,
-    }, {
-      label: "Signaler une anomalie",
-      key: "menu-item-incident",
-      icon: <WarningOutlined style={{ fontSize: "20px" }} />,
-      onClick: () => {
-        window.log.info("[WINDOW CONTAINER] Click Signaler une anomalie");
-        setIncidentOpen(true);
-      },
-    }, {
+    });
+
+    // Signalement d'anomalie : ferme tant que `[incident] enable` ne l'ouvre
+    // pas. Le signalement televerse journaux, etat des peripheriques et numero
+    // de caisse — un parc doit pouvoir choisir d'ouvrir ce canal.
+    if (conf && conf.incident && conf.incident.enable) {
+      items.push({
+        label: "Signaler une anomalie",
+        key: "menu-item-incident",
+        icon: <WarningOutlined style={{ fontSize: "20px" }} />,
+        onClick: () => {
+          window.log.info("[WINDOW CONTAINER] Click Signaler une anomalie");
+          setIncidentOpen(true);
+        },
+      });
+    }
+
+    items.push({
       label: "Quitter l’application",
       key: "menu-item-close",
       icon: <PoweroffOutlined style={{ fontSize: "20px" }} />,
@@ -197,7 +206,12 @@ const CashMenu: React.FunctionComponent<IMenuProps> = (props) => {
         onOpenDetail={() => props.onMenuClick(TNextAction.CUSTOMER_SCREENS)}
       />
       <Menu id="e-launcher-menu" items={generateItems()} />
-      <IncidentReport open={incidentOpen} onClose={() => setIncidentOpen(false)} />
+      {conf && conf.incident && conf.incident.enable && (
+        <IncidentReport
+          open={incidentOpen}
+          onClose={() => setIncidentOpen(false)}
+        />
+      )}
       <div className="e-launcher-menu-footer">
         <span className="e-launcher-menu-version">
           {(() => {

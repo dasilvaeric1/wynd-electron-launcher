@@ -826,6 +826,25 @@ const schema = {
       required: ["enable"],
       additionalProperties: false,
     },
+    // Signalement d'anomalie par le caissier. DESACTIVE par defaut : le
+    // signalement joint les journaux, l'etat des peripheriques et le numero de
+    // caisse, et les televerse. Un parc doit pouvoir choisir d'ouvrir ce canal,
+    // pas le subir parce qu'il est livre actif.
+    incident: {
+      type: "object",
+      properties: {
+        enable: {
+          allOf: [
+            {
+              coerce_boolean: true,
+            },
+          ],
+        },
+      },
+      required: ["enable"],
+      additionalProperties: false,
+    },
+
     // Ecran client : page face public d'une caisse a deux ecrans.
     // Aucune valeur par defaut pour `url` — on n'invente pas une page a
     // montrer a un client. Sans url, l'ecran client reste simplement inactif.

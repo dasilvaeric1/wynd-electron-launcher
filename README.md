@@ -540,6 +540,21 @@ before anyone knows it is needed.
   * default: false
   * description: add report menu for X/Z reprt
 
+#### [incident]
+
+* enable:
+  * required: false
+  * value: 0/1, false/true
+  * default: **false** (the menu entry does not exist unless you turn it on)
+  * description: cashier-facing "Signaler une anomalie" entry in the Wynd side
+    menu. The cashier describes the problem in one sentence and the launcher
+    attaches what support would ask for anyway: log tails, device state,
+    launcher version and till serial, zipped and uploaded through the same
+    presign/PUT/complete chain as traces. Off by default because that is a data
+    channel, not just a button — a fleet should opt into it. The main process
+    re-checks this flag when it receives the IPC message, so hiding the entry is
+    not the only thing standing between a stale renderer and an upload.
+
 #### [emergency]
 
 * enable:

@@ -21,6 +21,7 @@ interface IIncidentResult {
 const REASONS: Record<string, string> = {
 	NOT_ENROLLED: "Cette caisse n'est pas rattachée au dashboard. Contactez le support.",
 	UPLOAD_FAILED: "L'envoi a échoué. Vérifiez la connexion et réessayez.",
+	DISABLED: "Le signalement d’anomalie est désactivé sur cette caisse.",
 }
 
 /**

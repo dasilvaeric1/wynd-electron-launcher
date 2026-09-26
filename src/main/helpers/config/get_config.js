@@ -42,6 +42,9 @@ module.exports =  function getConfig(path, raw, fallbackUrl) {
 				report: {
 					enable: false,
 				},
+				incident: {
+					enable: false,
+				},
 				central: {
 					enable: false,
 				},

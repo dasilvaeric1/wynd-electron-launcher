@@ -135,6 +135,15 @@ tags, c'est le canal que le control-center consomme).
     Seules voies valides : argv, ou `ELECTRON_OZONE_PLATFORM_HINT`.
     Au démarrage le launcher compare la position obtenue à celle demandée et
     journalise `[CUSTOMER] PLACEMENT IGNORE` si le compositeur l'a ignorée.
+- Section `[incident]` — **signalement d'anomalie par le caissier**.
+  `enable=0` par defaut : l'entree « Signaler une anomalie » du menu lateral
+  n'existe pas tant qu'on ne l'ouvre pas. Le signalement joint les journaux,
+  l'etat des peripheriques, la version et le numero de caisse, puis les
+  televerse par la meme chaine que les traces (presign/PUT/complete).
+  ⚠️ Le refus est verifie **aussi** dans `ipc.js` (`report_incident`) : masquer
+  une entree de menu n'est pas fermer un canal — le renderer peut etre un
+  bundle plus ancien que la config, et le canal IPC reste joignable.
+
 - Section `[log]` (niveaux `main`/`renderer`/`app` = `info|debug|error|warn`) +
   capture des logs JS du SCO/POS (voir « Logs & capture SCO » plus bas) :
   - `persist_app=1` — écrit les logs SCO dans `logs/app/` (interrupteur maître fichier).

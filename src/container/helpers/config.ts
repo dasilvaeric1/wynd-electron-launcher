@@ -35,6 +35,7 @@ export interface IConfig {
 	view: TView
 	wpt: IConfigWpt
 	report: IConfigReport
+	incident: IConfigIncident
 	menu: IConfigMenu
 	chrome: IConfigChrome
 	display_plugin_state: IDisplayPluginState
@@ -73,6 +74,11 @@ export interface IProxy {
 }
 
 export interface IConfigReport  {
+	enable: boolean
+}
+
+/** Signalement d'anomalie par le caissier — desactive par defaut. */
+export interface IConfigIncident {
 	enable: boolean
 }
 

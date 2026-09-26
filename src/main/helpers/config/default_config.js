@@ -139,8 +139,11 @@ module.exports =  function defaultConfig(config, log) {
 		}
 	}
 
-	if(!config.report) {
-		config.report = {
+	// Signalement d'anomalie : ferme tant que l'exploitant ne l'ouvre pas.
+	// Le signalement televerse journaux, etat des peripheriques et numero de
+	// caisse — c'est un canal de donnees, pas un simple bouton d'interface.
+	if (!config.incident) {
+		config.incident = {
 			enable: false
 		}
 	}

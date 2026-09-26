@@ -525,6 +525,30 @@ module.exports = function generateIpc(store, initCallback) {
         // Signalement declenche par le caissier. Le ZIP part en direct vers le
         // stockage objet via la meme chaine que les traces : aucun egress
         // central, aucune nouvelle route cote dashboard.
+        //
+        // Le refus est verifie ICI et pas seulement dans le menu : masquer une
+        // entree n'est pas fermer un canal. Le renderer peut etre un bundle
+        // plus ancien que la config, et le canal IPC reste joignable quoi
+        // qu'affiche l'interface. C'est le main qui detient l'autorisation.
+        if (!store.conf?.incident?.enable) {
+          log.warn(
+            "[INCIDENT] signalement refuse : [incident] enable=0 dans config.ini",
+          );
+          if (
+            store.windows.container.current &&
+            !store.windows.container.current.isDestroyed()
+          ) {
+            store.windows.container.current.webContents.send(
+              "incident.result",
+              {
+                ok: false,
+                reason: "DISABLED",
+                message: "Le signalement d'anomalie est desactive sur cette caisse.",
+              },
+            );
+          }
+          break;
+        }
         let result;
         try {
           result = await sendIncident(store, other, {
