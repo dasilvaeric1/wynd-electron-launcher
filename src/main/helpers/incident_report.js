@@ -98,6 +98,26 @@ function latestLogFile(dir) {
   }
 }
 
+/**
+ * Dossier du journal de demarrage de la stack, ecrit par anycommerce.bat
+ * (redemarrages WSL et apiupdater, rotation quotidienne).
+ *
+ * C'est souvent le journal qui MANQUE au support : quand WSL ne repart pas, le
+ * launcher n'a rien a dire — il n'a meme pas demarre dans de bonnes
+ * conditions. Le joindre au signalement evite l'aller-retour « pouvez-vous
+ * nous envoyer aussi... ».
+ *
+ * Renvoie null hors Windows : le script qui alimente ce journal est un .bat,
+ * et rien ne l'ecrit ailleurs. Inventer un chemin Linux ferait echouer une
+ * lecture a chaque signalement pour rien. `EL_STACK_LOG_DIR` reste la porte de
+ * sortie le jour ou un equivalent existera.
+ */
+function stackLogDir() {
+  if (process.env.EL_STACK_LOG_DIR) return process.env.EL_STACK_LOG_DIR;
+  if (process.platform !== "win32") return null;
+  return String.raw`C:\Retail\ANYCOMMERCE\logs`;
+}
+
 /** Construit le ZIP du signalement. */
 async function buildIncidentZip(store, comment, now) {
   const zip = new JSZip();
@@ -105,7 +125,14 @@ async function buildIncidentZip(store, comment, now) {
   zip.file("report.json", JSON.stringify(meta, null, 2));
 
   const logs = (store?.logs) || {};
-  for (const [name, dir] of [["main", logs.main], ["app", logs.app]]) {
+  const sources = [
+    ["main", logs.main],
+    ["app", logs.app],
+    // Ecrit hors du launcher, avant meme son demarrage — d'ou un chemin
+    // resolu et non lu depuis store.logs.
+    ["stack", stackLogDir()],
+  ];
+  for (const [name, dir] of sources) {
     if (!dir) continue;
     const file = latestLogFile(dir);
     if (!file) continue;
@@ -176,6 +203,7 @@ module.exports = {
   buildReportMeta,
   tailFile,
   latestLogFile,
+  stackLogDir,
   LOG_TAIL_BYTES,
   MAX_COMMENT,
 };

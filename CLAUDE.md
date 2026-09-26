@@ -143,6 +143,11 @@ tags, c'est le canal que le control-center consomme).
   ⚠️ Le refus est verifie **aussi** dans `ipc.js` (`report_incident`) : masquer
   une entree de menu n'est pas fermer un canal — le renderer peut etre un
   bundle plus ancien que la config, et le canal IPC reste joignable.
+  Le ZIP joint trois journaux : `main`, `app`, et **`stack`** — ce dernier est
+  le `C:\Retail\ANYCOMMERCE\logs\stack-*.log` ecrit par `anycommerce.bat`
+  (redemarrages WSL / apiupdater). C'est souvent celui qui manque au support :
+  quand WSL ne repart pas, le launcher n'a rien a raconter. Resolu par
+  `stackLogDir()` — Windows uniquement, `EL_STACK_LOG_DIR` pour outrepasser.
 
 - Section `[log]` (niveaux `main`/`renderer`/`app` = `info|debug|error|warn`) +
   capture des logs JS du SCO/POS (voir « Logs & capture SCO » plus bas) :
@@ -338,6 +343,7 @@ Quatre jobs dans le stage `quality`, tous en parallèle :
 | `sonar` | develop + tag | n'apparaît que si `SONAR_TOKEN` est défini |
 | `security:deps` | **tag seulement** | `pnpm audit` |
 | `security:secrets` | **partout** | `gitleaks` |
+| `security:electron` | jamais (informatif) | `electronegativity` — anti-patterns Electron |
 
 Les seuils sont volontairement dissymétriques :
 
@@ -350,6 +356,12 @@ Les seuils sont volontairement dissymétriques :
 - **`security:secrets` bloque partout.** Un secret n'apparaît jamais tout
   seul : il arrive par un commit, donc il n'y a pas de bruit de fond à
   tolérer. Et une clé poussée est une clé à révoquer, même retirée ensuite.
+
+⚠️ `security:electron` DOIT recevoir `-e <version>`. Sans lui,
+electronegativity ne trouve pas de `package.json` sous `src/`, suppose Electron
+v0.1.0 et évalue les défauts de cette époque — il signalait en HIGH un
+`nodeIntegration` sur une fenêtre qui pose explicitement `sandbox: true`.
+Avec la vraie version : 23 constats → 16, plus aucun HIGH.
 
 ⚠️ `sonar-project.properties` pointe sur `coverage/lcov.info`. Jest était
 configuré avec `coverageReporters: ["json"]` seul : le scan tournait sur une

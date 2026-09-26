@@ -5,6 +5,7 @@
 #   sonar            → SonarQube sur la couverture reelle (si SONAR_TOKEN existe)
 #   security:deps    → pnpm audit : bloquant sur tag, informatif ailleurs
 #   security:secrets → gitleaks sur l'arborescence : bloquant PARTOUT
+#   security:electron → electronegativity : informatif (allow_failure)
 #   dist          → bundle renderer (Vite) sur node:22 / pnpm
 #   build:linux   → AppImage + .deb + .rpm (auto sur tag, MANUEL sur branche)
 #   build:win     → .exe portable Windows x64 (cross-compile via wine) + zip Nexus
@@ -194,6 +195,43 @@ security:secrets:
     - docker
   script:
     - gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose --exit-code 1
+
+# ---------------------------------------------------------------------------
+# Securite — anti-patterns specifiques a Electron (electronegativity).
+#
+# INFORMATIF : allow_failure partout. L'outil ne sort pas en erreur quand il
+# trouve quelque chose, donc allow_failure ne couvre que sa propre defaillance
+# (reseau, npx). Le rapport est publie en artefact et resume dans le log.
+#
+# `-e` est INDISPENSABLE. Sans lui, electronegativity ne trouve pas de
+# package.json sous `src/`, suppose Electron v0.1.0 et evalue les defauts de
+# cette epoque : il a par exemple signale en HIGH un `nodeIntegration` sur une
+# fenetre qui pose explicitement `sandbox: true` — nodeIntegration vaut false
+# par defaut depuis Electron 5. Avec la vraie version, 23 constats tombent a
+# 16, dont plus aucun HIGH. Une gate qui ment est une gate qu'on ignore.
+# ---------------------------------------------------------------------------
+security:electron:
+  stage: quality
+  image: node:24
+  interruptible: true
+  tags:
+    - docker
+  allow_failure: true
+  script:
+    - ELECTRON_VERSION=$(node -p "(require('./package.json').devDependencies.electron || '').replace(/[^0-9.]/g, '')")
+    - echo "Electron detecte - $ELECTRON_VERSION"
+    - npx --yes @doyensec/electronegativity -i src -e "$ELECTRON_VERSION" -r -o electronegativity.csv
+    - tail -n +2 electronegativity.csv | cut -d, -f1,2 | sort | uniq -c | sort -rn
+  artifacts:
+    expire_in: 1 week
+    when: always
+    paths:
+      - electronegativity.csv
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_COMMIT_BRANCH
+      when: manual
 
 # ---------------------------------------------------------------------------
 # Bundle renderer (container + loader) — Vite (remplace webpack).
