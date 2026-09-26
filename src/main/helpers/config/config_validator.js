@@ -395,7 +395,7 @@ const addKeyWord = function (confPath) {
       // if enable is false, dependance is not needed
       if (data === false) {
         for (let i = 0; i < metaData.keys.length; i++) {
-          const key = metaData[i];
+          const key = metaData.keys[i];
           if (!metaData.keep) {
             it.parentData[key] = null;
           }

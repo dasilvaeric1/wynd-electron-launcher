@@ -260,7 +260,7 @@ getConfig(store.path.conf, undefined, argv.url)
       .then(() => {
         if (store.pre_error_init) {
           showDialogError(store, store.pre_error_init);
-          throw err;
+          throw store.pre_error_init;
         }
         process.on("SIGINT", () => {
           log.info("[PROCESS] > SIGINT");

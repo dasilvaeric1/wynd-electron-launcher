@@ -311,6 +311,43 @@ salarié. Masquage actif par défaut et non affaiblissable à distance, `until`
 obligatoire, rétention côté dashboard. L'information des salariés / la
 consultation du CSE relèvent de l'opérateur du parc.
 
+## Redémarrer WPT — deux mécanismes selon qui possède le process
+
+`reloadWPT` (`helpers/reload_wpt.js`) branche sur `wpt.process` :
+
+- **Windows** — le launcher a lancé WPT : `killWPT` + `launchWpt`, inchangé.
+- **Linux** — WPT est le service systemd `wyndpostools`, lancé sous
+  l'utilisateur système `wpt` (`useradd --system --shell /sbin/nologin`). Le
+  launcher **ne peut ni le signaler ni le relancer**. Il émet donc `end` sur la
+  socket : le plugin System de WPT (`plugins/System/lib/main.js`) appelle
+  `endWyndPOSTools()`, qui fait `SIGHUP` puis `exit(2)` (`CMDLinux.js`).
+  L'unit pose `Restart=always` / `RestartSec=3` → systemd relance. **Aucun
+  privilège requis côté launcher**, donc pas de règle sudoers à poser.
+
+⚠️ **`end`, JAMAIS `restart`.** La même socket expose aussi `restart` et
+`shutdown`, et sous Linux ils valent `reboot -f` et `shutdown -f -h now` : ils
+redémarrent ou éteignent **la machine**, en force et sans démontage propre.
+
+Trois points de conception :
+
+- `end` n'est pas accusé — WPT meurt avant de pouvoir répondre. Le succès se lit
+  donc à la **reconnexion**, pas à une réponse. D'où la surveillance de
+  `socket.connected` (coupure *puis* retour) plutôt que des écouteurs
+  d'événements : `on_socket.js` fait `removeAllListeners()` à chaque
+  reconnexion et emporterait des écouteurs temporaires.
+- Si le plugin System n'est pas démarré, `_checkPlugin` échoue et WPT renvoie
+  `end.error`. C'est justement le cas d'un WPT malade, celui où le redémarrage
+  servirait le plus : l'erreur est explicite, car sans privilèges le launcher
+  n'a aucun autre recours.
+- `end` est accessible à tout client autorisé par `cors-origins` côté WPT. Liste
+  vide = n'importe quelle page ouverte sur la caisse peut redémarrer WPT. Ce
+  n'est pas nouveau, mais c'est une raison de plus de renseigner `cors-origins`
+  en production.
+
+⚠️ Le rechargement du menu (`case "reload"`) passe `keep_wpt: true` et **ne
+doit pas** déclencher ça : recharger la page POS est un geste fréquent et bon
+marché, redémarrer la pile périphérique ré-énumère imprimante, tiroir et TPE.
+
 ## Logs & capture SCO (`helpers/handle_sco_log.js`, `helpers/capture_js_errors.js`)
 
 Le launcher écrit ses logs (Winston, rotation quotidienne) dans

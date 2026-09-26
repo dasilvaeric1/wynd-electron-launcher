@@ -62,7 +62,7 @@ describe("Validation config", () => {
       central: { enable: false, mode: 'AUTO' },
       report: { enable: false },
       incident: { enable: false },
-      proxy: { enable: false, url: null, undefined: null },
+      proxy: { enable: false, url: null },
       http: { enable: false, port: null },
       update: { enable: false, on_start: false },
       zoom: { level: 1, factor: 0.99 },
@@ -169,7 +169,7 @@ describe("Validation config", () => {
       central: { enable: false, mode: 'AUTO' },
       report: { enable: false },
       incident: { enable: false },
-      proxy: { enable: false, url: null, undefined: null },
+      proxy: { enable: false, url: null },
       zoom: { level: 1, factor: 0.99 },
       log: { main: 'info', renderer: 'info', app: 'info' },
       publish: {
@@ -182,6 +182,27 @@ describe("Validation config", () => {
 		try {
 			checkConfig(config)
 			expect(config).toEqual(expectedConfig)
+			done()
+		} catch (err) {
+			done(err)
+		}
+	})
+
+	// Regression : `must_exist` avec keep:false doit remettre a null les cles
+	// dependantes quand enable=false. La boucle iterait sur metaData.keys.length
+	// mais lisait metaData[i], donc elle posait une cle "undefined" et laissait
+	// `url` intact : une URL de proxy explicitement desactivee restait alors
+	// visible pour create_http. Les cas 1_1/1_2 ne pouvaient pas le voir, leur
+	// proxy.url etant deja null.
+	test('1_3: proxy desactive remet son url a null', (done) => {
+		config = {
+			url: 'http://localhost:3000',
+			proxy: { enable: false, url: 'http://proxy.interne:8080' }
+		}
+
+		try {
+			checkConfig(config)
+			expect(config.proxy).toEqual({ enable: false, url: null })
 			done()
 		} catch (err) {
 			done(err)
