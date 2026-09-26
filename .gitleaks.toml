@@ -1,0 +1,27 @@
+# Configuration gitleaks — job CI `security:secrets`.
+#
+# On part des regles par defaut et on se contente d'ecarter ce qui n'est PAS
+# du code source versionne. Aucune regle n'est affaiblie : un secret reel dans
+# src/ ou dans un script de deploiement fait toujours echouer le job.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Sorties de build et artefacts — non versionnes, regeneres a chaque build."
+paths = [
+  # Bundles minifies produits par Vite. La regle generic-api-key y lit des
+  # expressions comme `e.columnsKey,<hash>` comme une cle d'API : 7 faux
+  # positifs, tous dans du code genere. Ces repertoires sont gitignores ;
+  # les exclure ici rend le resultat identique avant et apres un `pnpm dist`,
+  # au lieu de dependre de l'ordre des jobs.
+  '''src/[^/]+/dist/''',
+  '''\.map$''',
+  '''^dist/''',
+  '''^release/''',
+  '''^coverage/''',
+  '''^node_modules/''',
+  # Bundle d'autorites de certification PUBLIQUES (curl/mozilla). Aucune cle
+  # privee : uniquement des certificats destines a etre distribues.
+  '''deploy/scaffold/Electron-Launcher/portable/cacert\.pem$''',
+]

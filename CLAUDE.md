@@ -328,6 +328,45 @@ hook dans le **main world** de la frame POS (détectée par URL via
 attache debugger CDP. ⚠️ Signature `console-message` = nouvelle API Electron ≥37
 `(event, details)` (le code gère aussi l'ancienne).
 
+## CI — qualité & sécurité
+
+Quatre jobs dans le stage `quality`, tous en parallèle :
+
+| Job | Bloque quand | Pourquoi ce choix |
+|-----|--------------|-------------------|
+| `quality` | develop + tag | eslint + jest **avec couverture** (`pnpm test:coverage`) |
+| `sonar` | develop + tag | n'apparaît que si `SONAR_TOKEN` est défini |
+| `security:deps` | **tag seulement** | `pnpm audit` |
+| `security:secrets` | **partout** | `gitleaks` |
+
+Les seuils sont volontairement dissymétriques :
+
+- **`security:deps` ne bloque que sur tag.** Une CVE publiée en amont apparaît
+  sans qu'on ait touché au code. Bloquer `develop` ferait échouer le pipeline
+  un matin où personne n'a rien changé — c'est ainsi qu'une équipe apprend à
+  ignorer un job. Sur un tag, en revanche, on refuse de livrer une version
+  vulnérable connue. `--prod` d'abord (ce qui part réellement dans l'asar),
+  puis l'audit complet en informatif.
+- **`security:secrets` bloque partout.** Un secret n'apparaît jamais tout
+  seul : il arrive par un commit, donc il n'y a pas de bruit de fond à
+  tolérer. Et une clé poussée est une clé à révoquer, même retirée ensuite.
+
+⚠️ `sonar-project.properties` pointe sur `coverage/lcov.info`. Jest était
+configuré avec `coverageReporters: ["json"]` seul : le scan tournait sur une
+couverture **vide**. Ne pas retirer `lcov` de la liste.
+
+### Vulnérabilités connues et acceptées
+
+Deux constats modérés, sous le seuil `high` — donc non bloquants :
+
+- **`parseuri` (ReDoS)** via `socket.io-client` : **aucune version corrigée
+  n'existe**. Sortir du constat demanderait un saut majeur de
+  `socket.io-client`, à valider contre le protocole WPT.
+- **`file-type` (boucle infinie sur un parseur ASF)** via `jimp` ←
+  `@nut-tree-fork/nut-js` : corrigé en `>=21.3.1`, mais jimp 0.22 attend la
+  majeure 16. Un override casserait le contrôle distant, et le launcher ne
+  parse jamais de fichier ASF.
+
 ## Distribution / built-in update
 
 Le `.exe` est buildé ici. Le **service C# RetailScheduler** gère sa propre

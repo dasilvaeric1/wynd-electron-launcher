@@ -2,6 +2,9 @@
 #
 # Pipeline :
 #   quality       → eslint + jest (bloquant sur develop/tag, signale ailleurs)
+#   sonar            → SonarQube sur la couverture reelle (si SONAR_TOKEN existe)
+#   security:deps    → pnpm audit : bloquant sur tag, informatif ailleurs
+#   security:secrets → gitleaks sur l'arborescence : bloquant PARTOUT
 #   dist          → bundle renderer (Vite) sur node:22 / pnpm
 #   build:linux   → AppImage + .deb + .rpm (auto sur tag, MANUEL sur branche)
 #   build:win     → .exe portable Windows x64 (cross-compile via wine) + zip Nexus
@@ -68,14 +71,129 @@ quality:
   script:
     - pnpm install --frozen-lockfile
     - pnpm lint
-    - pnpm test
+    # `test:coverage` et pas `test` : sonar-project.properties pointe sur
+    # coverage/lcov.info, que jest ne produisait pas (coverageReporters etait
+    # limite a "json"). Le scan tournait donc sur une couverture vide.
+    - pnpm test:coverage
     # bash est present dans l'image node:24 (Debian) — pas d'installation.
     - bash scripts/publish_linux_nexus.test.sh
+  # Chiffre repris du resume jest, affiche par GitLab sur le job et la MR.
+  coverage: '/^Lines\s*:\s*(\d+(?:\.\d+)?)%/'
+  artifacts:
+    expire_in: 1 day
+    when: always
+    paths:
+      - coverage/
   rules:
     - if: $CI_COMMIT_TAG # release : gate dur
     - if: $CI_COMMIT_BRANCH == "develop" # branche de travail : gate dur
     - if: $CI_COMMIT_BRANCH # autre branche : signale, ne bloque pas
       allow_failure: true
+
+# ---------------------------------------------------------------------------
+# Analyse SonarQube — qualite + securite, sur la couverture reelle.
+#
+# Le scan consomme l'artefact `coverage/` du job quality : sans lui, sonar
+# rapporte 0 % et la note de couverture est un mensonge.
+#
+# GIT_DEPTH: 0 est NECESSAIRE — sonar date chaque ligne via git blame pour
+# distinguer le "code nouveau" de l'existant. Sur un clone superficiel (20
+# commits par defaut chez GitLab), tout le fichier parait nouveau et la
+# quality gate se declenche sur du code qui n'a pas bouge.
+#
+# Le job ne s'execute que si SONAR_TOKEN est defini, sinon il disparait du
+# pipeline au lieu d'echouer bruyamment sur chaque projet forke.
+# ---------------------------------------------------------------------------
+sonar:
+  stage: quality
+  image:
+    name: sonarsource/sonar-scanner-cli:11
+    entrypoint: [""]
+  interruptible: true
+  tags:
+    - docker
+  needs:
+    - job: quality
+      artifacts: true
+  variables:
+    GIT_DEPTH: 0
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+  cache:
+    key: sonar-cache
+    paths:
+      - .sonar/cache
+  script:
+    - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}" -Dsonar.token="${SONAR_TOKEN}" -Dsonar.projectVersion="$(node -p "require('./package.json').version")"
+  rules:
+    - if: $SONAR_TOKEN == null
+      when: never
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_COMMIT_BRANCH
+      when: manual
+      allow_failure: true
+
+# ---------------------------------------------------------------------------
+# Securite — dependances vulnerables.
+#
+# Bloquant sur TAG uniquement, et c'est deliberе : une CVE publiee en amont
+# apparait sans qu'on ait touche au code. Bloquer `develop` ferait echouer le
+# pipeline un matin ou personne n'a rien change, ce qui apprend a l'equipe a
+# ignorer le job. Sur un tag, en revanche, on refuse de livrer une version
+# vulnerable connue.
+#
+# `--prod` d'abord : ce sont les dependances qui partent REELLEMENT dans
+# l'asar. L'audit complet (devDependencies incluses) suit en informatif — la
+# chaine de build merite un oeil, sans porter le veto de release.
+# ---------------------------------------------------------------------------
+security:deps:
+  stage: quality
+  image: node:24
+  interruptible: true
+  tags:
+    - docker
+  before_script:
+    - corepack enable
+  script:
+    - echo "--- dependances embarquees (bloquant sur tag) ---"
+    - pnpm audit --prod --audit-level=high
+    - echo "--- chaine de build (informatif) ---"
+    - pnpm audit --audit-level=high || echo "Vulnerabilites en devDependencies - a traiter, non bloquant"
+  rules:
+    - if: $CI_COMMIT_TAG # refus de livrer une version vulnerable connue
+    - if: $CI_COMMIT_BRANCH
+      allow_failure: true
+
+# ---------------------------------------------------------------------------
+# Securite — secrets committes.
+#
+# Bloquant PARTOUT, sans exception. Contrairement aux CVE, un secret
+# n'apparait jamais tout seul : il arrive par un commit, donc il n'y a pas de
+# bruit de fond a tolerer. Et une cle poussee est une cle a revoquer, meme
+# retiree ensuite — mieux vaut refuser le job.
+#
+# `--no-git` scanne l'arborescence telle qu'elle sera livree, pas l'historique.
+# Scanner l'historique bloquerait indefiniment le pipeline sur un secret deja
+# revoque il y a deux ans : c'est un chantier de remediation, pas une gate de
+# CI.
+#
+# .gitleaks.toml n'ecarte que les sorties de build (bundles Vite minifies, ou
+# `e.columnsKey,<hash>` se lit comme une cle d'API). Sans ce fichier le job
+# passerait quand meme ici — les bundles ne sont pas encore construits a ce
+# stade — mais par accident : le resultat dependrait de l'ordre des jobs, et
+# un developpeur qui lance la commande apres un `pnpm dist` verrait 7 fausses
+# alertes. Aucune regle n'est affaiblie.
+# ---------------------------------------------------------------------------
+security:secrets:
+  stage: quality
+  image:
+    name: zricethezav/gitleaks:v8.21.2
+    entrypoint: [""]
+  interruptible: true
+  tags:
+    - docker
+  script:
+    - gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose --exit-code 1
 
 # ---------------------------------------------------------------------------
 # Bundle renderer (container + loader) — Vite (remplace webpack).

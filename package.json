@@ -23,6 +23,7 @@
     "build:mac": "node scripts/stamp_build.js && electron-builder --mac --publish never",
     "lint": "eslint .",
     "test": "jest __tests__",
+    "test:coverage": "jest __tests__ --coverage",
     "smoke:packaged": "bash scripts/smoke_packaged.sh"
   },
   "author": "patrice petit",
@@ -184,7 +185,9 @@
       "/test/"
     ],
     "coverageReporters": [
-      "json"
+      "json",
+      "lcov",
+      "text-summary"
     ]
   },
   "prettier": {
