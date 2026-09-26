@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.10.X]
+
+### [2.10.0]
+
+- **feat(incident): « Signaler une anomalie » est desormais FERME par defaut.**
+  ⚠️ Changement de comportement : apres mise a jour, l'entree DISPARAIT du menu
+  lateral tant que `[incident] enable=1` n'est pas pose dans config.ini. Le
+  signalement zippe les journaux, l'etat des peripheriques, la version et le
+  numero de caisse puis les televerse : c'est un canal de donnees, un parc doit
+  choisir de l'ouvrir. Le refus est verifie aussi cote main (ipc.js), masquer
+  une entree n'etant pas fermer un canal.
+
+- feat(incident): le signalement joint un TROISIEME journal, `stack`, lu dans
+  `C:\Retail\ANYCOMMERCE\logs\stack-*.log`. C'est souvent celui qui manque
+  au support : quand WSL ne repart pas, le launcher n'a rien a raconter.
+  `EL_STACK_LOG_DIR` pour outrepasser le chemin.
+
+- feat(launch): anycommerce.bat journalise les redemarrages WSL et apiupdater
+  dans `C:\Retail\ANYCOMMERCE\logs\stack-AAAAMMJJ.log`, rotation forfiles
+  sur 14 jours. Leur sortie partait jusqu'ici dans une console qui se referme.
+
+- feat: prise en charge du cas SCO dans anycommerce.bat (Thierry Lestideau).
+
+- fix(launch): retablit `nul` dans anycommerce.bat. `$null` est du PowerShell ;
+  en batch il ne jette rien et CREE un fichier nomme `$null` a chaque lancement.
+
+- **fix(wpt): redemarrage de WPT enfin possible sous Linux.** WPT y est le
+  service systemd `wyndpostools`, lance sous l'utilisateur systeme `wpt` : le
+  launcher ne possede aucun process a tuer. Il emet desormais `end` sur la
+  socket (plugin System -> SIGHUP + exit(2)), et `Restart=always` relance.
+  Aucun privilege requis. Le succes se lit a la reconnexion, plafond 20 s.
+  ⚠️ `end` et JAMAIS `restart` : ce dernier vaut `reboot -f` cote WPT.
+
+- fix(wpt): `reloadWPT` ne resout plus quand ses deux branches echouent. Le BO
+  recevait `END` sur un redemarrage qui n'avait pas eu lieu.
+
+- ci: gates qualite et securite — `sonar` (sur la couverture REELLE : jest
+  n'emettait pas de lcov, le scan tournait sur une couverture vide),
+  `security:deps` (pnpm audit, bloquant sur tag), `security:secrets` (gitleaks,
+  bloquant partout) et `security:electron` (electronegativity, informatif).
+
 ## [2.9.X]
 
 ### [2.9.3]
