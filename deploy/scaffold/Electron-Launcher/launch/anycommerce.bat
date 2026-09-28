@@ -1,4 +1,21 @@
 @echo off
+
+REM --- Console hors de portee d'un clic ------------------------------------
+REM Cette console s'ouvre a l'ouverture de session, devant la caissiere. En
+REM mode "edition rapide", un clic dedans demarre une selection et Windows
+REM SUSPEND ce qui y ecrit jusqu'a Entree ou Echap. Le 28/09/2026, cela a fige
+REM control_center.ps1 pendant 1 h 40 sur une caisse : le Retail Scheduler, qui
+REM le voit tourner, a suspendu taches et commandes (maintenance) et la caisse
+REM est apparue hors ligne.
+REM   1. on se relance dans une console reduite (--minimise evite la boucle) ;
+REM   2. on y coupe l'edition rapide (no_quickedit.ps1, facultatif) ;
+REM   3. control_center.ps1 n'ecrit jamais dans la console (journal ci-dessous).
+if /i not "%~1"=="--minimise" (
+	start "Octipas POS" /min cmd /c ""%~f0" --minimise"
+	exit /b
+)
+if exist "%~dp0no_quickedit.ps1" Powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0no_quickedit.ps1" > nul 2>&1
+
 cd /d "C:\Retail\ANYCOMMERCE\local-stack-maintenance"
 
 REM --- Journal des redemarrages de la stack ------------------------------
