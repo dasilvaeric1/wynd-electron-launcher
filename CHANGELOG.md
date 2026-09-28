@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [2.11.X]
 
+### [2.11.1]
+
+- **fix(launch): la console d'`anycommerce.bat` ne peut plus etre figee par un
+  clic.** Elle s'ouvre a l'ouverture de session, devant la caissiere : une
+  selection (mode « edition rapide » de Windows) suspendait `control_center.ps1`,
+  le Retail Scheduler restait en maintenance (taches et commandes a distance
+  suspendues) et la caisse apparaissait hors ligne (53R1198977, 28/09/2026,
+  1 h 40). Le .bat se relance desormais dans une console reduite et y coupe
+  l'edition rapide (`no_quickedit.ps1`, facultatif : absent, la caisse demarre
+  comme avant).
+
 ### [2.11.0]
 
 - **feat(launch): `start.ps1`, lanceur de caisse avec ecran de chargement, A
