@@ -8,6 +8,8 @@
 #   Electron-Launcher/
 #   ├── cfg/config.ini                       (scaffold, versionné)
 #   ├── launch/anycommerce.bat               (scaffold, versionné)
+#   ├── launch/start.ps1                     (scaffold, à l’essai)
+#   ├── launch/create-test-shortcut.ps1      (scaffold, à l’essai)
 #   ├── launch/logo.ico                      (scaffold, versionné)
 #   └── portable/
 #       ├── cacert.pem                       (scaffold, versionné)
