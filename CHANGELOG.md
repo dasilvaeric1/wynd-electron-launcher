@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.11.X]
+
+### [2.11.0]
+
+- **feat(launch): `start.ps1`, lanceur de caisse avec ecran de chargement, A
+  L'ESSAI.** Livre A COTE d'`anycommerce.bat`, qui reste le lancement par
+  defaut : rien ne change tant qu'on ne l'active pas. Meme sequence que le .bat
+  (WSL si configure, launcher, apiupdater), mais :
+  - un ecran de chargement « Octipas POS » s'affiche en 1 a 2 s (WinForms), a
+    la place de ~25 s d'ecran vide ou de console, et s'efface quand la fenetre
+    du launcher apparait ;
+  - aucune console : `control_center.ps1` tourne cache, sortie dans
+    `logs\stack-AAAAMMJJ.log`. Plus de clic qui fige la caisse (QuickEdit) et
+    laisse le Retail Scheduler en maintenance ;
+  - un launcher deja ouvert n'est plus tue : il revient au premier plan ;
+  - les durees sont journalisees (`launcher lance a`, `visible a`, `termine en`)
+    pour comparer avec l'ancien lancement ;
+  - sans WinForms, repli sans ecran ; si rien n'a lance le launcher, lancement
+    de secours.
+- feat(launch): `create-test-shortcut.ps1` pose un raccourci d'essai sur le
+  bureau, ou echange le lancement a l'ouverture de session (`-Startup` :
+  `ChapsPOS.lnk` renomme, jamais supprime), reversible (`-Restore`).
+
 ## [2.10.X]
 
 ### [2.10.0]
