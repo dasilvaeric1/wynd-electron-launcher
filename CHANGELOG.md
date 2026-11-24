@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.12.X]
+
+### [2.12.0]
+
+- **feat(wpt): le launcher emule le plugin `System` de WyndPOSTools.** Pour
+  les caisses SANS WPT dont le POS est servi en central (HTTPS) : le launcher
+  repond a `hardwareserial` sur `https://localhost:<port>` (route socket.io et
+  `GET /System/api/hardwareserial`). Cote POS, pointer `WPT_HOST` /
+  `WPT_PORT` du `env.json` dessus. Section `[wpt_emulation]` de `config.ini`
+  (`enable`, `port`, `allowed_origins`, `hardware_serial`), desactivee par
+  defaut.
+  - Serial : `EL_WPT_HARDWARE_SERIAL` > `hardware_serial=` > appsettings du
+    RetailScheduler > `/api/identity` > BIOS. Le forcage ne vaut que pour le
+    POS.
+  - Ecoute sur `127.0.0.1` seul, origine du POS verifiee, `end` / `restart` /
+    `shutdown` refuses.
+  - Certificat auto-signe genere au premier lancement, accepte a
+    l'empreinte. Effet de bord corrige : la regle « hote de `wpt.url` »
+    acceptait jusqu'ici n'importe quel certificat sur `localhost:9963`, y
+    compris WPT desactive.
+  - Limite : le relais ecran client de `pos-customer-display-package`
+    (`SOCKET_HOST` / `SOCKET_PORT`) n'est pas emule.
+
 ## [2.11.X]
 
 ### [2.11.1]
