@@ -20,6 +20,7 @@ const configureProtocol = require("./helpers/register_file_protocol");
 const hardenWebContents = require("./helpers/harden_web_contents");
 const captureJsErrors = require("./helpers/capture_js_errors");
 const trustWptCertificate = require("./helpers/trust_wpt_certificate");
+const { initWptEmulation } = require("./helpers/wpt_emulation");
 const { surveiller: surveillerDevTools } = require("./helpers/open_dev_tools");
 const {
   applyConfiguredSwitches,
@@ -230,6 +231,14 @@ app.on("will-quit", async (e) => {
     store.http.close();
     store.http = null;
   }
+  if (store.wptEmulation) {
+    try {
+      await store.wptEmulation.close();
+    } catch (err) {
+      log.error(`[WPT-EMU] arret: ${err.message}`);
+    }
+    store.wptEmulation = null;
+  }
 });
 
 app.on("window-all-closed", () => {
@@ -306,6 +315,12 @@ getConfig(store.path.conf, undefined, argv.url)
         // Capture des erreurs JS non catchées du POS en webview (opt-in
         // config.log.capture_errors). À enregistrer avant createWindows.
         captureJsErrors(store);
+      })
+      .then(() => {
+        // Emulation du plugin System de WPT (caisses sans WPT, POS central en
+        // HTTPS). Avant createWindows : le POS s'y connecte des son chargement.
+        // Ne jette pas : un echec est journalise et le launcher continue.
+        return initWptEmulation(store);
       })
       .then(() => {
         innerGlobalShortcut(store, log);

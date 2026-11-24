@@ -149,6 +149,15 @@ tags, c'est le canal que le control-center consomme).
   quand WSL ne repart pas, le launcher n'a rien a raconter. Resolu par
   `stackLogDir()` — Windows uniquement, `EL_STACK_LOG_DIR` pour outrepasser.
 
+- Section `[wpt_emulation]` — **le launcher se fait passer pour WPT** (plugin
+  `System` seul) sur les caisses **sans WyndPOSTools** dont le POS est servi en
+  central (HTTPS). Le POS se connecte à `https://localhost:<port>` (à régler
+  dans son `env.json` : `WPT_HOST=https://localhost`, `WPT_PORT=9963`) et y
+  obtient `hardwareserial`. Détails dans « Émulation WPT » plus bas.
+  - `enable=1`, `port=9963` (défaut), `allowed_origins=` (virgules ; vide =
+    origine de `url=`), `hardware_serial=` pour **forcer** le serial.
+  - Incompatible avec `[wpt] enable=1` sur le même port : refus au démarrage.
+
 - Section `[log]` (niveaux `main`/`renderer`/`app` = `info|debug|error|warn`) +
   capture des logs JS du SCO/POS (voir « Logs & capture SCO » plus bas) :
   - `persist_app=1` — écrit les logs SCO dans `logs/app/` (interrupteur maître fichier).
@@ -173,6 +182,7 @@ tags, c'est le canal que le control-center consomme).
 | `EL_TRACE=1\|0` | Force/désactive la trace continue (gagne sur l'ordre BO et sur `config.ini`). |
 | `EL_TRACE_WS_FRAMES=1` | Mode crise : enregistre les **corps** des trames WebSocket (tronqués 2 Ko). Off par défaut. |
 | `EL_TRACE_CHUNK_SECONDS` / `EL_TRACE_SPOOL_MB` / `EL_TRACE_IDLE_PAUSE` / `EL_TRACE_MOUSEMOVE_MS` | Override des paramètres de trace (bornés, cf `helpers/trace_config.js`). |
+| `EL_WPT_HARDWARE_SERIAL` | Force le serial renvoyé au POS par l'émulation WPT (gagne sur `[wpt_emulation] hardware_serial`). |
 | `EL_STRICT_NAV=1` | Bloque les navigations hors origines autorisées (POS + localhost + file). Par défaut : log-only (cf `helpers/harden_web_contents.js`). |
 
 ## Screen-session (`src/main/screen_session.js`)
@@ -310,6 +320,51 @@ Un replay d'écran de caisse capture des données client **et** l'activité d'un
 salarié. Masquage actif par défaut et non affaiblissable à distance, `until`
 obligatoire, rétention côté dashboard. L'information des salariés / la
 consultation du CSE relèvent de l'opérateur du parc.
+
+## Émulation WPT (`src/main/helpers/wpt_emulation/`)
+
+Caisses **sans WPT**, POS central en HTTPS. Le POS (`apps/pos-sap` du
+monorepo) lit son serial via `@wynd/redux-wps-middleware` :
+`system.getHardwareserial()` → `emit('hardwareserial')` sur socket.io, réponse
+attendue sous le même nom ; au bout de 60 s sans réponse il affiche
+`WPT_CONNECTION_ERROR`. Le middleware n'attend **aucun** état « plugin
+démarré » avant d'émettre : un serveur qui répond suffit.
+
+- **Serveur** (`server.js`) : HTTPS + socket.io **4 avec `allowEIO3`** — le
+  middleware embarque un client socket.io **2**. Écoute sur `127.0.0.1` seul.
+  Route WPT `GET /System/api/hardwareserial` (200 + JSON, 500 `{code,message}`).
+  Envoie `version` à la connexion, comme WPT.
+- **Origine** vérifiée à la poignée de main (polling **et** websocket) et sur
+  la route HTTP. Sans en-tête `Origin` = outil local (un navigateur en envoie
+  toujours un en WS/CORS) → accepté. Préflight réseau privé :
+  `Access-Control-Allow-Private-Network: true` pour l'origine du POS seule.
+- **Événements refusés** : `end`, `restart`, `shutdown`, `chrome.end` (sous WPT
+  Linux, `restart`/`shutdown` = reboot/arrêt **machine**). Les autres
+  événements System → `<event>.error` `NOT_SUPPORTED` ; ceux des autres
+  plugins → ignorés, comme un WPT sans ce plugin.
+- **Serial** (`serial.js`), dans l'ordre : `EL_WPT_HARDWARE_SERIAL` >
+  `hardware_serial=` > `CaisseSerialNumber` de l'appsettings RetailScheduler >
+  `/api/identity` du service > **BIOS** (ce que renvoyait WPT : Win32_BIOS via
+  PowerShell — `wmic` a disparu des Windows 11 récents —, sysfs sous Linux).
+  Blancs retirés comme le fait le POS. Un serial forcé est journalisé en
+  `warn`. ⚠️ Le forçage ne vaut **que pour le POS** : screen-session, fleet et
+  trace gardent le serial réel (deux caisses forcées pareil se confondraient
+  côté central).
+- ⚠️ Linux : `/sys/class/dmi/id/product_serial` est souvent `0400 root` →
+  illisible pour le launcher. Sans RetailScheduler, **forcer** le serial.
+- **TLS** (`certificate.js`) : auto-signé, généré au 1er lancement dans
+  `<userData>/wpt-emulation/`, régénéré à J-30 de l'expiration ou si
+  corrompu. `trust_wpt_certificate.js` l'accepte sur `localhost:<port>` /
+  `127.0.0.1:<port>` **à l'empreinte**. ⚠️ Sans cela, la règle historique
+  « hôte de `wpt.url` » accepterait n'importe quel certificat sur ce port :
+  `default_config` pose `wpt.url=localhost:9963` même WPT désactivé.
+- **Vérifié en vrai** (Electron 42, page publique HTTPS → localhost) : route et
+  websocket OK pour l'origine autorisée, refus pour une autre. Local Network
+  Access ne bloque pas avec les permissions par défaut d'Electron — à
+  revérifier si un `setPermissionRequestHandler` global est ajouté un jour.
+- Limite : le relais écran client de `pos-customer-display-package` passe par
+  WPT (`serverTools`) et n'est **pas** émulé. L'écran client du launcher
+  (`[customer]`) n'en dépend pas.
 
 ## Redémarrer WPT — deux mécanismes selon qui possède le process
 

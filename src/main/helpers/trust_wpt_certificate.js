@@ -1,6 +1,18 @@
 const { app } = require('electron')
 const { URL } = require('url')
+const { X509Certificate } = require('node:crypto')
 const log = require('./electron_log')
+
+const emulatorHosts = (port) => new Set([`localhost:${port}`, `127.0.0.1:${port}`])
+
+/** Empreinte SHA-256 du certificat Electron (`cert.data` = PEM), ou null. */
+function empreinte(cert) {
+	try {
+		return cert && cert.data ? new X509Certificate(cert.data).fingerprint256 : null
+	} catch {
+		return null
+	}
+}
 
 /**
  * Accepte le certificat auto-signe de WyndPOSTools, et LUI SEUL.
@@ -41,12 +53,28 @@ function trustWptCertificate(store) {
 		}
 	}
 
-	app.on('certificate-error', (event, _webContents, url, error, _cert, callback) => {
+	app.on('certificate-error', (event, _webContents, url, error, cert, callback) => {
 		let hote = null
 		try {
 			hote = new URL(url).host.toLowerCase()
 		} catch (err) {
 			log.debug(`[TLS] url en cause non analysable (${url}): ${err.message}`)
+		}
+
+		// Emulateur WPT du launcher : sur ses hotes, l'EMPREINTE fait foi et la
+		// regle d'hote ci-dessous ne s'applique pas. default_config pose
+		// `wpt.url=localhost:9963` meme WPT desactive : sans cela, n'importe
+		// quel certificat presente sur ce port serait accepte.
+		const emu = store && store.wptEmulation
+		if (emu && hote && emulatorHosts(emu.port).has(hote)) {
+			if (empreinte(cert) === emu.fingerprint256) {
+				event.preventDefault()
+				callback(true)
+				return
+			}
+			log.warn(`[TLS] certificat REFUSE pour ${url} : empreinte differente de celle de l'emulateur WPT`)
+			callback(false)
+			return
 		}
 
 		const attendu = hoteAttendu()

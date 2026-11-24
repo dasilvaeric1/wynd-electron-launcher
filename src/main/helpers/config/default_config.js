@@ -61,6 +61,17 @@ module.exports =  function defaultConfig(config, log) {
 		}
 	}
 
+	// Emulation du plugin System de WPT par le launcher (caisses sans WPT, POS
+	// central en HTTPS). Desactivee par defaut : elle ouvre un port local.
+	if (!config.wpt_emulation) {
+		config.wpt_emulation = {
+			enable: false
+		}
+	}
+	if (!config.wpt_emulation.port) {
+		config.wpt_emulation.port = 9963
+	}
+
 	// Ecran client : desactive tant que l'exploitant n'a pas pose une url.
 	// `enable: true` sans url resterait inactif de toute facon (cf
 	// resolveCustomerScreen), mais le dire ici evite d'avoir a le deduire.

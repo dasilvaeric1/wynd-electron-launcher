@@ -845,6 +845,39 @@ const schema = {
       additionalProperties: false,
     },
 
+    // Emulation du plugin System de WPT par le launcher : sert
+    // `hardwareserial` au POS sur https://localhost:<port> quand aucun WPT
+    // ne tourne sur la caisse. Cf helpers/wpt_emulation.
+    wpt_emulation: {
+      type: "object",
+      properties: {
+        enable: {
+          allOf: [
+            {
+              coerce_boolean: true,
+            },
+          ],
+        },
+        port: {
+          type: ["integer", "null"],
+          minimum: 1,
+          maximum: 65535,
+        },
+        // Forcage du serial renvoye au POS (le reste du launcher garde le
+        // serial reel). Vide = serial resolu (service, puis BIOS).
+        hardware_serial: {
+          type: ["string", "null"],
+        },
+        // Origines autorisees, separees par des virgules. Vide = origine de
+        // la cle `url` racine.
+        allowed_origins: {
+          type: ["string", "null"],
+        },
+      },
+      required: ["enable"],
+      additionalProperties: false,
+    },
+
     // Ecran client : page face public d'une caisse a deux ecrans.
     // Aucune valeur par defaut pour `url` — on n'invente pas une page a
     // montrer a un client. Sans url, l'ecran client reste simplement inactif.

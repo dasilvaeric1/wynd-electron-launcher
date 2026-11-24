@@ -65,6 +65,7 @@ describe("Validation config", () => {
       proxy: { enable: false, url: null },
       http: { enable: false, port: null },
       update: { enable: false, on_start: false },
+      wpt_emulation: { enable: false, port: 9963 },
       zoom: { level: 1, factor: 0.99 },
       log: { main: 'info', renderer: 'info', app: 'info' },
       publish: {
@@ -170,6 +171,7 @@ describe("Validation config", () => {
       report: { enable: false },
       incident: { enable: false },
       proxy: { enable: false, url: null },
+      wpt_emulation: { enable: false, port: 9963 },
       zoom: { level: 1, factor: 0.99 },
       log: { main: 'info', renderer: 'info', app: 'info' },
       publish: {
